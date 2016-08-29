@@ -1,0 +1,30 @@
+From 162f6949307ee0a61e81f14b6d2afd2a06f004d5 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 11:41:07 +0200
+Subject: [PATCH] skia: Kill libqc-skia
+
+Change-Id: I7810fd86abe8a7e5b09e436f940550dd94dda655
+---
+ Android.mk | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Android.mk b/Android.mk
+index bd46e6f..7a0a45f 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -831,9 +831,9 @@ LOCAL_WHOLE_STATIC_LIBRARIES := libskia_static
+ LOCAL_SHARED_LIBRARIES := \
+         libcutils
+ 
+-ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+-        LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
+-endif
++#ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
++#LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
++#endif
+ 
+ LOCAL_EXPORT_C_INCLUDE_DIRS := \
+ 	$(LOCAL_PATH)/include/codec \
+-- 
+2.9.3
+
