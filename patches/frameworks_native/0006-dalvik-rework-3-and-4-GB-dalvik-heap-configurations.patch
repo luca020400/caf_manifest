@@ -1,0 +1,90 @@
+From 1cbf7ab7a42a3e74719c35b01cf6c357dbf947af Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Sun, 14 Aug 2016 21:48:27 -0400
+Subject: [PATCH 6/8] dalvik: rework 3 and 4-GB dalvik heap configurations
+
+The previous configuration sets target utilization as .25, which is geared towards
+low memory devices. This path increases it to .75 and makes us pass the check:
+(heaptargetutilization / 2) * heapsize = heapgrowthlimit
+
+Example:
+heapgrowthlimit: 256m
+heapsize: 512m
+heaptargetutilization: 0.75
+0.75/2 * 512 = 192
+
+To pass the check this has to be true:
+
+192 = 256 (WRONG)
+
+Check not passed.
+
+This new configuration is optimized for higher RAM devices and passes the check:
+
+heapgrowthlimit: 384m
+heapsize: 1024m
+heaptargetutilization: 0.75
+
+0.75/2 * 1024 = 384
+
+384 = 384 (TRUE)
+
+Check passed.
+
+Change-Id: I6839339382229da80546761c3746a032081ff2cd
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ build/phone-xxhdpi-3072-dalvik-heap.mk  | 4 ++--
+ build/phone-xxxhdpi-3072-dalvik-heap.mk | 4 ++--
+ build/phone-xxxhdpi-4096-dalvik-heap.mk | 6 +++---
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/build/phone-xxhdpi-3072-dalvik-heap.mk b/build/phone-xxhdpi-3072-dalvik-heap.mk
+index 450f4e1..57eeb6e 100644
+--- a/build/phone-xxhdpi-3072-dalvik-heap.mk
++++ b/build/phone-xxhdpi-3072-dalvik-heap.mk
+@@ -18,8 +18,8 @@
+ 
+ PRODUCT_PROPERTY_OVERRIDES += \
+     dalvik.vm.heapstartsize=8m \
+-    dalvik.vm.heapgrowthlimit=256m \
+-    dalvik.vm.heapsize=512m \
++    dalvik.vm.heapgrowthlimit=384m \
++    dalvik.vm.heapsize=1024m \
+     dalvik.vm.heaptargetutilization=0.75 \
+     dalvik.vm.heapminfree=512k \
+     dalvik.vm.heapmaxfree=8m
+diff --git a/build/phone-xxxhdpi-3072-dalvik-heap.mk b/build/phone-xxxhdpi-3072-dalvik-heap.mk
+index 3bf65a7..88e2e70 100644
+--- a/build/phone-xxxhdpi-3072-dalvik-heap.mk
++++ b/build/phone-xxxhdpi-3072-dalvik-heap.mk
+@@ -18,8 +18,8 @@
+ 
+ PRODUCT_PROPERTY_OVERRIDES += \
+     dalvik.vm.heapstartsize=8m \
+-    dalvik.vm.heapgrowthlimit=256m \
+-    dalvik.vm.heapsize=512m \
++    dalvik.vm.heapgrowthlimit=384m \
++    dalvik.vm.heapsize=1024m \
+     dalvik.vm.heaptargetutilization=0.75 \
+     dalvik.vm.heapminfree=2m \
+     dalvik.vm.heapmaxfree=8m
+diff --git a/build/phone-xxxhdpi-4096-dalvik-heap.mk b/build/phone-xxxhdpi-4096-dalvik-heap.mk
+index 67f94f4..0e12557 100644
+--- a/build/phone-xxxhdpi-4096-dalvik-heap.mk
++++ b/build/phone-xxxhdpi-4096-dalvik-heap.mk
+@@ -18,8 +18,8 @@
+ 
+ PRODUCT_PROPERTY_OVERRIDES += \
+     dalvik.vm.heapstartsize=8m \
+-    dalvik.vm.heapgrowthlimit=256m \
+-    dalvik.vm.heapsize=512m \
+-    dalvik.vm.heaptargetutilization=0.25 \
++    dalvik.vm.heapgrowthlimit=384m \
++    dalvik.vm.heapsize=1024m \
++    dalvik.vm.heaptargetutilization=0.75 \
+     dalvik.vm.heapminfree=4m \
+     dalvik.vm.heapmaxfree=16m
+-- 
+2.9.3
+

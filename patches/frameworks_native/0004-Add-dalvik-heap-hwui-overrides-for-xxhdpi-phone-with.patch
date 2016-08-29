@@ -1,0 +1,84 @@
+From d7f68f1bd6e71372d9c6344f06bcc9fcadea6711 Mon Sep 17 00:00:00 2001
+From: Louis Popi <theh2o64@gmail.com>
+Date: Wed, 11 May 2016 22:48:52 +0200
+Subject: [PATCH 4/8] Add dalvik heap/hwui overrides for xxhdpi phone with
+ 3072MB RAM
+
+Change-Id: I0ebf2033341e8f09004c1e2dec5f4438aa52e5dc
+---
+ build/phone-xxhdpi-3072-dalvik-heap.mk | 25 +++++++++++++++++++++++++
+ build/phone-xxhdpi-3072-hwui-memory.mk | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+)
+ create mode 100644 build/phone-xxhdpi-3072-dalvik-heap.mk
+ create mode 100644 build/phone-xxhdpi-3072-hwui-memory.mk
+
+diff --git a/build/phone-xxhdpi-3072-dalvik-heap.mk b/build/phone-xxhdpi-3072-dalvik-heap.mk
+new file mode 100644
+index 0000000..450f4e1
+--- /dev/null
++++ b/build/phone-xxhdpi-3072-dalvik-heap.mk
+@@ -0,0 +1,25 @@
++#
++# Copyright (C) 2016 The CyanogenMod Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# Provides overrides to configure the Dalvik heap for a 3G phone
++
++PRODUCT_PROPERTY_OVERRIDES += \
++    dalvik.vm.heapstartsize=8m \
++    dalvik.vm.heapgrowthlimit=256m \
++    dalvik.vm.heapsize=512m \
++    dalvik.vm.heaptargetutilization=0.75 \
++    dalvik.vm.heapminfree=512k \
++    dalvik.vm.heapmaxfree=8m
+diff --git a/build/phone-xxhdpi-3072-hwui-memory.mk b/build/phone-xxhdpi-3072-hwui-memory.mk
+new file mode 100644
+index 0000000..217bfb8
+--- /dev/null
++++ b/build/phone-xxhdpi-3072-hwui-memory.mk
+@@ -0,0 +1,30 @@
++#
++# Copyright (C) 2016 The CyanogenMod Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# Provides overrides to configure the HWUI memory limits
++
++PRODUCT_PROPERTY_OVERRIDES += \
++    ro.hwui.texture_cache_size=72 \
++    ro.hwui.layer_cache_size=48 \
++    ro.hwui.path_cache_size=32 \
++    ro.hwui.gradient_cache_size=1 \
++    ro.hwui.drop_shadow_cache_size=6 \
++    ro.hwui.r_buffer_cache_size=8 \
++    ro.hwui.texture_cache_flushrate=0.4 \
++    ro.hwui.text_small_cache_width=1024 \
++    ro.hwui.text_small_cache_height=1024 \
++    ro.hwui.text_large_cache_width=2048 \
++    ro.hwui.text_large_cache_height=1024
+-- 
+2.9.3
+

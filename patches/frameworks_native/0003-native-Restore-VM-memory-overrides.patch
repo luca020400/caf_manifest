@@ -1,0 +1,192 @@
+From c64a3d3a7b233cc5daf71946997098b679c72ede Mon Sep 17 00:00:00 2001
+From: Diogo Ferreira <defer@cyngn.com>
+Date: Sun, 9 Nov 2014 16:16:41 +0000
+Subject: [PATCH 3/8] native: Restore VM memory overrides
+
+This change adds back the property overrides for several device
+types as we had in CM 11.
+
+It contains a squished commit of the following:
+
+commit 5b9240927f8af0b26c406835df33b2d999496434
+Author: Steve Kondik <shade@chemlab.org>
+Date:   Thu Nov 6 14:40:44 2014 -0800
+
+    Add hdpi-2048 tunings
+
+commit ed579d8be17fb52ef92a1dc9c83843879f396fa1
+Author: Steve Kondik <shade@chemlab.org>
+Date:   Sat Jan 4 12:12:00 2014 -0800
+
+    Update HWUI config for xxhdpi/2GB devices
+
+commit 386f220e174f9ed5aad487867223033fd5d986c6
+Author: Steve Kondik <shade@chemlab.org>
+Date:   Tue Aug 6 02:53:19 2013 -0700
+
+    hwui: Update configuration for 2GB/1080p devices
+
+commit b7392d113d8ae6c3c07990bbb3f2621bef490d11
+Author: Steve Kondik <shade@chemlab.org>
+Date:   Sat Jun 1 14:51:17 2013 +0200
+
+    provide overrides for hwui memory limits for xxhdpi phones
+
+commit 247b3c635b1d6776ffedf3cd61a936546c2f6603
+Author: Steve Kondik <shade@chemlab.org>
+Date:   Fri May 17 13:10:19 2013 -0700
+
+    Add heap configuration for 1080p phones with 2048m
+
+     * Increase heap start size to 16m to minimize GC with larger bitmaps
+
+commit 9856e93970fd6def1349e564f17d42f505904eba
+Author: Andrew Bartholomew <andrewb03@gmail.com>
+Date:   Thu Apr 25 13:48:21 2013 -0400
+
+    build/phone-xhdpi-1024-dalvik-heap.mk Revert AOSP heapgrowthlimit change from 64 to 96
+
+    This reverts part of AOSP change at
+
+    https://android.googlesource.com/platform/frameworks/native/+/c84e9844d621223d14178be521
+
+    Possible performance issues have arisen because of it. Discussion at
+
+    http://code.google.com/p/android/issues/detail?id=40961
+
+    Patch Set 2: Clean up commit message
+
+commit bd7fb4be323f6f868a886b22e93cf203944af9a6
+Author: Bhargav Upperla <bhargavuln@codeaurora.org>
+Date:   Thu May 23 12:50:15 2013 -0700
+
+    Configure dalvik heap parameters for low memory devices
+
+    Reduces after boot memory footprint by about 5-8MB
+    Note: This is for low memory based devices only (~512MB RAM
+    or less)
+
+Change-Id: Id7e1967d18227359ad9631139bfd47e61e494829
+---
+ build/phone-hdpi-2048-dalvik-heap.mk   | 25 +++++++++++++++++++++++++
+ build/phone-xhdpi-1024-dalvik-heap.mk  |  2 +-
+ build/phone-xxhdpi-2048-dalvik-heap.mk | 26 ++++++++++++++++++++++++++
+ build/phone-xxhdpi-2048-hwui-memory.mk | 30 ++++++++++++++++++++++++++++++
+ 4 files changed, 82 insertions(+), 1 deletion(-)
+ create mode 100644 build/phone-hdpi-2048-dalvik-heap.mk
+ create mode 100644 build/phone-xxhdpi-2048-dalvik-heap.mk
+ create mode 100644 build/phone-xxhdpi-2048-hwui-memory.mk
+
+diff --git a/build/phone-hdpi-2048-dalvik-heap.mk b/build/phone-hdpi-2048-dalvik-heap.mk
+new file mode 100644
+index 0000000..2f0bbd2
+--- /dev/null
++++ b/build/phone-hdpi-2048-dalvik-heap.mk
+@@ -0,0 +1,25 @@
++#
++# Copyright (C) 2012 The Android Open Source Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# Provides overrides to configure the Dalvik heap for a 2G phone
++# 192m of RAM gives enough space for 5 8 megapixel camera bitmaps in RAM.
++
++PRODUCT_PROPERTY_OVERRIDES += \
++    dalvik.vm.heapstartsize=12m \
++    dalvik.vm.heapgrowthlimit=128m \
++    dalvik.vm.heapsize=256m \
++    dalvik.vm.heaptargetutilization=0.75 \
++    dalvik.vm.heapminfree=4m
+diff --git a/build/phone-xhdpi-1024-dalvik-heap.mk b/build/phone-xhdpi-1024-dalvik-heap.mk
+index 221227d..20f365f 100644
+--- a/build/phone-xhdpi-1024-dalvik-heap.mk
++++ b/build/phone-xhdpi-1024-dalvik-heap.mk
+@@ -21,5 +21,5 @@ PRODUCT_PROPERTY_OVERRIDES += \
+     dalvik.vm.heapgrowthlimit=96m \
+     dalvik.vm.heapsize=256m \
+     dalvik.vm.heaptargetutilization=0.75 \
+-    dalvik.vm.heapminfree=512k \
++    dalvik.vm.heapminfree=2m \
+     dalvik.vm.heapmaxfree=8m
+diff --git a/build/phone-xxhdpi-2048-dalvik-heap.mk b/build/phone-xxhdpi-2048-dalvik-heap.mk
+new file mode 100644
+index 0000000..9489593
+--- /dev/null
++++ b/build/phone-xxhdpi-2048-dalvik-heap.mk
+@@ -0,0 +1,26 @@
++#
++# Copyright (C) 2012 The Android Open Source Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# Provides overrides to configure the Dalvik heap for a 2G phone
++# 192m of RAM gives enough space for 5 8 megapixel camera bitmaps in RAM.
++
++PRODUCT_PROPERTY_OVERRIDES += \
++    dalvik.vm.heapstartsize=16m \
++    dalvik.vm.heapgrowthlimit=192m \
++    dalvik.vm.heapsize=512m \
++    dalvik.vm.heaptargetutilization=0.75 \
++    dalvik.vm.heapminfree=2m \
++    dalvik.vm.heapmaxfree=8m
+diff --git a/build/phone-xxhdpi-2048-hwui-memory.mk b/build/phone-xxhdpi-2048-hwui-memory.mk
+new file mode 100644
+index 0000000..b4226bc
+--- /dev/null
++++ b/build/phone-xxhdpi-2048-hwui-memory.mk
+@@ -0,0 +1,30 @@
++#
++# Copyright (C) 2013 The CyanogenMod Project
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#      http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# Provides overrides to configure the HWUI memory limits
++
++PRODUCT_PROPERTY_OVERRIDES += \
++    ro.hwui.texture_cache_size=72 \
++    ro.hwui.layer_cache_size=48 \
++    ro.hwui.r_buffer_cache_size=8 \
++    ro.hwui.path_cache_size=32 \
++    ro.hwui.gradient_cache_size=1 \
++    ro.hwui.drop_shadow_cache_size=6 \
++    ro.hwui.texture_cache_flushrate=0.4 \
++    ro.hwui.text_small_cache_width=1024 \
++    ro.hwui.text_small_cache_height=1024 \
++    ro.hwui.text_large_cache_width=2048 \
++    ro.hwui.text_large_cache_height=1024
+-- 
+2.9.3
+

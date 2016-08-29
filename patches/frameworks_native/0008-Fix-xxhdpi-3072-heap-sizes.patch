@@ -1,0 +1,32 @@
+From 919a0667ff63c53b8914a1e8e5a084ca253e64a5 Mon Sep 17 00:00:00 2001
+From: Abhisek Devkota <ciwrl@cyanogenmod.com>
+Date: Wed, 17 Aug 2016 09:04:42 -0700
+Subject: [PATCH 8/8] Fix xxhdpi 3072 heap sizes
+
+Bootloops on r7 with current values
+
+Fix for 94774ac01d1953bcc7a70a7018267ee34793d3f7
+
+Change-Id: I248a9375735a261715668494da0d0ab5a6440d42
+---
+ build/phone-xxhdpi-3072-dalvik-heap.mk | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/build/phone-xxhdpi-3072-dalvik-heap.mk b/build/phone-xxhdpi-3072-dalvik-heap.mk
+index 57eeb6e..3598f5a 100644
+--- a/build/phone-xxhdpi-3072-dalvik-heap.mk
++++ b/build/phone-xxhdpi-3072-dalvik-heap.mk
+@@ -18,8 +18,8 @@
+ 
+ PRODUCT_PROPERTY_OVERRIDES += \
+     dalvik.vm.heapstartsize=8m \
+-    dalvik.vm.heapgrowthlimit=384m \
+-    dalvik.vm.heapsize=1024m \
++    dalvik.vm.heapgrowthlimit=288m \
++    dalvik.vm.heapsize=768m \
+     dalvik.vm.heaptargetutilization=0.75 \
+     dalvik.vm.heapminfree=512k \
+     dalvik.vm.heapmaxfree=8m
+-- 
+2.9.3
+
