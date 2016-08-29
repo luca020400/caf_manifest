@@ -1,13 +1,13 @@
-From e1f213245b642d924d9ef9d8dcc55dd37cced155 Mon Sep 17 00:00:00 2001
+From df33aecab5306b5c2e9dbd9a749799e8666389a6 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Mon, 29 Aug 2016 09:35:11 +0200
 Subject: [PATCH] wcnss-service: Squashed support for libwcnss-qmi
 
 Change-Id: Id1f481660c8bf190bc5551d6a08e3e7b95a6c4cc
 ---
- wcnss-service/Android.mk      | 52 ++++++++++++++++++++---
- wcnss-service/wcnss_service.c | 96 +++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 138 insertions(+), 10 deletions(-)
+ wcnss-service/Android.mk      |  52 ++++++++++++++++++---
+ wcnss-service/wcnss_service.c | 102 +++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 141 insertions(+), 13 deletions(-)
 
 diff --git a/wcnss-service/Android.mk b/wcnss-service/Android.mk
 index 16cc10e..f13a329 100644
@@ -86,7 +86,7 @@ index 16cc10e..f13a329 100644
 +
 +endif #TARGET_ARCH
 diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
-index 1d4346b..8ba426b 100644
+index 1d4346b..8920705 100644
 --- a/wcnss-service/wcnss_service.c
 +++ b/wcnss-service/wcnss_service.c
 @@ -41,8 +41,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -112,6 +112,15 @@ index 1d4346b..8ba426b 100644
  #define WLAN_ADDR_SIZE   6
  unsigned char wlan_nv_mac_addr[WLAN_ADDR_SIZE];
  #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+@@ -362,7 +367,7 @@ unsigned int convert_string_to_hex(char* string)
+ }
+ 
+ 
+-#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined (WCNSS_QMI_OSS)
+ void setup_wcnss_parameters(int *cal, int nv_mac_addr)
+ #else
+ void setup_wcnss_parameters(int *cal)
 @@ -399,7 +404,7 @@ void setup_wcnss_parameters(int *cal)
  		}
  	}
@@ -130,7 +139,7 @@ index 1d4346b..8ba426b 100644
  int check_modem_compatability(struct dev_info *mdm_detect_info)
  {
  	char args[MODEM_BASEBAND_PROPERTY_SIZE] = {0};
-@@ -501,6 +506,60 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
+@@ -501,24 +506,102 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
  }
  #endif
  
@@ -191,10 +200,11 @@ index 1d4346b..8ba426b 100644
  int main(int argc, char *argv[])
  {
  	UNUSED(argc), UNUSED(argv);
-@@ -508,17 +567,41 @@ int main(int argc, char *argv[])
+ 	int rc;
  	int fd_dev, ret_cal;
- #ifdef WCNSS_QMI
+-#ifdef WCNSS_QMI
  	int nv_mac_addr = FAILED;
++#ifdef WCNSS_QMI
 +#ifdef MDM_DETECT
  	struct dev_info mdm_detect_info;
 +#endif
@@ -242,6 +252,15 @@ index 1d4346b..8ba426b 100644
  
  	/* initialize the DMS client and request the wlan mac address */
  
+@@ -558,7 +642,7 @@ int main(int argc, char *argv[])
+ nomodem:
+ #endif
+ 
+-#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined (WCNSS_QMI_OSS)
+ 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
+ #else
+ 	setup_wcnss_parameters(&ret_cal);
 @@ -590,5 +674,9 @@ nomodem:
  
  	close(fd_dev);
