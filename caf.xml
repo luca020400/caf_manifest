@@ -47,9 +47,9 @@
   <project path="caf_manifest" name="luca020400/caf_manifest" remote="github" revision="master" />
 
   <!-- BEGIN ASUS -->
-  <project name="CyanogenMod/android_device_asus_Z00T" path="device/asus/Z00T" remote="github" revision="refs/heads/cm-14.0-caf" />
-  <project name="CyanogenMod/android_device_asus_msm8916-common" path="device/asus/msm8916-common" remote="github" revision="refs/heads/cm-14.0-caf" />
-  <project name="CyanogenMod/android_kernel_asus_msm8916" path="kernel/asus/msm8916" remote="github" revision="refs/heads/cm-14.0-caf" />
+  <project name="luca020400/android_device_asus_Z00T" path="device/asus/Z00T" remote="github" revision="refs/heads/cm-14.0-caf" />
+  <project name="luca020400/android_device_asus_msm8916-common" path="device/asus/msm8916-common" remote="github" revision="refs/heads/cm-14.0-caf" />
+  <project name="CyanogenMod/android_kernel_asus_msm8916" path="kernel/asus/msm8916" remote="github" revision="refs/heads/cm-14.0" />
   <project name="TheMuppets/proprietary_vendor_asus" path="vendor/asus" remote="github" revision="refs/heads/cm-14.0" />
   <!-- END ASUS -->
 </manifest>

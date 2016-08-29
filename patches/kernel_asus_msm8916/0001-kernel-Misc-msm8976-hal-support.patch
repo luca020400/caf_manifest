@@ -1,0 +1,2039 @@
+From 004f7240d72b177f6f36055833b4b7a39e5a87ce Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 10:15:13 +0200
+Subject: [PATCH] kernel: Misc msm8976 hal support
+
+Change-Id: I7d253864a2e6e934de55cd184c5e921aedbddff1
+---
+ drivers/misc/qcom/qdsp6v2/Makefile              |   2 +-
+ drivers/misc/qcom/qdsp6v2/audio_hwacc_effects.c | 728 ++++++++++++++++++++++++
+ drivers/video/msm/mdss/mdss_compat_utils.c      |   8 +
+ drivers/video/msm/mdss/mdss_compat_utils.h      |   1 +
+ drivers/video/msm/mdss/mdss_hdmi_edid.c         | 141 ++++-
+ drivers/video/msm/mdss/mdss_hdmi_edid.h         |   4 +-
+ drivers/video/msm/mdss/mdss_hdmi_tx.c           | 131 ++++-
+ drivers/video/msm/mdss/mdss_hdmi_tx.h           |   3 +-
+ drivers/video/msm/mdss/mdss_hdmi_util.h         |   6 +-
+ drivers/video/msm/mdss/mdss_mdp.h               |   2 +
+ drivers/video/msm/mdss/mdss_mdp_formats.h       |   4 +-
+ drivers/video/msm/mdss/mdss_mdp_rotator.c       |   2 +
+ drivers/video/msm/mdss/mdss_mdp_rotator.h       |   5 +-
+ drivers/video/msm/mdss/mdss_mdp_util.c          |   7 +-
+ include/media/msm_media_info.h                  | 462 ++++++++++++---
+ include/uapi/linux/msm_audio.h                  |  42 +-
+ include/uapi/linux/msm_mdp.h                    |   5 +
+ include/uapi/video/msm_hdmi_modes.h             |  10 +
+ 18 files changed, 1444 insertions(+), 119 deletions(-)
+ create mode 100644 drivers/misc/qcom/qdsp6v2/audio_hwacc_effects.c
+
+diff --git a/drivers/misc/qcom/qdsp6v2/Makefile b/drivers/misc/qcom/qdsp6v2/Makefile
+index 11e7377..7006ff4 100644
+--- a/drivers/misc/qcom/qdsp6v2/Makefile
++++ b/drivers/misc/qcom/qdsp6v2/Makefile
+@@ -1,5 +1,5 @@
+ obj-$(CONFIG_MSM_QDSP6V2_CODECS) += aac_in.o qcelp_in.o evrc_in.o amrnb_in.o audio_utils.o
+ obj-$(CONFIG_MSM_QDSP6V2_CODECS) += audio_wma.o audio_wmapro.o audio_aac.o audio_multi_aac.o audio_alac.o audio_ape.o audio_utils_aio.o
+ obj-$(CONFIG_MSM_QDSP6V2_CODECS) += q6audio_v2.o q6audio_v2_aio.o
+-obj-$(CONFIG_MSM_QDSP6V2_CODECS)  += audio_mp3.o audio_amrnb.o audio_amrwb.o audio_amrwbplus.o audio_evrc.o audio_qcelp.o amrwb_in.o
++obj-$(CONFIG_MSM_QDSP6V2_CODECS)  += audio_mp3.o audio_amrnb.o audio_amrwb.o audio_amrwbplus.o audio_evrc.o audio_qcelp.o amrwb_in.o audio_hwacc_effects.o
+ obj-$(CONFIG_MSM_ULTRASOUND) += ultrasound/
+diff --git a/drivers/misc/qcom/qdsp6v2/audio_hwacc_effects.c b/drivers/misc/qcom/qdsp6v2/audio_hwacc_effects.c
+new file mode 100644
+index 0000000..2d023db
+--- /dev/null
++++ b/drivers/misc/qcom/qdsp6v2/audio_hwacc_effects.c
+@@ -0,0 +1,728 @@
++/*
++ * Copyright (c) 2014, The Linux Foundation. All rights reserved.
++ *
++ * This software is licensed under the terms of the GNU General Public
++ * License version 2, as published by the Free Software Foundation, and
++ * may be copied, distributed, and modified under those terms.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++
++#include <linux/msm_audio.h>
++#include <linux/compat.h>
++#include "q6audio_common.h"
++#include "audio_utils_aio.h"
++#include <sound/msm-audio-effects-q6-v2.h>
++
++#define MAX_CHANNELS_SUPPORTED		8
++#define MAX_PP_PARAMS_SZ		128
++#define WAIT_TIMEDOUT_DURATION_SECS	1
++
++struct msm_nt_eff_all_config {
++	struct bass_boost_params bass_boost;
++	struct virtualizer_params virtualizer;
++	struct reverb_params reverb;
++	struct eq_params equalizer;
++	struct soft_volume_params saplus_vol;
++	struct soft_volume_params topo_switch_vol;
++};
++
++struct q6audio_effects {
++	wait_queue_head_t		read_wait;
++	wait_queue_head_t		write_wait;
++
++	struct audio_client             *ac;
++	struct msm_hwacc_effects_config  config;
++
++	atomic_t			in_count;
++	atomic_t			out_count;
++
++	int				opened;
++	int				started;
++	int				buf_alloc;
++	struct msm_nt_eff_all_config audio_effects;
++};
++
++static void audio_effects_init_pp(struct audio_client *ac)
++{
++	int ret = 0;
++	struct asm_softvolume_params softvol = {
++		.period = SOFT_VOLUME_PERIOD,
++		.step = SOFT_VOLUME_STEP,
++		.rampingcurve = SOFT_VOLUME_CURVE_LINEAR,
++	};
++
++	if (!ac) {
++		pr_err("%s: audio client null to init pp\n", __func__);
++		return;
++	}
++	/* Add topology specific handling here when needed in future */
++	ret = q6asm_set_softvolume_v2(ac, &softvol,
++				      SOFT_VOLUME_INSTANCE_1);
++	if (ret < 0)
++		pr_err("%s: Send SoftVolume Param failed ret=%d\n",
++			__func__, ret);
++}
++
++static void audio_effects_deinit_pp(struct audio_client *ac)
++{
++	if (!ac) {
++		pr_err("%s: audio client null to deinit pp\n", __func__);
++		return;
++	}
++	/* Add topology specific handling here when needed in future */
++}
++
++static void audio_effects_event_handler(uint32_t opcode, uint32_t token,
++				 uint32_t *payload,  void *priv)
++{
++	struct q6audio_effects *effects;
++
++	if (!payload || !priv) {
++		pr_err("%s: invalid data to handle events, payload: %p, priv: %p\n",
++			__func__, payload, priv);
++		return;
++	}
++
++	effects = (struct q6audio_effects *)priv;
++	switch (opcode) {
++	case ASM_DATA_EVENT_WRITE_DONE_V2: {
++		atomic_inc(&effects->out_count);
++		wake_up(&effects->write_wait);
++		break;
++	}
++	case ASM_DATA_EVENT_READ_DONE_V2: {
++		atomic_inc(&effects->in_count);
++		wake_up(&effects->read_wait);
++		break;
++	}
++	case APR_BASIC_RSP_RESULT: {
++		pr_debug("%s: APR_BASIC_RSP_RESULT Cmd[0x%x] Status[0x%x]\n",
++			 __func__, payload[0], payload[1]);
++		switch (payload[0]) {
++		case ASM_SESSION_CMD_RUN_V2:
++			pr_debug("ASM_SESSION_CMD_RUN_V2\n");
++			break;
++		default:
++			pr_debug("%s: Payload = [0x%x] stat[0x%x]\n",
++				 __func__, payload[0], payload[1]);
++			break;
++		}
++		break;
++	}
++	default:
++		pr_debug("%s: Unhandled Event 0x%x token = 0x%x\n",
++			 __func__, opcode, token);
++		break;
++	}
++}
++
++static int audio_effects_shared_ioctl(struct file *file, unsigned cmd,
++				      unsigned long arg)
++{
++	struct q6audio_effects *effects = file->private_data;
++	int rc = 0;
++	switch (cmd) {
++	case AUDIO_START: {
++		pr_debug("%s: AUDIO_START\n", __func__);
++
++		rc = q6asm_open_read_write_v2(effects->ac,
++					FORMAT_LINEAR_PCM,
++					FORMAT_MULTI_CHANNEL_LINEAR_PCM,
++					effects->config.meta_mode_enabled,
++					effects->config.output.bits_per_sample,
++					effects->config.overwrite_topology,
++					effects->config.topology);
++		if (rc < 0) {
++			pr_err("%s: Open failed for hw accelerated effects:rc=%d\n",
++				__func__, rc);
++			rc = -EINVAL;
++			goto ioctl_fail;
++		}
++		effects->opened = 1;
++
++		pr_debug("%s: dec buf size: %d, num_buf: %d, enc buf size: %d, num_buf: %d\n",
++			 __func__, effects->config.output.buf_size,
++			 effects->config.output.buf_size,
++			 effects->config.input.buf_size,
++			 effects->config.input.num_buf);
++		rc = q6asm_audio_client_buf_alloc_contiguous(IN, effects->ac,
++					effects->config.output.buf_size,
++					effects->config.output.num_buf);
++		if (rc < 0) {
++			pr_err("%s: Write buffer Allocation failed rc = %d\n",
++				__func__, rc);
++			rc = -ENOMEM;
++			goto ioctl_fail;
++		}
++		atomic_set(&effects->in_count, effects->config.input.num_buf);
++		rc = q6asm_audio_client_buf_alloc_contiguous(OUT, effects->ac,
++					effects->config.input.buf_size,
++					effects->config.input.num_buf);
++		if (rc < 0) {
++			pr_err("%s: Read buffer Allocation failed rc = %d\n",
++				__func__, rc);
++			rc = -ENOMEM;
++			goto readbuf_fail;
++		}
++		atomic_set(&effects->out_count, effects->config.output.num_buf);
++		effects->buf_alloc = 1;
++
++		pr_debug("%s: enc: sample_rate: %d, num_channels: %d\n",
++			 __func__, effects->config.input.sample_rate,
++			effects->config.input.num_channels);
++		rc = q6asm_enc_cfg_blk_pcm(effects->ac,
++					   effects->config.input.sample_rate,
++					   effects->config.input.num_channels);
++		if (rc < 0) {
++			pr_err("%s: pcm read block config failed\n", __func__);
++			rc = -EINVAL;
++			goto cfg_fail;
++		}
++		pr_debug("%s: dec: sample_rate: %d, num_channels: %d, bit_width: %d\n",
++			 __func__, effects->config.output.sample_rate,
++			effects->config.output.num_channels,
++			effects->config.output.bits_per_sample);
++		rc = q6asm_media_format_block_pcm_format_support(
++				effects->ac, effects->config.output.sample_rate,
++				effects->config.output.num_channels,
++				effects->config.output.bits_per_sample);
++		if (rc < 0) {
++			pr_err("%s: pcm write format block config failed\n",
++				__func__);
++			rc = -EINVAL;
++			goto cfg_fail;
++		}
++
++		audio_effects_init_pp(effects->ac);
++
++		rc = q6asm_run(effects->ac, 0x00, 0x00, 0x00);
++		if (!rc)
++			effects->started = 1;
++		else {
++			effects->started = 0;
++			pr_err("%s: ASM run state failed\n", __func__);
++		}
++		break;
++	}
++	case AUDIO_EFFECTS_WRITE: {
++		char *bufptr = NULL;
++		uint32_t idx = 0;
++		uint32_t size = 0;
++
++		if (!effects->started) {
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++
++		rc = wait_event_timeout(effects->write_wait,
++					atomic_read(&effects->out_count),
++					WAIT_TIMEDOUT_DURATION_SECS * HZ);
++		if (!rc) {
++			pr_err("%s: write wait_event_timeout\n", __func__);
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++		if (!atomic_read(&effects->out_count)) {
++			pr_err("%s: pcm stopped out_count 0\n", __func__);
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++
++		bufptr = q6asm_is_cpu_buf_avail(IN, effects->ac, &size, &idx);
++		if (bufptr) {
++			if (copy_from_user(bufptr, (void *)arg,
++					effects->config.buf_cfg.output_len)) {
++				rc = -EFAULT;
++				goto ioctl_fail;
++			}
++			rc = q6asm_write(effects->ac,
++					 effects->config.buf_cfg.output_len,
++					 0, 0, NO_TIMESTAMP);
++			if (rc < 0) {
++				rc = -EFAULT;
++				goto ioctl_fail;
++			}
++			atomic_dec(&effects->out_count);
++		} else {
++			pr_err("%s: AUDIO_EFFECTS_WRITE: Buffer dropped\n",
++				__func__);
++		}
++		break;
++	}
++	case AUDIO_EFFECTS_READ: {
++		char *bufptr = NULL;
++		uint32_t idx = 0;
++		uint32_t size = 0;
++
++		if (!effects->started) {
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++
++		atomic_set(&effects->in_count, 0);
++
++		q6asm_read_v2(effects->ac, effects->config.buf_cfg.input_len);
++		/* Read might fail initially, don't error out */
++		if (rc < 0)
++			pr_err("%s: read failed\n", __func__);
++
++		rc = wait_event_timeout(effects->read_wait,
++					atomic_read(&effects->in_count),
++					WAIT_TIMEDOUT_DURATION_SECS * HZ);
++		if (!rc) {
++			pr_err("%s: read wait_event_timeout\n", __func__);
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++		if (!atomic_read(&effects->in_count)) {
++			pr_err("%s: pcm stopped in_count 0\n", __func__);
++			rc = -EFAULT;
++			goto ioctl_fail;
++		}
++
++		bufptr = q6asm_is_cpu_buf_avail(OUT, effects->ac, &size, &idx);
++		if (bufptr) {
++			if (!((void *)arg)) {
++				rc = -EFAULT;
++				goto ioctl_fail;
++			}
++			if (copy_to_user((void *)arg, bufptr,
++					  effects->config.buf_cfg.input_len)) {
++				rc = -EFAULT;
++				goto ioctl_fail;
++			}
++		}
++		break;
++	}
++	default:
++		pr_err("%s: Invalid effects config module\n", __func__);
++		rc = -EINVAL;
++		break;
++	}
++ioctl_fail:
++	return rc;
++readbuf_fail:
++	q6asm_audio_client_buf_free_contiguous(IN,
++					effects->ac);
++	return rc;
++cfg_fail:
++	q6asm_audio_client_buf_free_contiguous(IN,
++					effects->ac);
++	q6asm_audio_client_buf_free_contiguous(OUT,
++					effects->ac);
++	effects->buf_alloc = 0;
++	return rc;
++}
++
++static long audio_effects_set_pp_param(struct q6audio_effects *effects,
++				long *values)
++{
++	int rc = 0;
++	int effects_module = values[0];
++	switch (effects_module) {
++	case VIRTUALIZER_MODULE:
++		pr_debug("%s: VIRTUALIZER_MODULE\n", __func__);
++		if (msm_audio_effects_is_effmodule_supp_in_top(
++			effects_module, effects->ac->topology))
++			msm_audio_effects_virtualizer_handler(
++				effects->ac,
++				&(effects->audio_effects.virtualizer),
++				(long *)&values[1]);
++		break;
++	case REVERB_MODULE:
++		pr_debug("%s: REVERB_MODULE\n", __func__);
++		if (msm_audio_effects_is_effmodule_supp_in_top(
++			effects_module, effects->ac->topology))
++			msm_audio_effects_reverb_handler(effects->ac,
++				 &(effects->audio_effects.reverb),
++				 (long *)&values[1]);
++		break;
++	case BASS_BOOST_MODULE:
++		pr_debug("%s: BASS_BOOST_MODULE\n", __func__);
++		if (msm_audio_effects_is_effmodule_supp_in_top(
++			effects_module, effects->ac->topology))
++			msm_audio_effects_bass_boost_handler(
++				effects->ac,
++				&(effects->audio_effects.bass_boost),
++				(long *)&values[1]);
++		break;
++	case EQ_MODULE:
++		pr_debug("%s: EQ_MODULE\n", __func__);
++		if (msm_audio_effects_is_effmodule_supp_in_top(
++			effects_module, effects->ac->topology))
++			msm_audio_effects_popless_eq_handler(
++				effects->ac,
++				&(effects->audio_effects.equalizer),
++				(long *)&values[1]);
++		break;
++	case SOFT_VOLUME_MODULE:
++		pr_debug("%s: SA PLUS VOLUME_MODULE\n", __func__);
++		msm_audio_effects_volume_handler_v2(effects->ac,
++				&(effects->audio_effects.saplus_vol),
++				(long *)&values[1], SOFT_VOLUME_INSTANCE_1);
++		break;
++	case SOFT_VOLUME2_MODULE:
++		pr_debug("%s: TOPOLOGY SWITCH VOLUME MODULE\n",
++			 __func__);
++		if (msm_audio_effects_is_effmodule_supp_in_top(
++			effects_module, effects->ac->topology))
++			msm_audio_effects_volume_handler_v2(effects->ac,
++			      &(effects->audio_effects.topo_switch_vol),
++			      (long *)&values[1], SOFT_VOLUME_INSTANCE_2);
++		break;
++	default:
++		pr_err("%s: Invalid effects config module\n", __func__);
++		rc = -EINVAL;
++	}
++	return rc;
++}
++
++static long audio_effects_ioctl(struct file *file, unsigned int cmd,
++				unsigned long arg)
++{
++	struct q6audio_effects *effects = file->private_data;
++	int rc = 0;
++	long argvalues[MAX_PP_PARAMS_SZ] = {0};
++
++	switch (cmd) {
++	case AUDIO_SET_EFFECTS_CONFIG: {
++		pr_debug("%s: AUDIO_SET_EFFECTS_CONFIG\n", __func__);
++		memset(&effects->config, 0, sizeof(effects->config));
++		if (copy_from_user(&effects->config, (void *)arg,
++				   sizeof(effects->config))) {
++			pr_err("%s: copy from user for AUDIO_SET_EFFECTS_CONFIG failed\n",
++				__func__);
++			rc = -EFAULT;
++		}
++		pr_debug("%s: write buf_size: %d, num_buf: %d, sample_rate: %d, channel: %d\n",
++			 __func__, effects->config.output.buf_size,
++			 effects->config.output.num_buf,
++			 effects->config.output.sample_rate,
++			 effects->config.output.num_channels);
++		pr_debug("%s: read buf_size: %d, num_buf: %d, sample_rate: %d, channel: %d\n",
++			 __func__, effects->config.input.buf_size,
++			 effects->config.input.num_buf,
++			 effects->config.input.sample_rate,
++			 effects->config.input.num_channels);
++		break;
++	}
++	case AUDIO_EFFECTS_SET_BUF_LEN: {
++		if (copy_from_user(&effects->config.buf_cfg, (void *)arg,
++				   sizeof(effects->config.buf_cfg))) {
++			pr_err("%s: copy from user for AUDIO_EFFECTS_SET_BUF_LEN failed\n",
++				__func__);
++			rc = -EFAULT;
++		}
++		pr_debug("%s: write buf len: %d, read buf len: %d\n",
++			 __func__, effects->config.buf_cfg.output_len,
++			 effects->config.buf_cfg.input_len);
++		break;
++	}
++	case AUDIO_EFFECTS_GET_BUF_AVAIL: {
++		struct msm_hwacc_buf_avail buf_avail;
++
++		buf_avail.input_num_avail = atomic_read(&effects->in_count);
++		buf_avail.output_num_avail = atomic_read(&effects->out_count);
++		pr_debug("%s: write buf avail: %d, read buf avail: %d\n",
++			 __func__, buf_avail.output_num_avail,
++			 buf_avail.input_num_avail);
++		if (copy_to_user((void *)arg, &buf_avail,
++				   sizeof(buf_avail))) {
++			pr_err("%s: copy to user for AUDIO_EFFECTS_GET_NUM_BUF_AVAIL failed\n",
++				__func__);
++			rc = -EFAULT;
++		}
++		break;
++	}
++	case AUDIO_EFFECTS_SET_PP_PARAMS: {
++		if (copy_from_user(argvalues, (void *)arg,
++				   MAX_PP_PARAMS_SZ*sizeof(long))) {
++			pr_err("%s: copy from user for pp params failed\n",
++				__func__);
++			return -EFAULT;
++		}
++		rc = audio_effects_set_pp_param(effects, argvalues);
++		break;
++	}
++	default:
++		pr_debug("%s: Calling shared ioctl\n", __func__);
++		rc = audio_effects_shared_ioctl(file, cmd, arg);
++		break;
++	}
++	if (rc)
++		pr_err("%s: cmd 0x%x failed\n", __func__, cmd);
++	return rc;
++}
++
++#ifdef CONFIG_COMPAT
++struct msm_hwacc_data_config32 {
++	__u32 buf_size;
++	__u32 num_buf;
++	__u32 num_channels;
++	__u8 channel_map[MAX_CHANNELS_SUPPORTED];
++	__u32 sample_rate;
++	__u32 bits_per_sample;
++};
++
++struct msm_hwacc_buf_cfg32 {
++	__u32 input_len;
++	__u32 output_len;
++};
++
++struct msm_hwacc_buf_avail32 {
++	__u32 input_num_avail;
++	__u32 output_num_avail;
++};
++
++struct msm_hwacc_effects_config32 {
++	struct msm_hwacc_data_config32 input;
++	struct msm_hwacc_data_config32 output;
++	struct msm_hwacc_buf_cfg32 buf_cfg;
++	__u32 meta_mode_enabled;
++	__u32 overwrite_topology;
++	__s32 topology;
++};
++
++enum {
++	AUDIO_SET_EFFECTS_CONFIG32 = _IOW(AUDIO_IOCTL_MAGIC, 99,
++					  struct msm_hwacc_effects_config32),
++	AUDIO_EFFECTS_SET_BUF_LEN32 = _IOW(AUDIO_IOCTL_MAGIC, 100,
++					   struct msm_hwacc_buf_cfg32),
++	AUDIO_EFFECTS_GET_BUF_AVAIL32 = _IOW(AUDIO_IOCTL_MAGIC, 101,
++					     struct msm_hwacc_buf_avail32),
++	AUDIO_EFFECTS_WRITE32 = _IOW(AUDIO_IOCTL_MAGIC, 102, compat_uptr_t),
++	AUDIO_EFFECTS_READ32 = _IOWR(AUDIO_IOCTL_MAGIC, 103, compat_uptr_t),
++	AUDIO_EFFECTS_SET_PP_PARAMS32 = _IOW(AUDIO_IOCTL_MAGIC, 104,
++					   compat_uptr_t),
++	AUDIO_START32 = _IOW(AUDIO_IOCTL_MAGIC, 0, unsigned),
++};
++
++static long audio_effects_compat_ioctl(struct file *file, unsigned int cmd,
++					unsigned long arg)
++{
++	struct q6audio_effects *effects = file->private_data;
++	int rc = 0, i;
++
++	switch (cmd) {
++	case AUDIO_SET_EFFECTS_CONFIG32: {
++		struct msm_hwacc_effects_config32 config32;
++		struct msm_hwacc_effects_config *config = &effects->config;
++		memset(&effects->config, 0, sizeof(effects->config));
++		if (copy_from_user(&config32, (void *)arg,
++				   sizeof(config32))) {
++			pr_err("%s: copy to user for AUDIO_SET_EFFECTS_CONFIG failed\n",
++				__func__);
++			rc = -EFAULT;
++			break;
++		}
++		config->input.buf_size = config32.input.buf_size;
++		config->input.num_buf = config32.input.num_buf;
++		config->input.num_channels = config32.input.num_channels;
++		config->input.sample_rate = config32.input.sample_rate;
++		config->input.bits_per_sample = config32.input.bits_per_sample;
++		config->input.buf_size = config32.input.buf_size;
++		for (i = 0; i < MAX_CHANNELS_SUPPORTED; i++)
++			config->input.channel_map[i] =
++						config32.input.channel_map[i];
++		config->output.buf_size = config32.output.buf_size;
++		config->output.num_buf = config32.output.num_buf;
++		config->output.num_channels = config32.output.num_channels;
++		config->output.sample_rate = config32.output.sample_rate;
++		config->output.bits_per_sample =
++					 config32.output.bits_per_sample;
++		config->output.buf_size = config32.output.buf_size;
++		for (i = 0; i < MAX_CHANNELS_SUPPORTED; i++)
++			config->output.channel_map[i] =
++						config32.output.channel_map[i];
++		config->buf_cfg.input_len = config32.buf_cfg.input_len;
++		config->buf_cfg.output_len = config32.buf_cfg.output_len;
++		config->meta_mode_enabled = config32.meta_mode_enabled;
++		config->overwrite_topology = config32.overwrite_topology;
++		config->topology = config32.topology;
++		pr_debug("%s: write buf_size: %d, num_buf: %d, sample_rate: %d, channels: %d\n",
++			 __func__, effects->config.output.buf_size,
++			 effects->config.output.num_buf,
++			 effects->config.output.sample_rate,
++			 effects->config.output.num_channels);
++		pr_debug("%s: read buf_size: %d, num_buf: %d, sample_rate: %d, channels: %d\n",
++			 __func__, effects->config.input.buf_size,
++			 effects->config.input.num_buf,
++			 effects->config.input.sample_rate,
++			 effects->config.input.num_channels);
++		break;
++	}
++	case AUDIO_EFFECTS_SET_BUF_LEN32: {
++		struct msm_hwacc_buf_cfg32 buf_cfg32;
++		struct msm_hwacc_effects_config *config = &effects->config;
++		if (copy_from_user(&buf_cfg32, (void *)arg,
++				   sizeof(buf_cfg32))) {
++			pr_err("%s: copy from user for AUDIO_EFFECTS_SET_BUF_LEN failed\n",
++				__func__);
++			rc = -EFAULT;
++			break;
++		}
++		config->buf_cfg.input_len = buf_cfg32.input_len;
++		config->buf_cfg.output_len = buf_cfg32.output_len;
++		pr_debug("%s: write buf len: %d, read buf len: %d\n",
++			 __func__, effects->config.buf_cfg.output_len,
++			 effects->config.buf_cfg.input_len);
++		break;
++	}
++	case AUDIO_EFFECTS_GET_BUF_AVAIL32: {
++		struct msm_hwacc_buf_avail32 buf_avail;
++
++		buf_avail.input_num_avail = atomic_read(&effects->in_count);
++		buf_avail.output_num_avail = atomic_read(&effects->out_count);
++		pr_debug("%s: write buf avail: %d, read buf avail: %d\n",
++			 __func__, buf_avail.output_num_avail,
++			 buf_avail.input_num_avail);
++		if (copy_to_user((void *)arg, &buf_avail,
++				   sizeof(buf_avail))) {
++			pr_err("%s: copy to user for AUDIO_EFFECTS_GET_NUM_BUF_AVAIL failed\n",
++				__func__);
++			rc = -EFAULT;
++		}
++		break;
++	}
++	case AUDIO_EFFECTS_SET_PP_PARAMS32: {
++		long argvalues[MAX_PP_PARAMS_SZ] = {0};
++		int argvalues32[MAX_PP_PARAMS_SZ] = {0};
++
++		if (copy_from_user(argvalues32, (void *)arg,
++				   MAX_PP_PARAMS_SZ*sizeof(int))) {
++			pr_err("%s: copy from user failed for pp params\n",
++				__func__);
++			return -EFAULT;
++		}
++		for (i = 0; i < MAX_PP_PARAMS_SZ; i++)
++			argvalues[i] = argvalues32[i];
++
++		rc = audio_effects_set_pp_param(effects, argvalues);
++		break;
++	}
++	case AUDIO_START32: {
++		rc = audio_effects_shared_ioctl(file, AUDIO_START, arg);
++		break;
++	}
++	case AUDIO_EFFECTS_WRITE32: {
++		rc = audio_effects_shared_ioctl(file, AUDIO_EFFECTS_WRITE, arg);
++		break;
++	}
++	case AUDIO_EFFECTS_READ32: {
++		rc = audio_effects_shared_ioctl(file, AUDIO_EFFECTS_READ, arg);
++		break;
++	}
++	default:
++		pr_debug("%s: unhandled ioctl\n", __func__);
++		rc = -EINVAL;
++		break;
++	}
++	return rc;
++}
++#endif
++
++static int audio_effects_release(struct inode *inode, struct file *file)
++{
++	struct q6audio_effects *effects = file->private_data;
++	int rc = 0;
++	if (!effects) {
++		pr_err("%s: effect is NULL\n", __func__);
++		return -EINVAL;
++	}
++	if (effects->opened) {
++		rc = wait_event_timeout(effects->write_wait,
++					atomic_read(&effects->out_count),
++					WAIT_TIMEDOUT_DURATION_SECS * HZ);
++		if (!rc)
++			pr_err("%s: write wait_event_timeout failed\n",
++				__func__);
++		rc = wait_event_timeout(effects->read_wait,
++					atomic_read(&effects->in_count),
++					WAIT_TIMEDOUT_DURATION_SECS * HZ);
++		if (!rc)
++			pr_err("%s: read wait_event_timeout failed\n",
++				__func__);
++		rc = q6asm_cmd(effects->ac, CMD_CLOSE);
++		if (rc < 0)
++			pr_err("%s[%p]:Failed to close the session rc=%d\n",
++				__func__, effects, rc);
++		effects->opened = 0;
++		effects->started = 0;
++
++		audio_effects_deinit_pp(effects->ac);
++	}
++
++	if (effects->buf_alloc) {
++		q6asm_audio_client_buf_free_contiguous(IN, effects->ac);
++		q6asm_audio_client_buf_free_contiguous(OUT, effects->ac);
++	}
++	q6asm_audio_client_free(effects->ac);
++
++	kfree(effects);
++
++	pr_debug("%s: close session success\n", __func__);
++	return rc;
++}
++
++static int audio_effects_open(struct inode *inode, struct file *file)
++{
++	struct q6audio_effects *effects;
++	int rc = 0;
++
++	effects = kzalloc(sizeof(struct q6audio_effects), GFP_KERNEL);
++	if (!effects) {
++		pr_err("%s: Could not allocate memory for hw acc effects driver\n",
++			__func__);
++		return -ENOMEM;
++	}
++
++	effects->ac = q6asm_audio_client_alloc(
++					(app_cb)audio_effects_event_handler,
++					(void *)effects);
++	if (!effects->ac) {
++		pr_err("%s: Could not allocate memory for audio client\n",
++			__func__);
++		kfree(effects);
++		return -ENOMEM;
++	}
++
++	init_waitqueue_head(&effects->read_wait);
++	init_waitqueue_head(&effects->write_wait);
++
++	effects->opened = 0;
++	effects->started = 0;
++	effects->buf_alloc = 0;
++	file->private_data = effects;
++	pr_debug("%s: open session success\n", __func__);
++	return rc;
++}
++
++static const struct file_operations audio_effects_fops = {
++	.owner = THIS_MODULE,
++	.open = audio_effects_open,
++	.release = audio_effects_release,
++	.unlocked_ioctl = audio_effects_ioctl,
++#ifdef CONFIG_COMPAT
++	.compat_ioctl = audio_effects_compat_ioctl,
++#endif
++};
++
++struct miscdevice audio_effects_misc = {
++	.minor = MISC_DYNAMIC_MINOR,
++	.name = "msm_hweffects",
++	.fops = &audio_effects_fops,
++};
++
++static int __init audio_effects_init(void)
++{
++	return misc_register(&audio_effects_misc);
++}
++
++device_initcall(audio_effects_init);
++MODULE_DESCRIPTION("Audio hardware accelerated effects driver");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/video/msm/mdss/mdss_compat_utils.c b/drivers/video/msm/mdss/mdss_compat_utils.c
+index 5e7f690..0cf82f9 100644
+--- a/drivers/video/msm/mdss/mdss_compat_utils.c
++++ b/drivers/video/msm/mdss/mdss_compat_utils.c
+@@ -2447,6 +2447,10 @@ static int __to_user_mdp_overlay(struct mdp_overlay32 __user *ov32,
+ 	if (ret)
+ 		return -EFAULT;
+ 
++	ret = put_user(ov->frame_rate, &ov32->frame_rate);
++	if (ret)
++		return -EFAULT;
++
+ 	return 0;
+ }
+ 
+@@ -2507,6 +2511,10 @@ static int __from_user_mdp_overlay(struct mdp_overlay *ov,
+ 	    put_user(data, &ov->color_space))
+ 		return -EFAULT;
+ 
++	if (get_user(data, &ov32->frame_rate) ||
++	    put_user(data, &ov->frame_rate))
++		return -EFAULT;
++
+ 	return 0;
+ }
+ 
+diff --git a/drivers/video/msm/mdss/mdss_compat_utils.h b/drivers/video/msm/mdss/mdss_compat_utils.h
+index 9f9fdef..930b773 100644
+--- a/drivers/video/msm/mdss/mdss_compat_utils.h
++++ b/drivers/video/msm/mdss/mdss_compat_utils.h
+@@ -402,6 +402,7 @@ struct mdp_overlay32 {
+ 	struct mdp_overlay_pp_params32 overlay_pp_cfg;
+ 	struct mdp_scale_data scale;
+ 	uint8_t color_space;
++	uint32_t frame_rate;
+ };
+ 
+ struct mdp_overlay_list32 {
+diff --git a/drivers/video/msm/mdss/mdss_hdmi_edid.c b/drivers/video/msm/mdss/mdss_hdmi_edid.c
+index 3942229..686bc23 100644
+--- a/drivers/video/msm/mdss/mdss_hdmi_edid.c
++++ b/drivers/video/msm/mdss/mdss_hdmi_edid.c
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -77,6 +77,7 @@ struct hdmi_edid_ctrl {
+ 	u16 audio_latency;
+ 	u16 video_latency;
+ 	u32 present_3d;
++	u32 page_id;
+ 	u8 audio_data_block[MAX_AUDIO_DATA_BLOCK_SIZE];
+ 	int adb_size;
+ 	u8 spkr_alloc_data_block[MAX_SPKR_ALLOC_DATA_BLOCK_SIZE];
+@@ -206,6 +207,102 @@ static ssize_t hdmi_edid_sysfs_rda_modes(struct device *dev,
+ } /* hdmi_edid_sysfs_rda_modes */
+ static DEVICE_ATTR(edid_modes, S_IRUGO, hdmi_edid_sysfs_rda_modes, NULL);
+ 
++static ssize_t hdmi_edid_sysfs_wta_res_info(struct device *dev,
++	struct device_attribute *attr, const char *buf, size_t count)
++{
++	int rc, page_id;
++	ssize_t ret = strnlen(buf, PAGE_SIZE);
++	struct hdmi_edid_ctrl *edid_ctrl =
++		hdmi_get_featuredata_from_sysfs_dev(dev, HDMI_TX_FEAT_EDID);
++
++	if (!edid_ctrl) {
++		DEV_ERR("%s: invalid input\n", __func__);
++		return -EINVAL;
++	}
++
++	rc = kstrtoint(buf, 10, &page_id);
++	if (rc) {
++		DEV_ERR("%s: kstrtoint failed. rc=%d\n", __func__, rc);
++		return rc;
++	}
++
++	edid_ctrl->page_id = page_id;
++
++	DEV_DBG("%s: %d\n", __func__, edid_ctrl->page_id);
++	return ret;
++}
++
++static ssize_t hdmi_edid_sysfs_rda_res_info(struct device *dev,
++	struct device_attribute *attr, char *buf)
++{
++	ssize_t ret;
++	u32 *video_mode;
++	u32 no_of_elem;
++	u32 i = 0, j, page;
++	char *buf_dbg = buf;
++	struct msm_hdmi_mode_timing_info info = {0};
++	struct hdmi_edid_ctrl *edid_ctrl =
++		hdmi_get_featuredata_from_sysfs_dev(dev, HDMI_TX_FEAT_EDID);
++	u32 size_to_write = sizeof(info);
++
++	if (!edid_ctrl) {
++		DEV_ERR("%s: invalid input\n", __func__);
++		return -EINVAL;
++	}
++
++	video_mode = edid_ctrl->sink_data.disp_mode_list;
++	no_of_elem = edid_ctrl->sink_data.num_of_elements;
++
++	if (edid_ctrl->page_id > MSM_HDMI_INIT_RES_PAGE) {
++		page = MSM_HDMI_INIT_RES_PAGE;
++		while (page < edid_ctrl->page_id) {
++			j = 1;
++			while (sizeof(info) * j < PAGE_SIZE) {
++				i++;
++				j++;
++				video_mode++;
++			}
++			page++;
++		}
++	}
++
++	for (; i < no_of_elem && size_to_write < PAGE_SIZE; i++) {
++		ret = hdmi_get_supported_mode(&info,
++			edid_ctrl->init_data.ds_data,
++			*video_mode++);
++
++		if (ret || !info.supported)
++			continue;
++
++		memcpy(buf, &info, sizeof(info));
++
++		buf += sizeof(info);
++		size_to_write += sizeof(info);
++	}
++
++	for (i = sizeof(info); i < size_to_write; i += sizeof(info)) {
++		struct msm_hdmi_mode_timing_info info_dbg = {0};
++
++		memcpy(&info_dbg, buf_dbg, sizeof(info_dbg));
++
++		DEV_DBG("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
++			info_dbg.video_format, info_dbg.active_h,
++			info_dbg.front_porch_h, info_dbg.pulse_width_h,
++			info_dbg.back_porch_h, info_dbg.active_low_h,
++			info_dbg.active_v, info_dbg.front_porch_v,
++			info_dbg.pulse_width_v, info_dbg.back_porch_v,
++			info_dbg.active_low_v, info_dbg.pixel_freq,
++			info_dbg.refresh_rate, info_dbg.interlaced,
++			info_dbg.supported, info_dbg.ar);
++
++		buf_dbg += sizeof(info_dbg);
++	}
++
++	return size_to_write - sizeof(info);
++}
++static DEVICE_ATTR(res_info, S_IRUGO | S_IWUSR, hdmi_edid_sysfs_rda_res_info,
++	hdmi_edid_sysfs_wta_res_info);
++
+ static ssize_t hdmi_edid_sysfs_rda_audio_latency(struct device *dev,
+ 	struct device_attribute *attr, char *buf)
+ {
+@@ -304,11 +401,15 @@ static ssize_t hdmi_edid_sysfs_rda_3d_modes(struct device *dev,
+ 	if (edid_ctrl->sink_data.num_of_elements) {
+ 		u32 *video_mode = edid_ctrl->sink_data.disp_mode_list;
+ 		u32 *video_3d_mode = edid_ctrl->sink_data.disp_3d_mode_list;
+-
+ 		for (i = 0; i < edid_ctrl->sink_data.num_of_elements; ++i) {
+-			ret = hdmi_get_video_3d_fmt_2string(*video_3d_mode++,
++			if (*video_3d_mode == 0) {
++				video_3d_mode++;
++				video_mode++;
++				continue;
++			}
++			hdmi_get_video_3d_fmt_2string(*video_3d_mode++,
+ 				buff_3d, sizeof(buff_3d));
+-			if (ret > 0)
++			if (ret)
+ 				ret += scnprintf(buf + ret, PAGE_SIZE - ret,
+ 					",%d=%s", *video_mode++,
+ 					buff_3d);
+@@ -317,9 +418,6 @@ static ssize_t hdmi_edid_sysfs_rda_3d_modes(struct device *dev,
+ 					"%d=%s", *video_mode++,
+ 					buff_3d);
+ 		}
+-	} else {
+-		ret += scnprintf(buf + ret, PAGE_SIZE - ret, "%d",
+-			edid_ctrl->video_resolution);
+ 	}
+ 
+ 	DEV_DBG("%s: '%s'\n", __func__, buf);
+@@ -359,6 +457,7 @@ static struct attribute *hdmi_edid_fs_attrs[] = {
+ 	&dev_attr_spkr_alloc_data_block.attr,
+ 	&dev_attr_edid_audio_latency.attr,
+ 	&dev_attr_edid_video_latency.attr,
++	&dev_attr_res_info.attr,
+ 	NULL,
+ };
+ 
+@@ -1469,6 +1568,8 @@ int hdmi_edid_read(void *input)
+ 		return -EINVAL;
+ 	}
+ 
++	edid_ctrl->page_id = MSM_HDMI_INIT_RES_PAGE;
++
+ 	edid_buf = edid_ctrl->edid_buf;
+ 
+ 	edid_ctrl->pt_scan_info = 0;
+@@ -1649,6 +1750,32 @@ u32 hdmi_edid_get_sink_mode(void *input)
+ 	return edid_ctrl->sink_mode;
+ } /* hdmi_edid_get_sink_mode */
+ 
++bool hdmi_edid_is_s3d_mode_supported(void *input, u32 video_mode, u32 s3d_mode)
++{
++	int i;
++	bool ret = false;
++	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
++	struct hdmi_edid_sink_data *sink_data;
++
++	if (!edid_ctrl) {
++		DEV_ERR("%s: invalid input\n", __func__);
++		return false;
++	}
++	sink_data = &edid_ctrl->sink_data;
++	for (i = 0; i < sink_data->num_of_elements; ++i) {
++		if (sink_data->disp_mode_list[i] != video_mode)
++			continue;
++		if (sink_data->disp_3d_mode_list[i] & (1 << s3d_mode))
++			ret = true;
++		else
++			DEV_DBG("%s: return false: vic=%d caps=%x s3d=%d\n",
++				__func__, video_mode,
++				sink_data->disp_3d_mode_list[i], s3d_mode);
++		break;
++	}
++	return ret;
++}
++
+ int hdmi_edid_get_audio_blk(void *input, struct msm_hdmi_audio_edid_blk *blk)
+ {
+ 	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+diff --git a/drivers/video/msm/mdss/mdss_hdmi_edid.h b/drivers/video/msm/mdss/mdss_hdmi_edid.h
+index d14ae32..344b24f 100644
+--- a/drivers/video/msm/mdss/mdss_hdmi_edid.h
++++ b/drivers/video/msm/mdss/mdss_hdmi_edid.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -32,5 +32,7 @@ int hdmi_edid_get_audio_blk(void *edid_ctrl,
+ void hdmi_edid_set_video_resolution(void *edid_ctrl, u32 resolution);
+ void hdmi_edid_deinit(void *edid_ctrl);
+ void *hdmi_edid_init(struct hdmi_edid_init_data *init_data);
++bool hdmi_edid_is_s3d_mode_supported(void *input,
++	u32 video_mode, u32 s3d_mode);
+ 
+ #endif /* __HDMI_EDID_H__ */
+diff --git a/drivers/video/msm/mdss/mdss_hdmi_tx.c b/drivers/video/msm/mdss/mdss_hdmi_tx.c
+index 90f9267..bb7528c 100644
+--- a/drivers/video/msm/mdss/mdss_hdmi_tx.c
++++ b/drivers/video/msm/mdss/mdss_hdmi_tx.c
+@@ -169,6 +169,8 @@ static void hdmi_tx_hpd_off(struct hdmi_tx_ctrl *hdmi_ctrl);
+ static int hdmi_tx_enable_power(struct hdmi_tx_ctrl *hdmi_ctrl,
+ 	enum hdmi_tx_power_module_type module, int enable);
+ static int hdmi_tx_audio_setup(struct hdmi_tx_ctrl *hdmi_ctrl);
++static void hdmi_tx_set_vendor_specific_infoframe(
++	struct hdmi_tx_ctrl *hdmi_ctrl);
+ 
+ static struct mdss_hw hdmi_tx_hw = {
+ 	.hw_ndx = MDSS_HW_HDMI,
+@@ -992,6 +994,66 @@ static ssize_t hdmi_tx_sysfs_wta_avi_cn_bits(struct device *dev,
+ 	return ret;
+ } /* hdmi_tx_sysfs_wta_cn_bits */
+ 
++static ssize_t hdmi_tx_sysfs_wta_s3d_mode(struct device *dev,
++	struct device_attribute *attr, const char *buf, size_t count)
++{
++	int rc, s3d_mode;
++	ssize_t ret = strnlen(buf, PAGE_SIZE);
++	struct hdmi_tx_ctrl *hdmi_ctrl = NULL;
++
++	hdmi_ctrl = hdmi_tx_get_drvdata_from_sysfs_dev(dev);
++
++	if (!hdmi_ctrl) {
++		DEV_ERR("%s: invalid input\n", __func__);
++		return -EINVAL;
++	}
++
++	rc = kstrtoint(buf, 10, &s3d_mode);
++	if (rc) {
++		DEV_ERR("%s: kstrtoint failed. rc=%d\n", __func__, rc);
++		return rc;
++	}
++
++	if (s3d_mode < HDMI_S3D_NONE || s3d_mode >= HDMI_S3D_MAX) {
++		DEV_ERR("%s: invalide s3d mode = %d\n", __func__, s3d_mode);
++		return -EINVAL;
++	}
++
++	if (s3d_mode > HDMI_S3D_NONE &&
++		!hdmi_edid_is_s3d_mode_supported(
++			hdmi_ctrl->feature_data[HDMI_TX_FEAT_EDID],
++			hdmi_ctrl->video_resolution,
++			s3d_mode)) {
++		DEV_ERR("%s: s3d mode not supported in current video mode\n",
++			__func__);
++		return -EPERM;
++	}
++
++	hdmi_ctrl->s3d_mode = s3d_mode;
++	hdmi_tx_set_vendor_specific_infoframe(hdmi_ctrl);
++
++	DEV_DBG("%s: %d\n", __func__, hdmi_ctrl->s3d_mode);
++	return ret;
++}
++
++static ssize_t hdmi_tx_sysfs_rda_s3d_mode(struct device *dev,
++	struct device_attribute *attr, char *buf)
++{
++	ssize_t ret;
++	struct hdmi_tx_ctrl *hdmi_ctrl =
++		hdmi_tx_get_drvdata_from_sysfs_dev(dev);
++
++	if (!hdmi_ctrl) {
++		DEV_ERR("%s: invalid input\n", __func__);
++		return -EINVAL;
++	}
++
++	ret = snprintf(buf, PAGE_SIZE, "%d\n", hdmi_ctrl->s3d_mode);
++	DEV_DBG("%s: '%d'\n", __func__, hdmi_ctrl->s3d_mode);
++
++	return ret;
++}
++
+ static DEVICE_ATTR(connected, S_IRUGO, hdmi_tx_sysfs_rda_connected, NULL);
+ static DEVICE_ATTR(video_mode, S_IRUGO, hdmi_tx_sysfs_rda_video_mode, NULL);
+ static DEVICE_ATTR(hpd, S_IRUGO | S_IWUSR, hdmi_tx_sysfs_rda_hpd,
+@@ -1003,6 +1065,8 @@ static DEVICE_ATTR(product_description, S_IRUGO | S_IWUSR,
+ 	hdmi_tx_sysfs_wta_product_description);
+ static DEVICE_ATTR(avi_itc, S_IWUSR, NULL, hdmi_tx_sysfs_wta_avi_itc);
+ static DEVICE_ATTR(avi_cn0_1, S_IWUSR, NULL, hdmi_tx_sysfs_wta_avi_cn_bits);
++static DEVICE_ATTR(s3d_mode, S_IRUGO | S_IWUSR, hdmi_tx_sysfs_rda_s3d_mode,
++	hdmi_tx_sysfs_wta_s3d_mode);
+ 
+ static struct attribute *hdmi_tx_fs_attrs[] = {
+ 	&dev_attr_connected.attr,
+@@ -1012,6 +1076,7 @@ static struct attribute *hdmi_tx_fs_attrs[] = {
+ 	&dev_attr_product_description.attr,
+ 	&dev_attr_avi_itc.attr,
+ 	&dev_attr_avi_cn0_1.attr,
++	&dev_attr_s3d_mode.attr,
+ 	NULL,
+ };
+ static struct attribute_group hdmi_tx_fs_attrs_group = {
+@@ -1624,14 +1689,13 @@ static void hdmi_tx_set_avi_infoframe(struct hdmi_tx_ctrl *hdmi_ctrl)
+ 		DSS_REG_R(io, HDMI_INFOFRAME_CTRL0) | BIT(1) | BIT(0));
+ } /* hdmi_tx_set_avi_infoframe */
+ 
+-/* todo: add 3D support */
+ static void hdmi_tx_set_vendor_specific_infoframe(
+ 	struct hdmi_tx_ctrl *hdmi_ctrl)
+ {
+ 	int i;
+ 	u8 vs_iframe[9]; /* two header + length + 6 data */
+ 	u32 sum, reg_val;
+-	u32 hdmi_vic, hdmi_video_format;
++	u32 hdmi_vic, hdmi_video_format, s3d_struct = 0;
+ 	struct dss_io_data *io = NULL;
+ 
+ 	if (!hdmi_ctrl) {
+@@ -1657,31 +1721,50 @@ static void hdmi_tx_set_vendor_specific_infoframe(
+ 	vs_iframe[5] = 0x0C;
+ 	vs_iframe[6] = 0x00;
+ 
+-	hdmi_video_format = 0x1;
+-	switch (hdmi_ctrl->video_resolution) {
+-	case HDMI_VFRMT_3840x2160p30_16_9:
+-		hdmi_vic = 0x1;
+-		break;
+-	case HDMI_VFRMT_3840x2160p25_16_9:
+-		hdmi_vic = 0x2;
+-		break;
+-	case HDMI_VFRMT_3840x2160p24_16_9:
+-		hdmi_vic = 0x3;
+-		break;
+-	case HDMI_VFRMT_4096x2160p24_16_9:
+-		hdmi_vic = 0x4;
+-		break;
+-	default:
+-		hdmi_video_format = 0x0;
+-		hdmi_vic = 0x0;
++	if ((hdmi_ctrl->s3d_mode != HDMI_S3D_NONE) &&
++		hdmi_edid_is_s3d_mode_supported(
++			hdmi_ctrl->feature_data[HDMI_TX_FEAT_EDID],
++			hdmi_ctrl->video_resolution,
++			hdmi_ctrl->s3d_mode)) {
++		switch (hdmi_ctrl->s3d_mode) {
++		case HDMI_S3D_SIDE_BY_SIDE:
++			s3d_struct = 0x8;
++			break;
++		case HDMI_S3D_TOP_AND_BOTTOM:
++			s3d_struct = 0x6;
++			break;
++		default:
++			s3d_struct = 0;
++		}
++		hdmi_video_format = 0x2;
++		hdmi_vic = 0;
++		/* PB5: 3D_Structure[7:4], Reserved[3:0] */
++		vs_iframe[8] = s3d_struct << 4;
++	} else {
++		hdmi_video_format = 0x1;
++		switch (hdmi_ctrl->video_resolution) {
++		case HDMI_VFRMT_3840x2160p30_16_9:
++			hdmi_vic = 0x1;
++			break;
++		case HDMI_VFRMT_3840x2160p25_16_9:
++			hdmi_vic = 0x2;
++			break;
++		case HDMI_VFRMT_3840x2160p24_16_9:
++			hdmi_vic = 0x3;
++			break;
++		case HDMI_VFRMT_4096x2160p24_16_9:
++			hdmi_vic = 0x4;
++			break;
++		default:
++			hdmi_video_format = 0x0;
++			hdmi_vic = 0x0;
++		}
++		/* PB5: HDMI_VIC */
++		vs_iframe[8] = hdmi_vic;
+ 	}
+-
+ 	/* PB4: HDMI Video Format[7:5],  Reserved[4:0] */
+ 	vs_iframe[7] = (hdmi_video_format << 5) & 0xE0;
+ 
+-	/* PB5: HDMI_VIC or 3D_Structure[7:4], Reserved[3:0] */
+-	vs_iframe[8] = hdmi_vic;
+-
+ 	/* compute checksum */
+ 	sum = 0;
+ 	for (i = 0; i < 9; i++)
+@@ -1691,7 +1774,7 @@ static void hdmi_tx_set_vendor_specific_infoframe(
+ 	sum = 256 - sum;
+ 	vs_iframe[3] = (u8)sum;
+ 
+-	reg_val = (hdmi_vic << 16) | (vs_iframe[3] << 8) |
++	reg_val = (s3d_struct << 24) | (hdmi_vic << 16) | (vs_iframe[3] << 8) |
+ 		(hdmi_video_format << 5) | vs_iframe[2];
+ 	DSS_REG_W(io, HDMI_VENSPEC_INFO0, reg_val);
+ 
+diff --git a/drivers/video/msm/mdss/mdss_hdmi_tx.h b/drivers/video/msm/mdss/mdss_hdmi_tx.h
+index 384b43a..de390c5 100644
+--- a/drivers/video/msm/mdss/mdss_hdmi_tx.h
++++ b/drivers/video/msm/mdss/mdss_hdmi_tx.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -112,6 +112,7 @@ struct hdmi_tx_ctrl {
+ 	void *downstream_data;
+ 
+ 	void *feature_data[HDMI_TX_FEAT_MAX];
++	u32 s3d_mode;
+ };
+ 
+ #endif /* __MDSS_HDMI_TX_H__ */
+diff --git a/drivers/video/msm/mdss/mdss_hdmi_util.h b/drivers/video/msm/mdss/mdss_hdmi_util.h
+index 1cfec59..21f9455 100644
+--- a/drivers/video/msm/mdss/mdss_hdmi_util.h
++++ b/drivers/video/msm/mdss/mdss_hdmi_util.h
+@@ -225,9 +225,9 @@
+ #define HDCP_KSV_LSB                     (0x000060D8)
+ #define HDCP_KSV_MSB                     (0x000060DC)
+ 
+-#define TOP_AND_BOTTOM		0x10
+-#define FRAME_PACKING		0x20
+-#define SIDE_BY_SIDE_HALF	0x40
++#define TOP_AND_BOTTOM		(1 << HDMI_S3D_TOP_AND_BOTTOM)
++#define FRAME_PACKING		(1 << HDMI_S3D_FRAME_PACKING)
++#define SIDE_BY_SIDE_HALF	(1 << HDMI_S3D_SIDE_BY_SIDE)
+ 
+ #define LPASS_LPAIF_RDDMA_CTL0           (0xFE152000)
+ #define LPASS_LPAIF_RDDMA_PER_CNT0       (0x00000014)
+diff --git a/drivers/video/msm/mdss/mdss_mdp.h b/drivers/video/msm/mdss/mdss_mdp.h
+index a6242fa..96d74ad 100644
+--- a/drivers/video/msm/mdss/mdss_mdp.h
++++ b/drivers/video/msm/mdss/mdss_mdp.h
+@@ -469,6 +469,8 @@ struct mdss_mdp_pipe {
+ 	u8 chroma_sample_h;
+ 	u8 chroma_sample_v;
+ 	u8 csc_coeff_set;
++
++	u32 frame_rate;
+ };
+ 
+ struct mdss_mdp_writeback_arg {
+diff --git a/drivers/video/msm/mdss/mdss_mdp_formats.h b/drivers/video/msm/mdss/mdss_mdp_formats.h
+index ba67808..ce46b4a 100644
+--- a/drivers/video/msm/mdss/mdss_mdp_formats.h
++++ b/drivers/video/msm/mdss/mdss_mdp_formats.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -230,6 +230,8 @@ static struct mdss_mdp_format_params mdss_mdp_format_map[] = {
+ 	FMT_YUV_PSEUDO(MDP_Y_CBCR_H2V2, MDSS_MDP_CHROMA_420, C1_B_Cb, C2_R_Cr),
+ 	FMT_YUV_PSEUDO(MDP_Y_CBCR_H2V2_VENUS, MDSS_MDP_CHROMA_420,
+ 		       C1_B_Cb, C2_R_Cr),
++	FMT_YUV_PSEUDO(MDP_Y_CRCB_H2V2_VENUS, MDSS_MDP_CHROMA_420,
++			C2_R_Cr, C1_B_Cb),
+ 
+ 	FMT_YUV_PLANR(MDP_Y_CB_CR_H2V2, MDSS_MDP_CHROMA_420, C2_R_Cr, C1_B_Cb),
+ 	FMT_YUV_PLANR(MDP_Y_CR_CB_H2V2, MDSS_MDP_CHROMA_420, C1_B_Cb, C2_R_Cr),
+diff --git a/drivers/video/msm/mdss/mdss_mdp_rotator.c b/drivers/video/msm/mdss/mdss_mdp_rotator.c
+index 9c41213..36a1feb 100644
+--- a/drivers/video/msm/mdss/mdss_mdp_rotator.c
++++ b/drivers/video/msm/mdss/mdss_mdp_rotator.c
+@@ -224,6 +224,7 @@ static int __mdss_mdp_rotator_to_pipe(struct mdss_mdp_rotator_session *rot,
+ 	pipe->dst = rot->src_rect;
+ 	pipe->dst.x = 0;
+ 	pipe->dst.y = 0;
++	pipe->frame_rate = rot->frame_rate;
+ 	pipe->params_changed++;
+ 	rot->params_changed = 0;
+ 
+@@ -569,6 +570,7 @@ int mdss_mdp_rotator_setup(struct msm_fb_data_type *mfd,
+ 	rot->src_rect.y = req->src_rect.y;
+ 	rot->src_rect.w = req->src_rect.w;
+ 	rot->src_rect.h = req->src_rect.h;
++	rot->frame_rate = req->frame_rate;
+ 
+ 	if (mdp5_data->mdata->has_rot_dwnscale &&
+ 			mdss_mdp_calc_dnsc_factor(req, rot)) {
+diff --git a/drivers/video/msm/mdss/mdss_mdp_rotator.h b/drivers/video/msm/mdss/mdss_mdp_rotator.h
+index b3360c0..dc1b3c7 100644
+--- a/drivers/video/msm/mdss/mdss_mdp_rotator.h
++++ b/drivers/video/msm/mdss/mdss_mdp_rotator.h
+@@ -1,4 +1,4 @@
+-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
++/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License version 2 and
+@@ -51,6 +51,8 @@ struct mdss_mdp_rotator_session {
+ 	struct mdss_mdp_rotator_session *next;
+ 	struct msm_sync_pt_data *rot_sync_pt_data;
+ 	struct work_struct commit_work;
++
++	u32 frame_rate;
+ };
+ 
+ static inline u32 mdss_mdp_get_rotator_dst_format(u32 in_format, u32 in_rot90,
+@@ -69,6 +71,7 @@ static inline u32 mdss_mdp_get_rotator_dst_format(u32 in_format, u32 in_rot90,
+ 		else
+ 			return in_format;
+ 	case MDP_Y_CBCR_H2V2_VENUS:
++	case MDP_Y_CRCB_H2V2_VENUS:
+ 	case MDP_Y_CBCR_H2V2:
+ 		if (in_rot90)
+ 			return MDP_Y_CRCB_H2V2;
+diff --git a/drivers/video/msm/mdss/mdss_mdp_util.c b/drivers/video/msm/mdss/mdss_mdp_util.c
+index c62acf3..10f430b 100644
+--- a/drivers/video/msm/mdss/mdss_mdp_util.c
++++ b/drivers/video/msm/mdss/mdss_mdp_util.c
+@@ -366,8 +366,11 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
+ 			ps->num_planes = 1;
+ 			ps->plane_size[0] = w * h * bpp;
+ 			ps->ystride[0] = w * bpp;
+-		} else if (format == MDP_Y_CBCR_H2V2_VENUS) {
+-			int cf = COLOR_FMT_NV12;
++		} else if (format == MDP_Y_CBCR_H2V2_VENUS ||
++				format == MDP_Y_CRCB_H2V2_VENUS) {
++
++			int cf = (format == MDP_Y_CBCR_H2V2_VENUS) ?
++					COLOR_FMT_NV12 : COLOR_FMT_NV21;
+ 			ps->num_planes = 2;
+ 			ps->ystride[0] = VENUS_Y_STRIDE(cf, w);
+ 			ps->ystride[1] = VENUS_UV_STRIDE(cf, w);
+diff --git a/include/media/msm_media_info.h b/include/media/msm_media_info.h
+index 91878a7..f6db826 100644
+--- a/include/media/msm_media_info.h
++++ b/include/media/msm_media_info.h
+@@ -5,6 +5,10 @@
+ #define MSM_MEDIA_ALIGN(__sz, __align) (((__sz) + (__align-1)) & (~(__align-1)))
+ #endif
+ 
++#ifndef MSM_MEDIA_ROUNDUP
++#define MSM_MEDIA_ROUNDUP(__sz, __r) (((__sz) + ((__r) - 1)) / (__r))
++#endif
++
+ enum color_fmts {
+ 	/* Venus NV12:
+ 	 * YUV 4:2:0 image with a plane of 8 bit Y samples followed
+@@ -13,25 +17,25 @@ enum color_fmts {
+ 	 *
+ 	 * <-------- Y/UV_Stride -------->
+ 	 * <------- Width ------->
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  ^           ^
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  Height      |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |          Y_Scanlines
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  V           |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              V
+-	 * U V U V U V U V U V U V X X X X  ^
+-	 * U V U V U V U V U V U V X X X X  |
+-	 * U V U V U V U V U V U V X X X X  |
+-	 * U V U V U V U V U V U V X X X X  UV_Scanlines
+-	 * X X X X X X X X X X X X X X X X  |
+-	 * X X X X X X X X X X X X X X X X  V
+-	 * X X X X X X X X X X X X X X X X  --> Buffer size alignment
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  ^           ^
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  Height      |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |          Y_Scanlines
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  V           |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              V
++	 * U V U V U V U V U V U V . . . .  ^
++	 * U V U V U V U V U V U V . . . .  |
++	 * U V U V U V U V U V U V . . . .  |
++	 * U V U V U V U V U V U V . . . .  UV_Scanlines
++	 * . . . . . . . . . . . . . . . .  |
++	 * . . . . . . . . . . . . . . . .  V
++	 * . . . . . . . . . . . . . . . .  --> Buffer size alignment
+ 	 *
+ 	 * Y_Stride : Width aligned to 128
+ 	 * UV_Stride : Width aligned to 128
+@@ -50,25 +54,25 @@ enum color_fmts {
+ 	 *
+ 	 * <-------- Y/UV_Stride -------->
+ 	 * <------- Width ------->
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  ^           ^
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  Height      |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |          Y_Scanlines
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  V           |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              |
+-	 * X X X X X X X X X X X X X X X X              V
+-	 * V U V U V U V U V U V U X X X X  ^
+-	 * V U V U V U V U V U V U X X X X  |
+-	 * V U V U V U V U V U V U X X X X  |
+-	 * V U V U V U V U V U V U X X X X  UV_Scanlines
+-	 * X X X X X X X X X X X X X X X X  |
+-	 * X X X X X X X X X X X X X X X X  V
+-	 * X X X X X X X X X X X X X X X X  --> Padding & Buffer size alignment
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  ^           ^
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  Height      |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |          Y_Scanlines
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  V           |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              V
++	 * V U V U V U V U V U V U . . . .  ^
++	 * V U V U V U V U V U V U . . . .  |
++	 * V U V U V U V U V U V U . . . .  |
++	 * V U V U V U V U V U V U . . . .  UV_Scanlines
++	 * . . . . . . . . . . . . . . . .  |
++	 * . . . . . . . . . . . . . . . .  V
++	 * . . . . . . . . . . . . . . . .  --> Padding & Buffer size alignment
+ 	 *
+ 	 * Y_Stride : Width aligned to 128
+ 	 * UV_Stride : Width aligned to 128
+@@ -89,43 +93,43 @@ enum color_fmts {
+ 	 *
+ 	 * <-------- Y/UV_Stride -------->
+ 	 * <------- Width ------->
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  ^           ^               ^
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  Height      |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |          Y_Scanlines      |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  V           |               |
+-	 * X X X X X X X X X X X X X X X X              |             View_1
+-	 * X X X X X X X X X X X X X X X X              |               |
+-	 * X X X X X X X X X X X X X X X X              |               |
+-	 * X X X X X X X X X X X X X X X X              V               |
+-	 * U V U V U V U V U V U V X X X X  ^                           |
+-	 * U V U V U V U V U V U V X X X X  |                           |
+-	 * U V U V U V U V U V U V X X X X  |                           |
+-	 * U V U V U V U V U V U V X X X X  UV_Scanlines                |
+-	 * X X X X X X X X X X X X X X X X  |                           |
+-	 * X X X X X X X X X X X X X X X X  V                           V
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  ^           ^               ^
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  Height      |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |          Y_Scanlines      |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  |           |               |
+-	 * Y Y Y Y Y Y Y Y Y Y Y Y X X X X  V           |               |
+-	 * X X X X X X X X X X X X X X X X              |             View_2
+-	 * X X X X X X X X X X X X X X X X              |               |
+-	 * X X X X X X X X X X X X X X X X              |               |
+-	 * X X X X X X X X X X X X X X X X              V               |
+-	 * U V U V U V U V U V U V X X X X  ^                           |
+-	 * U V U V U V U V U V U V X X X X  |                           |
+-	 * U V U V U V U V U V U V X X X X  |                           |
+-	 * U V U V U V U V U V U V X X X X  UV_Scanlines                |
+-	 * X X X X X X X X X X X X X X X X  |                           |
+-	 * X X X X X X X X X X X X X X X X  V                           V
+-	 * X X X X X X X X X X X X X X X X  --> Buffer size alignment
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  ^           ^               ^
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  Height      |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |          Y_Scanlines      |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  V           |               |
++	 * . . . . . . . . . . . . . . . .              |             View_1
++	 * . . . . . . . . . . . . . . . .              |               |
++	 * . . . . . . . . . . . . . . . .              |               |
++	 * . . . . . . . . . . . . . . . .              V               |
++	 * U V U V U V U V U V U V . . . .  ^                           |
++	 * U V U V U V U V U V U V . . . .  |                           |
++	 * U V U V U V U V U V U V . . . .  |                           |
++	 * U V U V U V U V U V U V . . . .  UV_Scanlines                |
++	 * . . . . . . . . . . . . . . . .  |                           |
++	 * . . . . . . . . . . . . . . . .  V                           V
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  ^           ^               ^
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  Height      |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |          Y_Scanlines      |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  |           |               |
++	 * Y Y Y Y Y Y Y Y Y Y Y Y . . . .  V           |               |
++	 * . . . . . . . . . . . . . . . .              |             View_2
++	 * . . . . . . . . . . . . . . . .              |               |
++	 * . . . . . . . . . . . . . . . .              |               |
++	 * . . . . . . . . . . . . . . . .              V               |
++	 * U V U V U V U V U V U V . . . .  ^                           |
++	 * U V U V U V U V U V U V . . . .  |                           |
++	 * U V U V U V U V U V U V . . . .  |                           |
++	 * U V U V U V U V U V U V . . . .  UV_Scanlines                |
++	 * . . . . . . . . . . . . . . . .  |                           |
++	 * . . . . . . . . . . . . . . . .  V                           V
++	 * . . . . . . . . . . . . . . . .  --> Buffer size alignment
+ 	 *
+ 	 * Y_Stride : Width aligned to 128
+ 	 * UV_Stride : Width aligned to 128
+@@ -138,6 +142,178 @@ enum color_fmts {
+ 	 *          + 2*(UV_Stride * UV_Scanlines) + Extradata), 4096)
+ 	 */
+ 	COLOR_FMT_NV12_MVTB,
++	/* Venus NV12 UBWC:
++	 * Compressed Macro-tile format for NV12.
++	 * Contains 4 planes in the following order -
++	 * (A) Y_Meta_Plane
++	 * (B) Y_UBWC_Plane
++	 * (C) UV_Meta_Plane
++	 * (D) UV_UBWC_Plane
++	 *
++	 * Y_Meta_Plane consists of meta information to decode compressed
++	 * tile data in Y_UBWC_Plane.
++	 * Y_UBWC_Plane consists of Y data in compressed macro-tile format.
++	 * UBWC decoder block will use the Y_Meta_Plane data together with
++	 * Y_UBWC_Plane data to produce loss-less uncompressed 8 bit Y samples.
++	 *
++	 * UV_Meta_Plane consists of meta information to decode compressed
++	 * tile data in UV_UBWC_Plane.
++	 * UV_UBWC_Plane consists of UV data in compressed macro-tile format.
++	 * UBWC decoder block will use UV_Meta_Plane data together with
++	 * UV_UBWC_Plane data to produce loss-less uncompressed 8 bit 2x2
++	 * subsampled color difference samples.
++	 *
++	 * Each tile in Y_UBWC_Plane/UV_UBWC_Plane is independently decodable
++	 * and randomly accessible. There is no dependency between tiles.
++	 *
++	 * <----- Y_Meta_Stride ---->
++	 * <-------- Width ------>
++	 * M M M M M M M M M M M M . .      ^           ^
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      Height      |
++	 * M M M M M M M M M M M M . .      |         Meta_Y_Scanlines
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      V           |
++	 * . . . . . . . . . . . . . .                  |
++	 * . . . . . . . . . . . . . .                  |
++	 * . . . . . . . . . . . . . .      -------> Buffer size aligned to 4k
++	 * . . . . . . . . . . . . . .                  V
++	 * <--Compressed tile Y Stride--->
++	 * <------- Width ------->
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  ^           ^
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  Height      |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |        Macro_tile_Y_Scanlines
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  V           |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .  -------> Buffer size aligned to 4k
++	 * . . . . . . . . . . . . . . . .              V
++	 * <----- UV_Meta_Stride ---->
++	 * M M M M M M M M M M M M . .      ^
++	 * M M M M M M M M M M M M . .      |
++	 * M M M M M M M M M M M M . .      |
++	 * M M M M M M M M M M M M . .      M_UV_Scanlines
++	 * . . . . . . . . . . . . . .      |
++	 * . . . . . . . . . . . . . .      V
++	 * . . . . . . . . . . . . . .      -------> Buffer size aligned to 4k
++	 * <--Compressed tile UV Stride--->
++	 * U* V* U* V* U* V* U* V* . . . .  ^
++	 * U* V* U* V* U* V* U* V* . . . .  |
++	 * U* V* U* V* U* V* U* V* . . . .  |
++	 * U* V* U* V* U* V* U* V* . . . .  UV_Scanlines
++	 * . . . . . . . . . . . . . . . .  |
++	 * . . . . . . . . . . . . . . . .  V
++	 * . . . . . . . . . . . . . . . .  -------> Buffer size aligned to 4k
++	 *
++	 * Y_Stride = align(Width, 128)
++	 * UV_Stride = align(Width, 128)
++	 * Y_Scanlines = align(Height, 32)
++	 * UV_Scanlines = align(Height/2, 16)
++	 * Y_UBWC_Plane_size = align(Y_Stride * Y_Scanlines, 4096)
++	 * UV_UBWC_Plane_size = align(UV_Stride * UV_Scanlines, 4096)
++	 * Y_Meta_Stride = align(roundup(Width, Y_TileWidth), 64)
++	 * Y_Meta_Scanlines = align(roundup(Height, Y_TileHeight), 16)
++	 * Y_Meta_Plane_size = align(Y_Meta_Stride * Y_Meta_Scanlines, 4096)
++	 * UV_Meta_Stride = align(roundup(Width, UV_TileWidth), 64)
++	 * UV_Meta_Scanlines = align(roundup(Height, UV_TileHeight), 16)
++	 * UV_Meta_Plane_size = align(UV_Meta_Stride * UV_Meta_Scanlines, 4096)
++	 * Extradata = 8k
++	 *
++	 * Total size = align( Y_UBWC_Plane_size + UV_UBWC_Plane_size +
++	 *           Y_Meta_Plane_size + UV_Meta_Plane_size + Extradata, 4096)
++	 */
++	COLOR_FMT_NV12_UBWC,
++	/* Venus NV12 10-bit UBWC:
++	 * Compressed Macro-tile format for NV12.
++	 * Contains 4 planes in the following order -
++	 * (A) Y_Meta_Plane
++	 * (B) Y_UBWC_Plane
++	 * (C) UV_Meta_Plane
++	 * (D) UV_UBWC_Plane
++	 *
++	 * Y_Meta_Plane consists of meta information to decode compressed
++	 * tile data in Y_UBWC_Plane.
++	 * Y_UBWC_Plane consists of Y data in compressed macro-tile format.
++	 * UBWC decoder block will use the Y_Meta_Plane data together with
++	 * Y_UBWC_Plane data to produce loss-less uncompressed 10 bit Y samples.
++	 *
++	 * UV_Meta_Plane consists of meta information to decode compressed
++	 * tile data in UV_UBWC_Plane.
++	 * UV_UBWC_Plane consists of UV data in compressed macro-tile format.
++	 * UBWC decoder block will use UV_Meta_Plane data together with
++	 * UV_UBWC_Plane data to produce loss-less uncompressed 10 bit 2x2
++	 * subsampled color difference samples.
++	 *
++	 * Each tile in Y_UBWC_Plane/UV_UBWC_Plane is independently decodable
++	 * and randomly accessible. There is no dependency between tiles.
++	 *
++	 * <----- Y_Meta_Stride ----->
++	 * <-------- Width ------>
++	 * M M M M M M M M M M M M . .      ^           ^
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      Height      |
++	 * M M M M M M M M M M M M . .      |         Meta_Y_Scanlines
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      |           |
++	 * M M M M M M M M M M M M . .      V           |
++	 * . . . . . . . . . . . . . .                  |
++	 * . . . . . . . . . . . . . .                  |
++	 * . . . . . . . . . . . . . .      -------> Buffer size aligned to 4k
++	 * . . . . . . . . . . . . . .                  V
++	 * <--Compressed tile Y Stride--->
++	 * <------- Width ------->
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  ^           ^
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  Height      |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |        Macro_tile_Y_Scanlines
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  |           |
++	 * Y* Y* Y* Y* Y* Y* Y* Y* . . . .  V           |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .              |
++	 * . . . . . . . . . . . . . . . .  -------> Buffer size aligned to 4k
++	 * . . . . . . . . . . . . . . . .              V
++	 * <----- UV_Meta_Stride ---->
++	 * M M M M M M M M M M M M . .      ^
++	 * M M M M M M M M M M M M . .      |
++	 * M M M M M M M M M M M M . .      |
++	 * M M M M M M M M M M M M . .      M_UV_Scanlines
++	 * . . . . . . . . . . . . . .      |
++	 * . . . . . . . . . . . . . .      V
++	 * . . . . . . . . . . . . . .      -------> Buffer size aligned to 4k
++	 * <--Compressed tile UV Stride--->
++	 * U* V* U* V* U* V* U* V* . . . .  ^
++	 * U* V* U* V* U* V* U* V* . . . .  |
++	 * U* V* U* V* U* V* U* V* . . . .  |
++	 * U* V* U* V* U* V* U* V* . . . .  UV_Scanlines
++	 * . . . . . . . . . . . . . . . .  |
++	 * . . . . . . . . . . . . . . . .  V
++	 * . . . . . . . . . . . . . . . .  -------> Buffer size aligned to 4k
++	 *
++	 *
++	 * Y_Stride = align(Width * 4/3, 128)
++	 * UV_Stride = align(Width * 4/3, 128)
++	 * Y_Scanlines = align(Height, 32)
++	 * UV_Scanlines = align(Height/2, 16)
++	 * Y_UBWC_Plane_Size = align(Y_Stride * Y_Scanlines, 4096)
++	 * UV_UBWC_Plane_Size = align(UV_Stride * UV_Scanlines, 4096)
++	 * Y_Meta_Stride = align(roundup(Width, Y_TileWidth), 64)
++	 * Y_Meta_Scanlines = align(roundup(Height, Y_TileHeight), 16)
++	 * Y_Meta_Plane_size = align(Y_Meta_Stride * Y_Meta_Scanlines, 4096)
++	 * UV_Meta_Stride = align(roundup(Width, UV_TileWidth), 64)
++	 * UV_Meta_Scanlines = align(roundup(Height, UV_TileHeight), 16)
++	 * UV_Meta_Plane_size = align(UV_Meta_Stride * UV_Meta_Scanlines, 4096)
++	 * Extradata = 8k
++	 */
++	COLOR_FMT_NV12_BPP10_UBWC,
+ };
+ 
+ static inline unsigned int VENUS_EXTRADATA_SIZE(int width, int height)
+@@ -162,9 +338,14 @@ static inline unsigned int VENUS_Y_STRIDE(int color_fmt, int width)
+ 	case COLOR_FMT_NV21:
+ 	case COLOR_FMT_NV12:
+ 	case COLOR_FMT_NV12_MVTB:
++	case COLOR_FMT_NV12_UBWC:
+ 		alignment = 128;
+ 		stride = MSM_MEDIA_ALIGN(width, alignment);
+ 		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		alignment = 128;
++		stride = MSM_MEDIA_ALIGN(width * 4/3, alignment);
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -182,9 +363,14 @@ static inline unsigned int VENUS_UV_STRIDE(int color_fmt, int width)
+ 	case COLOR_FMT_NV21:
+ 	case COLOR_FMT_NV12:
+ 	case COLOR_FMT_NV12_MVTB:
++	case COLOR_FMT_NV12_UBWC:
+ 		alignment = 128;
+ 		stride = MSM_MEDIA_ALIGN(width, alignment);
+ 		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		alignment = 128;
++		stride = MSM_MEDIA_ALIGN(width * 4/3, alignment);
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -202,6 +388,8 @@ static inline unsigned int VENUS_Y_SCANLINES(int color_fmt, int height)
+ 	case COLOR_FMT_NV21:
+ 	case COLOR_FMT_NV12:
+ 	case COLOR_FMT_NV12_MVTB:
++	case COLOR_FMT_NV12_UBWC:
++	case COLOR_FMT_NV12_BPP10_UBWC:
+ 		alignment = 32;
+ 		sclines = MSM_MEDIA_ALIGN(height, alignment);
+ 		break;
+@@ -222,6 +410,8 @@ static inline unsigned int VENUS_UV_SCANLINES(int color_fmt, int height)
+ 	case COLOR_FMT_NV21:
+ 	case COLOR_FMT_NV12:
+ 	case COLOR_FMT_NV12_MVTB:
++	case COLOR_FMT_NV12_UBWC:
++	case COLOR_FMT_NV12_BPP10_UBWC:
+ 		alignment = 16;
+ 		sclines = MSM_MEDIA_ALIGN(((height + 1) >> 1), alignment);
+ 		break;
+@@ -232,6 +422,106 @@ invalid_input:
+ 	return sclines;
+ }
+ 
++static inline unsigned int VENUS_Y_META_STRIDE(int color_fmt, int width)
++{
++	int y_tile_width = 0, y_meta_stride = 0;
++
++	if (!width)
++		goto invalid_input;
++
++	switch (color_fmt) {
++	case COLOR_FMT_NV12_UBWC:
++		y_tile_width = 32;
++		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		y_tile_width = 48;
++		break;
++	default:
++		goto invalid_input;
++	}
++
++	y_meta_stride = MSM_MEDIA_ROUNDUP(width, y_tile_width);
++	y_meta_stride = MSM_MEDIA_ALIGN(y_meta_stride, 64);
++
++invalid_input:
++	return y_meta_stride;
++}
++
++static inline unsigned int VENUS_Y_META_SCANLINES(int color_fmt, int height)
++{
++	int y_tile_height = 0, y_meta_scanlines = 0;
++
++	if (!height)
++		goto invalid_input;
++
++	switch (color_fmt) {
++	case COLOR_FMT_NV12_UBWC:
++		y_tile_height = 8;
++		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		y_tile_height = 4;
++		break;
++	default:
++		goto invalid_input;
++	}
++
++	y_meta_scanlines = MSM_MEDIA_ROUNDUP(height, y_tile_height);
++	y_meta_scanlines = MSM_MEDIA_ALIGN(y_meta_scanlines, 16);
++
++invalid_input:
++	return y_meta_scanlines;
++}
++
++static inline unsigned int VENUS_UV_META_STRIDE(int color_fmt, int width)
++{
++	int uv_tile_width = 0, uv_meta_stride = 0;
++
++	if (!width)
++		goto invalid_input;
++
++	switch (color_fmt) {
++	case COLOR_FMT_NV12_UBWC:
++		uv_tile_width = 16;
++		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		uv_tile_width = 24;
++		break;
++	default:
++		goto invalid_input;
++	}
++
++	uv_meta_stride = MSM_MEDIA_ROUNDUP(width, uv_tile_width);
++	uv_meta_stride = MSM_MEDIA_ALIGN(uv_meta_stride, 64);
++
++invalid_input:
++	return uv_meta_stride;
++}
++
++static inline unsigned int VENUS_UV_META_SCANLINES(int color_fmt, int height)
++{
++	int uv_tile_height = 0, uv_meta_scanlines = 0;
++
++	if (!height)
++		goto invalid_input;
++
++	switch (color_fmt) {
++	case COLOR_FMT_NV12_UBWC:
++		uv_tile_height = 8;
++		break;
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		uv_tile_height = 4;
++		break;
++	default:
++		goto invalid_input;
++	}
++
++	uv_meta_scanlines = MSM_MEDIA_ROUNDUP(height, uv_tile_height);
++	uv_meta_scanlines = MSM_MEDIA_ALIGN(uv_meta_scanlines, 16);
++
++invalid_input:
++	return uv_meta_scanlines;
++}
++
+ static inline unsigned int VENUS_BUFFER_SIZE(
+ 	int color_fmt, int width, int height)
+ {
+@@ -239,6 +529,11 @@ static inline unsigned int VENUS_BUFFER_SIZE(
+ 	unsigned int uv_alignment = 0, size = 0;
+ 	unsigned int y_plane, uv_plane, y_stride,
+ 		uv_stride, y_sclines, uv_sclines;
++	unsigned int y_ubwc_plane = 0, uv_ubwc_plane = 0;
++	unsigned int y_meta_stride = 0, y_meta_scanlines = 0;
++	unsigned int uv_meta_stride = 0, uv_meta_scanlines = 0;
++	unsigned int y_meta_plane = 0, uv_meta_plane = 0;
++
+ 	if (!width || !height)
+ 		goto invalid_input;
+ 
+@@ -263,6 +558,23 @@ static inline unsigned int VENUS_BUFFER_SIZE(
+ 		size = 2 * size + extra_size;
+ 		size = MSM_MEDIA_ALIGN(size, 4096);
+ 		break;
++	case COLOR_FMT_NV12_UBWC:
++	case COLOR_FMT_NV12_BPP10_UBWC:
++		y_ubwc_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
++		uv_ubwc_plane = MSM_MEDIA_ALIGN(uv_stride * uv_sclines, 4096);
++		y_meta_stride = VENUS_Y_META_STRIDE(color_fmt, width);
++		y_meta_scanlines = VENUS_Y_META_SCANLINES(color_fmt, height);
++		y_meta_plane = MSM_MEDIA_ALIGN(
++				y_meta_stride * y_meta_scanlines, 4096);
++		uv_meta_stride = VENUS_UV_META_STRIDE(color_fmt, width);
++		uv_meta_scanlines = VENUS_UV_META_SCANLINES(color_fmt, height);
++		uv_meta_plane = MSM_MEDIA_ALIGN(uv_meta_stride *
++					uv_meta_scanlines, 4096);
++
++		size = y_ubwc_plane + uv_ubwc_plane + y_meta_plane +
++				uv_meta_plane + extra_size;
++		size = MSM_MEDIA_ALIGN(size, 4096);
++		break;
+ 	default:
+ 		break;
+ 	}
+diff --git a/include/uapi/linux/msm_audio.h b/include/uapi/linux/msm_audio.h
+index 1f17371..5005cd5 100644
+--- a/include/uapi/linux/msm_audio.h
++++ b/include/uapi/linux/msm_audio.h
+@@ -1,7 +1,7 @@
+ /* include/linux/msm_audio.h
+  *
+  * Copyright (C) 2008 Google, Inc.
+- * Copyright (c) 2012 The Linux Foundation. All rights reserved.
++ * Copyright (c) 2012, 2014 The Linux Foundation. All rights reserved.
+  *
+  * This software is licensed under the terms of the GNU General Public
+  * License version 2, as published by the Free Software Foundation, and
+@@ -104,8 +104,17 @@
+ 		struct msm_audio_ion_info)
+ #define AUDIO_DEREGISTER_ION _IOW(AUDIO_IOCTL_MAGIC, 98, \
+ 		struct msm_audio_ion_info)
++#define AUDIO_SET_EFFECTS_CONFIG   _IOW(AUDIO_IOCTL_MAGIC, 99, \
++				struct msm_hwacc_effects_config)
++#define AUDIO_EFFECTS_SET_BUF_LEN _IOW(AUDIO_IOCTL_MAGIC, 100, \
++				struct msm_hwacc_buf_cfg)
++#define AUDIO_EFFECTS_GET_BUF_AVAIL _IOW(AUDIO_IOCTL_MAGIC, 101, \
++				struct msm_hwacc_buf_avail)
++#define AUDIO_EFFECTS_WRITE _IOW(AUDIO_IOCTL_MAGIC, 102, void *)
++#define AUDIO_EFFECTS_READ _IOWR(AUDIO_IOCTL_MAGIC, 103, void *)
++#define AUDIO_EFFECTS_SET_PP_PARAMS _IOW(AUDIO_IOCTL_MAGIC, 104, void *)
+ 
+-#define	AUDIO_MAX_COMMON_IOCTL_NUM	100
++#define	AUDIO_MAX_COMMON_IOCTL_NUM	105
+ 
+ 
+ #define HANDSET_MIC			0x01
+@@ -140,7 +149,7 @@
+ #define I2S_TX				0x21
+ 
+ #define ADRC_ENABLE		0x0001
+-#define EQ_ENABLE		0x0002
++#define EQUALIZER_ENABLE	0x0002
+ #define IIR_ENABLE		0x0004
+ #define QCONCERT_PLUS_ENABLE	0x0008
+ #define MBADRC_ENABLE		0x0010
+@@ -420,5 +429,32 @@ struct msm_acdb_cmd_device {
+ 	uint32_t     *phys_buf;           /* Physical Address of data */
+ };
+ 
++struct msm_hwacc_data_config {
++	__u32 buf_size;
++	__u32 num_buf;
++	__u32 num_channels;
++	__u8 channel_map[8];
++	__u32 sample_rate;
++	__u32 bits_per_sample;
++};
++
++struct msm_hwacc_buf_cfg {
++	__u32 input_len;
++	__u32 output_len;
++};
++
++struct msm_hwacc_buf_avail {
++	__u32 input_num_avail;
++	__u32 output_num_avail;
++};
++
++struct msm_hwacc_effects_config {
++	struct msm_hwacc_data_config input;
++	struct msm_hwacc_data_config output;
++	struct msm_hwacc_buf_cfg buf_cfg;
++	__u32 meta_mode_enabled;
++	__u32 overwrite_topology;
++	__s32 topology;
++};
+ 
+ #endif
+diff --git a/include/uapi/linux/msm_mdp.h b/include/uapi/linux/msm_mdp.h
+index 8ee109d..4234c28 100644
+--- a/include/uapi/linux/msm_mdp.h
++++ b/include/uapi/linux/msm_mdp.h
+@@ -172,6 +172,10 @@ enum {
+ 	MDP_RGBA_5551,	/*RGBA 5551*/
+ 	MDP_ARGB_4444,	/*ARGB 4444*/
+ 	MDP_RGBA_4444,	/*RGBA 4444*/
++	MDP_RGB_565_UBWC,
++	MDP_RGBA_8888_UBWC,
++	MDP_Y_CBCR_H2V2_UBWC,
++	MDP_Y_CRCB_H2V2_VENUS,
+ 	MDP_IMGTYPE_LIMIT,
+ 	MDP_RGB_BORDERFILL,	/* border fill pipe */
+ 	MDP_FB_FORMAT = MDP_IMGTYPE2_START,    /* framebuffer format */
+@@ -672,6 +676,7 @@ struct mdp_overlay {
+ 	struct mdp_overlay_pp_params overlay_pp_cfg;
+ 	struct mdp_scale_data scale;
+ 	uint8_t color_space;
++	uint32_t frame_rate;
+ };
+ 
+ struct msmfb_overlay_3d {
+diff --git a/include/uapi/video/msm_hdmi_modes.h b/include/uapi/video/msm_hdmi_modes.h
+index 24816a0..98d52fc 100644
+--- a/include/uapi/video/msm_hdmi_modes.h
++++ b/include/uapi/video/msm_hdmi_modes.h
+@@ -11,6 +11,14 @@ enum aspect_ratio {
+ 	HDMI_RES_AR_MAX,
+ };
+ 
++enum msm_hdmi_s3d_mode {
++	HDMI_S3D_NONE,
++	HDMI_S3D_SIDE_BY_SIDE,
++	HDMI_S3D_TOP_AND_BOTTOM,
++	HDMI_S3D_FRAME_PACKING,
++	HDMI_S3D_MAX,
++};
++
+ struct msm_hdmi_mode_timing_info {
+ 	uint32_t	video_format;
+ 	uint32_t	active_h;
+@@ -32,6 +40,8 @@ struct msm_hdmi_mode_timing_info {
+ 	enum aspect_ratio ar;
+ };
+ 
++#define MSM_HDMI_INIT_RES_PAGE          1
++
+ #define MSM_HDMI_MODES_CEA		(1 << 0)
+ #define MSM_HDMI_MODES_XTND		(1 << 1)
+ #define MSM_HDMI_MODES_DVI		(1 << 2)
+-- 
+2.9.3
+
