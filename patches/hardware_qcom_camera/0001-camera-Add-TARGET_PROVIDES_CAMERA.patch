@@ -1,0 +1,28 @@
+From 683cf8cf8f06365c55ed4f8ef0eebd851eef36d5 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 11:36:58 +0200
+Subject: [PATCH] camera: Add TARGET_PROVIDES_CAMERA
+
+Change-Id: I006dc06b06b78ba593f4456018b67951a1c1e8f1
+---
+ Android.mk | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/Android.mk b/Android.mk
+index 107384e..d2bdfda 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -17,7 +17,9 @@ MM_V4L2_DRIVER_LIST += msm8992
+ ifneq (,$(filter $(MM_V4L2_DRIVER_LIST),$(TARGET_BOARD_PLATFORM)))
+   ifneq ($(strip $(USE_CAMERA_STUB)),true)
+     ifneq ($(BUILD_TINY_ANDROID),true)
+-      include $(call all-subdir-makefiles)
++      ifneq ($(TARGET_PROVIDES_CAMERA), true)
++        include $(call all-subdir-makefiles)
++      endif
+     endif
+   endif
+ endif
+-- 
+2.9.3
+
