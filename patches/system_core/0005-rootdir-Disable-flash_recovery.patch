@@ -1,0 +1,22 @@
+From 3c43a9c810c22c6d8173012bfc9c51d691b1054b Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 09:54:30 +0200
+Subject: [PATCH] rootdir: Disable flash_recovery
+
+Change-Id: Ia63f510fd54dc8f68b884cd9091c89a008434603
+---
+ rootdir/init.rc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/rootdir/init.rc b/rootdir/init.rc
+index 3466dce..56334df 100644
+--- a/rootdir/init.rc
++++ b/rootdir/init.rc
+@@ -639,3 +639,4 @@ on property:ro.debuggable=1
+ service flash_recovery /system/bin/install-recovery.sh
+     class main
+     oneshot
++    disabled
+-- 
+2.9.3
+
