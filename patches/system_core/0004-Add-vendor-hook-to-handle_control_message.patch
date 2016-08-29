@@ -58,7 +58,7 @@ index d3fd5ff..4b322bb 100644
  }
 +
 +__attribute__ ((weak))
-+int vendor_handle_control_message(const std::string& msg, const std::string& name) {
++int vendor_handle_control_message(const std::string& msg, const std::string& name)
 +{
 +    return -ENOSYS;
 +}
