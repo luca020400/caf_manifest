@@ -1,0 +1,29 @@
+From 322e95846ab265dfc26014594113dd3a4e4a22b1 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 09:42:59 +0200
+Subject: [PATCH] media: Always build mm-core and libstagefrighthw
+
+Change-Id: I039d51448aabaaca422521de674a8c7f590770be
+---
+ Android.mk | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/Android.mk b/Android.mk
+index d8dfe60..037cc4f 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -1,11 +1,7 @@
+ QCOM_MEDIA_ROOT := $(call my-dir)
+-$(warning target list is : $(MSM_VIDC_TARGET_LIST))
+ 
+-#Compile these for all targets under QCOM_BOARD_PLATFORMS list.
+-ifeq ($(call is-board-platform-in-list, $(QCOM_BOARD_PLATFORMS)),true)
+ include $(QCOM_MEDIA_ROOT)/mm-core/Android.mk
+ include $(QCOM_MEDIA_ROOT)/libstagefrighthw/Android.mk
+-endif
+ 
+ ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
+ include $(QCOM_MEDIA_ROOT)/mm-video-v4l2/Android.mk
+-- 
+2.9.3
+

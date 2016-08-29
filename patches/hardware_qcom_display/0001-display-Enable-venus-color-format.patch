@@ -1,0 +1,46 @@
+From 9b0d0d484ab18df8950860da2d0cfbd1e2f1afe5 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Mon, 29 Aug 2016 09:25:53 +0200
+Subject: [PATCH] display: Enable venus color format
+
+* Also add kernel dependencies
+
+Change-Id: Id6c7859ab35e1a1b4b5c6f4045b0be910e3ccab5
+---
+ common.mk | 16 +++-------------
+ 1 file changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/common.mk b/common.mk
+index 92a285b..5f66d69 100644
+--- a/common.mk
++++ b/common.mk
+@@ -20,9 +20,7 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
+     common_flags += -D__ARM_HAVE_NEON
+ endif
+ 
+-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
+-    common_flags += -DVENUS_COLOR_FORMAT
+-endif
++common_flags += -DVENUS_COLOR_FORMAT
+ 
+ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
+     common_flags += -DMASTER_SIDE_CP
+@@ -40,13 +38,5 @@ endif
+ ifneq ($(call is-platform-sdk-version-at-least,18),true)
+     common_flags += -DANDROID_JELLYBEAN_MR1=1
+ endif
+-ifeq ($(call is-vendor-board-platform,QCOM),true)
+-# This check is to pick the kernel headers from the right location.
+-# If the macro above is defined, we make the assumption that we have the kernel
+-# available in the build tree.
+-# If the macro is not present, the headers are picked from hardware/qcom/msmXXXX
+-# failing which, they are picked from bionic.
+-    common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+-    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+-endif
+-
++common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
++kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+-- 
+2.9.3
+

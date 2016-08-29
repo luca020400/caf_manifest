@@ -1,0 +1,59 @@
+From b9eb34196a0c3d27837332b86468149f11271fe7 Mon Sep 17 00:00:00 2001
+From: David Ng <dave@codeaurora.org>
+Date: Tue, 1 Mar 2016 11:13:56 -0800
+Subject: [PATCH 2/4] Add optional target-specific LD_PRELOAD to environment
+
+Append additional libraries defined in TARGET_LDPRELOAD to the
+LD_PRELOAD environment if it is defined.
+
+Conflicts:
+        rootdir/init.environ.rc.in
+
+Change-Id: I15f083df87605d2b708b56311430e11409a09dd7
+---
+ rootdir/Android.mk         | 11 ++++++++---
+ rootdir/init.environ.rc.in |  1 +
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/rootdir/Android.mk b/rootdir/Android.mk
+index d53af2f..e61c08e 100644
+--- a/rootdir/Android.mk
++++ b/rootdir/Android.mk
+@@ -78,16 +78,21 @@ endif
+ 
+ include $(BUILD_SYSTEM)/base_rules.mk
+ 
+-# Regenerate init.environ.rc if PRODUCT_BOOTCLASSPATH has changed.
+-bcp_md5 := $(word 1, $(shell echo $(PRODUCT_BOOTCLASSPATH) $(PRODUCT_SYSTEM_SERVER_CLASSPATH) | $(MD5SUM)))
++# Regenerate init.environ.rc if PRODUCT_BOOTCLASSPATH or TARGET_LDPRELOAD has changed.
++bcp_md5 := $(word 1, $(shell echo $(PRODUCT_BOOTCLASSPATH) $(PRODUCT_SYSTEM_SERVER_CLASSPATH) $(TARGET_LDPRELOAD) | $(MD5SUM)))
+ bcp_dep := $(intermediates)/$(bcp_md5).bcp.dep
+ $(bcp_dep) :
+ 	$(hide) mkdir -p $(dir $@) && rm -rf $(dir $@)*.bcp.dep && touch $@
+ 
++ifneq ($(strip $(TARGET_LDPRELOAD)),)
++    TARGET_LDPRELOAD_STR := :$(TARGET_LDPRELOAD)
++endif
++
+ $(LOCAL_BUILT_MODULE): $(LOCAL_PATH)/init.environ.rc.in $(bcp_dep)
+ 	@echo "Generate: $< -> $@"
+ 	@mkdir -p $(dir $@)
+-	$(hide) sed -e 's?%BOOTCLASSPATH%?$(PRODUCT_BOOTCLASSPATH)?g' $< >$@
++	$(hide) sed -e 's?%BOOTCLASSPATH%?$(PRODUCT_BOOTCLASSPATH)?g'\
++                -e 's?%TARGET_LDPRELOAD%?$(TARGET_LDPRELOAD_STR)?g' $< >$@
+ 	$(hide) sed -i -e 's?%SYSTEMSERVERCLASSPATH%?$(PRODUCT_SYSTEM_SERVER_CLASSPATH)?g' $@
+ 	$(hide) sed -i -e 's?%EXPORT_GLOBAL_ASAN_OPTIONS%?$(EXPORT_GLOBAL_ASAN_OPTIONS)?g' $@
+ 
+diff --git a/rootdir/init.environ.rc.in b/rootdir/init.environ.rc.in
+index 32817fa..032e698 100644
+--- a/rootdir/init.environ.rc.in
++++ b/rootdir/init.environ.rc.in
+@@ -9,4 +9,5 @@ on init
+     export ASEC_MOUNTPOINT /mnt/asec
+     export BOOTCLASSPATH %BOOTCLASSPATH%
+     export SYSTEMSERVERCLASSPATH %SYSTEMSERVERCLASSPATH%
++    export LD_PRELOAD libsigchain.so%TARGET_LDPRELOAD%
+     %EXPORT_GLOBAL_ASAN_OPTIONS%
+-- 
+2.9.3
+
