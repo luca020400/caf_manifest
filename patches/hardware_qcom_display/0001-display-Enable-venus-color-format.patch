@@ -1,7 +1,7 @@
-From 9b0d0d484ab18df8950860da2d0cfbd1e2f1afe5 Mon Sep 17 00:00:00 2001
+From d1bf671f75d43ebba06199539fd5cead5ee32fb4 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Mon, 29 Aug 2016 09:25:53 +0200
-Subject: [PATCH] display: Enable venus color format
+Subject: [PATCH 1/2] display: Enable venus color format
 
 * Also add kernel dependencies
 

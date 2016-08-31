@@ -1,0 +1,32 @@
+From 6164605bb53343c4037db915bfe65df441590cbb Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Wed, 31 Aug 2016 14:18:37 +0200
+Subject: [PATCH 2/2] Add TARGET_PROVIDES_LIBLIGHTS
+
+Change-Id: I072d1fb374ad3c79f16681e791ce2c173932e5d9
+---
+ Android.mk | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/Android.mk b/Android.mk
+index 9eb272f..ac088a6 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -4,9 +4,13 @@ else
+     TARGET_USES_SDM = false
+ endif
+ 
+-display-hals := libgralloc libcopybit liblight libmemtrack libqservice libqdutils
++display-hals := libgralloc libcopybit libmemtrack libqservice libqdutils
+ display-hals += hdmi_cec
+ 
++ifneq ($(TARGET_PROVIDES_LIBLIGHT), true)
++display-hals += liblight
++endif
++
+ ifeq ($(TARGET_USES_SDM), true)
+     sdm-libs := sdm/libs
+     display-hals += $(sdm-libs)/utils $(sdm-libs)/core $(sdm-libs)/hwc
+-- 
+2.9.3
+
