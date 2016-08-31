@@ -1,0 +1,65 @@
+From 05996ded45b0c269f2050cee9177dfd30d2a60e7 Mon Sep 17 00:00:00 2001
+From: Ricardo Cerqueira <ricardo@cyngn.com>
+Date: Wed, 26 Nov 2014 03:14:15 +0000
+Subject: [PATCH] Do not include common SE policies automatically
+
+Automatic additions to BOARD_SEPOLICY_UNION from Android.mk do not
+guarantee order or precedence of rules. More often than not, these
+rules get included _after_ the device's own, which makes
+it impossible for the device to extend them, or even to use types
+defined here.
+
+Manually include these in the device's BoardConfig with
+"include device/qcom/sepolicy/sepolicy.mk" before
+its own specific BOARD_SEPOLICY_DIRS (if any) instead. Or just
+include files piecemeal.
+
+Change-Id: I2ce0c3ec325906a46570b26c5f0c2018390d2ec9
+---
+ Android.mk  | 21 ++++++++++-----------
+ sepolicy.mk |  7 +++++++
+ 2 files changed, 17 insertions(+), 11 deletions(-)
+ create mode 100644 sepolicy.mk
+
+diff --git a/Android.mk b/Android.mk
+index b9700a9..b1ea616 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -1,11 +1,10 @@
+-# Board specific SELinux policy variable definitions
+-ifeq ($(call is-vendor-board-platform,QCOM),true)
+-LOCAL_PATH:= $(call my-dir)
+-BOARD_SEPOLICY_DIRS := \
+-       $(BOARD_SEPOLICY_DIRS) \
+-       $(LOCAL_PATH) \
+-       $(LOCAL_PATH)/common \
+-       $(LOCAL_PATH)/test \
+-       $(LOCAL_PATH)/$(TARGET_BOARD_PLATFORM)
+-
+-endif
++# Don't recurse into the platform makefiles. We don't care about them, and
++# we don't want to force a reset of BOARD_SEPOLICY_DIRS
++#
++# If you want to use these policies, add a
++#
++# include device/qcom/sepolicy/sepolicy.mk
++#
++# to your device's BoardConfig. It is highly recommended that in case
++# you have your own BOARD_SEPOLICY_DIRS and BOARD_SEPOLICY_UNION declarations,
++# the inclusion happens _before_ those lines
+diff --git a/sepolicy.mk b/sepolicy.mk
+new file mode 100644
+index 0000000..6d2f31d
+--- /dev/null
++++ b/sepolicy.mk
+@@ -0,0 +1,7 @@
++# Board specific SELinux policy variable definitions
++BOARD_SEPOLICY_DIRS := \
++       $(BOARD_SEPOLICY_DIRS) \
++       device/qcom/sepolicy \
++       device/qcom/sepolicy/common \
++       device/qcom/sepolicy/test \
++       device/qcom/sepolicy/$(TARGET_BOARD_PLATFORM)
+-- 
+2.9.3
+
