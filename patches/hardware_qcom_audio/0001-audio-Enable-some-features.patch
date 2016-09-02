@@ -1,4 +1,4 @@
-From 5171b090a1bb7b71e6a78809ab7ef4bbda9a2a8c Mon Sep 17 00:00:00 2001
+From 61440a518a26b85cf7663315ed86dfbda31c48d8 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Fri, 2 Sep 2016 19:09:49 +0200
 Subject: [PATCH] audio: Enable some features
@@ -6,9 +6,9 @@ Subject: [PATCH] audio: Enable some features
 Change-Id: Ibde91c7d3061f397ea1a57900f01baff803c7d4a
 ---
  hal/Android.mk        | 10 +++++-----
- policy_hal/Android.mk |  4 ++--
+ policy_hal/Android.mk |  6 +++---
  post_proc/Android.mk  |  2 ++
- 3 files changed, 9 insertions(+), 7 deletions(-)
+ 3 files changed, 10 insertions(+), 8 deletions(-)
 
 diff --git a/hal/Android.mk b/hal/Android.mk
 index ded8808..592c08b 100644
@@ -55,10 +55,10 @@ index ded8808..592c08b 100644
      LOCAL_SRC_FILES += voice_extn/compress_voip.c
  endif
 diff --git a/policy_hal/Android.mk b/policy_hal/Android.mk
-index 22071bb..4a72721 100644
+index 22071bb..c45e0e4 100644
 --- a/policy_hal/Android.mk
 +++ b/policy_hal/Android.mk
-@@ -47,11 +47,11 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_SPK)),true)
+@@ -47,15 +47,15 @@ ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HDMI_SPK)),true)
  LOCAL_CFLAGS += -DAUDIO_EXTN_HDMI_SPK_ENABLED
  endif
  
@@ -72,6 +72,11 @@ index 22071bb..4a72721 100644
      LOCAL_CFLAGS += -DCOMPRESS_VOIP_ENABLED
  endif
  
+-ifeq ($(strip $(AUDIO_FEATURE_NON_WEARABLE_TARGET)),true)
++ifneq ($(strip $(AUDIO_FEATURE_NON_WEARABLE_TARGET)),false)
+     LOCAL_CFLAGS += -DNON_WEARABLE_TARGET
+ else
+     LOCAL_CFLAGS += -Wno-error -fpermissive
 diff --git a/post_proc/Android.mk b/post_proc/Android.mk
 index bcce879..dc07afe 100644
 --- a/post_proc/Android.mk
