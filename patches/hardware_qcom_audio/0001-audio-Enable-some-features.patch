@@ -1,7 +1,7 @@
 From 61440a518a26b85cf7663315ed86dfbda31c48d8 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Fri, 2 Sep 2016 19:09:49 +0200
-Subject: [PATCH] audio: Enable some features
+Subject: [PATCH 1/2] audio: Enable some features
 
 Change-Id: Ibde91c7d3061f397ea1a57900f01baff803c7d4a
 ---
