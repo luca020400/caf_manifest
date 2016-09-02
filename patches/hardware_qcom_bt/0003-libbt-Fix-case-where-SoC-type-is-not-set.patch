@@ -1,0 +1,26 @@
+From 1df0e4705730c165d6ce82fe92d44219c8fc813b Mon Sep 17 00:00:00 2001
+From: Steve Kondik <shade@chemlab.org>
+Date: Fri, 4 Oct 2013 00:53:13 -0700
+Subject: [PATCH 3/3] libbt: Fix case where SoC type is not set
+
+Change-Id: Idbd953f2a17c426efb24b436b1933d4170732e54
+---
+ libbt-vendor/src/bt_vendor_qcom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libbt-vendor/src/bt_vendor_qcom.c b/libbt-vendor/src/bt_vendor_qcom.c
+index d4aa38f..aa91a26 100644
+--- a/libbt-vendor/src/bt_vendor_qcom.c
++++ b/libbt-vendor/src/bt_vendor_qcom.c
+@@ -192,7 +192,7 @@ static int get_bt_soc_type()
+     ALOGI("bt-vendor : get_bt_soc_type");
+ 
+     ret = property_get("qcom.bluetooth.soc", bt_soc_type, NULL);
+-    if (ret != 0) {
++    if (ret >= 0) {
+         ALOGI("qcom.bluetooth.soc set to %s\n", bt_soc_type);
+         if (!strncasecmp(bt_soc_type, "rome", sizeof("rome"))) {
+             return BT_SOC_ROME;
+-- 
+2.9.3
+
