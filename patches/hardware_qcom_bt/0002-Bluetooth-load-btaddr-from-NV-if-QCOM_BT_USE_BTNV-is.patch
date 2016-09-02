@@ -1,4 +1,4 @@
-From 273d0004d2814edd90024fa47b2f3994776990ad Mon Sep 17 00:00:00 2001
+From f2ec6b910cf77743a2efa50e1c6013c49ec6686d Mon Sep 17 00:00:00 2001
 From: Scott Mertz <scott@cyngn.com>
 Date: Thu, 13 Aug 2015 16:08:56 -0700
 Subject: [PATCH 2/2] Bluetooth: load btaddr from NV if QCOM_BT_USE_BTNV is set
