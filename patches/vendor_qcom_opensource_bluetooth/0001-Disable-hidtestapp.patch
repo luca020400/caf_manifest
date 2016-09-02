@@ -1,0 +1,28 @@
+From 7c7a942ebf1639bbe097aea088ec89b1ab179425 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Sat, 3 Sep 2016 00:17:48 +0200
+Subject: [PATCH] Disable hidtestapp
+
+* Same name for 2 modules ...
+
+Change-Id: Ia55fc733489555c97fc60764d65ba19efedd10df
+---
+ hidtestapp/Android.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hidtestapp/Android.mk b/hidtestapp/Android.mk
+index d2980c2..e4c2d76 100644
+--- a/hidtestapp/Android.mk
++++ b/hidtestapp/Android.mk
+@@ -14,7 +14,7 @@ LOCAL_PROGUARD_ENABLED := disabled
+ 
+ LOCAL_MULTILIB:= 32
+ 
+-include $(BUILD_PACKAGE)
++#include $(BUILD_PACKAGE)
+ 
+ 
+ include $(call all-makefiles-under,$(LOCAL_PATH))
+-- 
+2.9.3
+
