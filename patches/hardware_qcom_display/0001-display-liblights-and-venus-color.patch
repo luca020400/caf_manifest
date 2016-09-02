@@ -1,0 +1,47 @@
+From cfb29c2dff9e51f08ad3e447d7a4d3eb5a6bbbe3 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Fri, 2 Sep 2016 19:13:20 +0200
+Subject: [PATCH] display: liblights and venus color
+
+Change-Id: I18d09dd98a67f51bed58f0cc09f7d0ba1dbb5c82
+---
+ Android.mk | 7 ++++++-
+ common.mk  | 2 --
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/Android.mk b/Android.mk
+index d8b168d..3ce6fc3 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -1,6 +1,11 @@
+-display-hals := libgralloc libgenlock libcopybit liblight
++display-hals := libgralloc libgenlock libcopybit
+ display-hals += libhwcomposer liboverlay libqdutils libhdmi libqservice
+ display-hals += libmemtrack
++
++ifneq ($(TARGET_PROVIDES_LIBLIGHT), true)
++display-hals += liblight
++endif
++
+ ifeq ($(call is-vendor-board-platform,QCOM),true)
+     include $(call all-named-subdir-makefiles,$(display-hals))
+ else
+diff --git a/common.mk b/common.mk
+index 02885fc..777319f 100644
+--- a/common.mk
++++ b/common.mk
+@@ -25,11 +25,9 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
+     common_flags += -D__ARM_HAVE_NEON
+ endif
+ 
+-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
+ ifneq ($(TARGET_SUPPORTS_WEARABLES), true)
+     common_flags += -DVENUS_COLOR_FORMAT
+ endif
+-endif
+ 
+ ifeq ($(call is-board-platform-in-list, msm8974 msm8226 msm8610 apq8084 \
+         mpq8092 msm_bronze msm8916 msm8994), true)
+-- 
+2.9.3
+
