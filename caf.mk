@@ -1,7 +1,5 @@
 PRODUCT_PACKAGES += \
-    AccountAndSyncSettings \
     BluetoothExt \
-    DrmProvider \
     SnapdragonGallery \
     SnapdragonLauncher \
     SnapdragonMusic \
