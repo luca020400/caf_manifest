@@ -1,0 +1,36 @@
+From 9514666398156d6b759f723420eadffba45c1884 Mon Sep 17 00:00:00 2001
+From: Roman Birg <roman@cyngn.com>
+Date: Wed, 22 Jun 2016 15:12:01 -0700
+Subject: [PATCH 12/13] Subscription updater: don't turn data off if we've
+ never set a deafult
+
+In the case of an MSIM device that has only had 1 SIM and then you swap
+the sim to another slot, the data will turn off, but it's the same SIM
+and should not.
+
+Change-Id: I77ed8c22663aa10d211e6f4de06b791c1a8f0971
+Signed-off-by: Roman Birg <roman@cyngn.com>
+---
+ .../com/android/internal/telephony/SubscriptionInfoUpdater.java     | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index ead340e..0e60204 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -726,7 +726,11 @@ public class SubscriptionInfoUpdater extends Handler {
+                             Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION,
+                             SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+ 
+-                    if (realStoredDataSub != SubscriptionManager.getDefaultDataSubscriptionId()) {
++                    if (realStoredDataSub != SubscriptionManager.INVALID_SUBSCRIPTION_ID &&
++                            realStoredDataSub != SubscriptionManager.getDefaultDataSubscriptionId()) {
++                        logd("switching data off; real stored sub: " + realStoredDataSub
++                                + ", and we think the default sub id is now: "
++                                + SubscriptionManager.getDefaultDataSubscriptionId());
+                         PhoneFactory.getDefaultPhone().setDataEnabled(false);
+                     }
+                 } else if (insertedSimCount > 1) {
+-- 
+2.7.4
+

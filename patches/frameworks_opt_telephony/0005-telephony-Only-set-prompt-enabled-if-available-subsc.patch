@@ -1,0 +1,39 @@
+From 4fbb00fb966269ec7518e9dfadd2a401c05f7a59 Mon Sep 17 00:00:00 2001
+From: Adnan Begovic <adnan@cyngn.com>
+Date: Tue, 5 Apr 2016 08:14:29 -0700
+Subject: [PATCH 05/13] telephony: Only set prompt enabled if available
+ subscriptions > 1.
+
+TICKET: CRACKLING-1026
+Change-Id: I8a7555a41a52476af5236c03b4d410dd155db390
+---
+ src/java/com/android/internal/telephony/SubscriptionController.java | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
+index c5ae0c8..b86a4b5 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionController.java
++++ b/src/java/com/android/internal/telephony/SubscriptionController.java
+@@ -789,7 +789,7 @@ public class SubscriptionController extends ISub.Stub {
+                                     .getPhoneCount()) {
+                                 Rlog.i(LOG_TAG, "Subscription is invalid. Set default to " + subId);
+                                 setDefaultSmsSubId(subId);
+-                                PhoneFactory.setSMSPromptEnabled(true);
++                                PhoneFactory.setSMSPromptEnabled(subIdCountMax > 1);
+                             }
+ 
+                         } else {
+@@ -840,6 +840,10 @@ public class SubscriptionController extends ISub.Stub {
+ 
+             if (DBG) logdl("[addSubInfoRecord]- info size=" + sSlotIdxToSubId.size());
+ 
++            if (sSlotIdxToSubId.size() <= 1) {
++                PhoneFactory.setSMSPromptEnabled(false);
++            }
++
+         } finally {
+             Binder.restoreCallingIdentity(identity);
+         }
+-- 
+2.7.4
+

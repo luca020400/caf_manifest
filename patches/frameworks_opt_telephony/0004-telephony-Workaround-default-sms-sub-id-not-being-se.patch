@@ -1,0 +1,42 @@
+From 3714ea3c7df208b4ceee3e18c5a0b89c64bb61cc Mon Sep 17 00:00:00 2001
+From: Adnan Begovic <adnan@cyngn.com>
+Date: Wed, 30 Mar 2016 15:16:12 -0700
+Subject: [PATCH 04/13] telephony: Workaround default sms sub id not being set.
+
+  In the scenario where default sms sub id isn't set externally
+  the user can be stuck in an endless loop of prompts if they
+  select "Always Ask". This is bandaid to fix bad UX..
+
+TICKET: CYNGNOS-2185
+Change-Id: I70ef343eccc289d0ca58c59646f88b292ca03ca9
+---
+ .../android/internal/telephony/SubscriptionController.java  | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
+index e9caf94..c5ae0c8 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionController.java
++++ b/src/java/com/android/internal/telephony/SubscriptionController.java
+@@ -779,6 +779,19 @@ public class SubscriptionController extends ISub.Stub {
+                                 setDefaultSmsSubId(subId);
+                                 setDefaultVoiceSubId(subId);
+                             }
++
++                            // FIXME: Workaround the scenario where default sms subid is not
++                            // being set externally
++                            // CYNGNOS-2185
++                            int phoneId = SubscriptionController.getInstance().getPhoneId(
++                                    getDefaultSmsSubId());
++                            if (phoneId < 0 || phoneId >= TelephonyManager.getDefault()
++                                    .getPhoneCount()) {
++                                Rlog.i(LOG_TAG, "Subscription is invalid. Set default to " + subId);
++                                setDefaultSmsSubId(subId);
++                                PhoneFactory.setSMSPromptEnabled(true);
++                            }
++
+                         } else {
+                             if (DBG) {
+                                 logdl("[addSubInfoRecord] currentSubId != null"
+-- 
+2.7.4
+

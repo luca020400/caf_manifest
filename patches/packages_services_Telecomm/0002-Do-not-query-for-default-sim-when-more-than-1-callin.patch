@@ -1,0 +1,30 @@
+From acdca67e72459522319f77be148b26a4a3fc25cb Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Wed, 6 Jan 2016 17:25:30 +0100
+Subject: [PATCH 2/3] Do not query for default sim when more than 1 calling
+ account is available
+
+* Fixes an issue when com.android.phone crashes if user has
+single SIM inserted and SIP account set up.
+
+Change-Id: I8034a13a6b2d55b32e44c5c7761ff02ee36383cf
+---
+ src/com/android/server/telecom/PhoneAccountRegistrar.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/com/android/server/telecom/PhoneAccountRegistrar.java b/src/com/android/server/telecom/PhoneAccountRegistrar.java
+index 11efa66..505b084 100644
+--- a/src/com/android/server/telecom/PhoneAccountRegistrar.java
++++ b/src/com/android/server/telecom/PhoneAccountRegistrar.java
+@@ -233,7 +233,7 @@ public class PhoneAccountRegistrar {
+                 .get(userHandle);
+         if (defaultPhoneAccountHandle == null) {
+             if (TelephonyManager.getDefault().getPhoneCount() > 1 &&
+-                       mSubscriptionManager.getActiveSubscriptionInfoCount() == 1) {
++                       getAllPhoneAccounts(userHandle).size() == 1) {
+                 return getUserSelectedVoicePhoneAccount();
+             }
+             return null;
+-- 
+2.7.4
+

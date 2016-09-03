@@ -1,0 +1,69 @@
+From b78c5546d03288a57085529c4c4041f254d691ae Mon Sep 17 00:00:00 2001
+From: Roman Birg <roman@cyngn.com>
+Date: Thu, 5 May 2016 16:21:11 -0700
+Subject: [PATCH 07/13] SubscriptionController: properly detect when MSIM has 1
+ SIM
+
+We cannot use sSlotIdxToSubId to determine when to turn the SIM dialog
+off, because when subscription information gets reloaded (on data change
+for instance), we may add one, then disable SMS prompt, then add the
+other, which is incorrect. Query the total number of SIMs from the info
+updater.
+
+Ticket: CYNGNOS-2185, CYNGNOS-2570
+
+Change-Id: Iab1225c83b508e055d8a8de55c1e21e2aa153ca5
+Signed-off-by: Roman Birg <roman@cyngn.com>
+---
+ .../com/android/internal/telephony/SubscriptionController.java     | 2 +-
+ .../com/android/internal/telephony/SubscriptionInfoUpdater.java    | 7 +++++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
+index b86a4b5..8c9c189 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionController.java
++++ b/src/java/com/android/internal/telephony/SubscriptionController.java
+@@ -840,7 +840,7 @@ public class SubscriptionController extends ISub.Stub {
+ 
+             if (DBG) logdl("[addSubInfoRecord]- info size=" + sSlotIdxToSubId.size());
+ 
+-            if (sSlotIdxToSubId.size() <= 1) {
++            if (PhoneFactory.getSubscriptionInfoUpdater().getInsertedSimCount() <= 1) {
+                 PhoneFactory.setSMSPromptEnabled(false);
+             }
+ 
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index 92bdad0..f63f27a 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -116,6 +116,7 @@ public class SubscriptionInfoUpdater extends Handler {
+     private int mCurrentlyActiveUserId;
+     private CarrierServiceBindHelper mCarrierServiceBindHelper;
+     private boolean mIsShutdown;
++    private int mCurrentSimCount;
+ 
+     public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
+         logd("Constructor invoked");
+@@ -682,6 +683,8 @@ public class SubscriptionInfoUpdater extends Handler {
+             }
+         }
+ 
++        mCurrentSimCount = insertedSimCount;
++
+         if (!mIsShutdown && insertedSimCount == 1) {
+             SubscriptionInfo sir = subInfos.get(0);
+             int subId = sir.getSubscriptionId();
+@@ -698,6 +701,10 @@ public class SubscriptionInfoUpdater extends Handler {
+         logd("updateSubscriptionInfoByIccId:- SsubscriptionInfo update complete");
+     }
+ 
++    protected int getInsertedSimCount() {
++        return mCurrentSimCount;
++    }
++
+     private boolean isNewSim(String iccId, String[] oldIccId) {
+         boolean newSim = true;
+         for(int i = 0; i < PROJECT_SIM_NUM; i++) {
+-- 
+2.7.4
+

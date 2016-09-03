@@ -1,0 +1,88 @@
+From ce4defda887716194758a4199b71812947ad7fde Mon Sep 17 00:00:00 2001
+From: Roman Birg <roman@cyngn.com>
+Date: Mon, 20 Jun 2016 11:13:54 -0700
+Subject: [PATCH 11/13] Telephony: handle 3rd party sms apps + 'always ask'
+
+3rd party SMS apps may not be able to handle our always ask behavior, so
+they may get stuck in a bad state. An example of this is Hangouts, which
+just ends up never sending messages when always ask is selected.
+
+TIcket: CYNGNOS-3068
+
+Change-Id: I8a0f1f6bf7a5010438e40eb0be9aa178d2141f3c
+Signed-off-by: Roman Birg <roman@cyngn.com>
+---
+ src/java/com/android/internal/telephony/SmsApplication.java  | 12 ++++++++++++
+ .../com/android/internal/telephony/UiccSmsController.java    |  7 ++++---
+ 2 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/SmsApplication.java b/src/java/com/android/internal/telephony/SmsApplication.java
+index 675d943..1f9765f 100644
+--- a/src/java/com/android/internal/telephony/SmsApplication.java
++++ b/src/java/com/android/internal/telephony/SmsApplication.java
+@@ -40,6 +40,7 @@ import android.provider.Telephony.Sms.Intents;
+ import android.telephony.Rlog;
+ import android.telephony.SmsManager;
+ import android.telephony.TelephonyManager;
++import android.text.TextUtils;
+ import android.util.Log;
+ 
+ import com.android.internal.content.PackageMonitor;
+@@ -61,6 +62,7 @@ public final class SmsApplication {
+     private static final String BLUETOOTH_PACKAGE_NAME = "com.android.bluetooth";
+     private static final String MMS_SERVICE_PACKAGE_NAME = "com.android.mms.service";
+     private static final String TELEPHONY_PROVIDER_PACKAGE_NAME = "com.android.providers.telephony";
++    private static final String DEFAULT_SYSTEM_MMS_PACKAGE_NAME = "com.android.messaging";
+ 
+     private static final String SCHEME_SMS = "sms";
+     private static final String SCHEME_SMSTO = "smsto";
+@@ -898,6 +900,16 @@ public final class SmsApplication {
+         return false;
+     }
+ 
++    /**
++     * @hide
++     */
++    public static boolean canSmsAppHandleAlwaysAsk(Context context) {
++        final ComponentName defaultMmsApplication = SmsApplication.getDefaultMmsApplication(context,
++                false);
++        return TextUtils.equals(DEFAULT_SYSTEM_MMS_PACKAGE_NAME,
++                defaultMmsApplication.getPackageName());
++    }
++
+     private static String getDefaultSmsApplicationPackageName(Context context) {
+         final ComponentName component = getDefaultSmsApplication(context, false);
+         if (component != null) {
+diff --git a/src/java/com/android/internal/telephony/UiccSmsController.java b/src/java/com/android/internal/telephony/UiccSmsController.java
+index caca2f2..258571d 100755
+--- a/src/java/com/android/internal/telephony/UiccSmsController.java
++++ b/src/java/com/android/internal/telephony/UiccSmsController.java
+@@ -291,13 +291,14 @@ public class UiccSmsController extends ISms.Stub {
+ 
+     @Override
+     public boolean isSmsSimPickActivityNeeded(int subId) {
+-        if (!isSMSPromptEnabled()) {
++        final Context context = ActivityThread.currentApplication().getApplicationContext();
++        boolean canCurrentAppHandleAlwaysAsk = SmsApplication.canSmsAppHandleAlwaysAsk(context);
++        if (!isSMSPromptEnabled() && canCurrentAppHandleAlwaysAsk) {
+             Rlog.d(LOG_TAG, "isSmsSimPickActivityNeeded: false, sms prompt disabled.");
+             // user knows best
+             return false;
+         }
+ 
+-        final Context context = ActivityThread.currentApplication().getApplicationContext();
+         TelephonyManager telephonyManager =
+                 (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+         List<SubscriptionInfo> subInfoList;
+@@ -331,7 +332,7 @@ public class UiccSmsController extends ISms.Stub {
+             }
+         }
+ 
+-        return false;
++        return !canCurrentAppHandleAlwaysAsk;
+     }
+ 
+     @Override
+-- 
+2.7.4
+

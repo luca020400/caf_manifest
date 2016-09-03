@@ -1,0 +1,54 @@
+From 36657d03f3aa7c458bffa980a71f7ac68b758afe Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Thu, 9 Jun 2016 15:43:39 +0200
+Subject: [PATCH 3/3] Handle IllegalArgumentException while setting default
+ calling sub
+
+* How to reproduce:
+  1. Add new SIP account
+  2. Disable it in "All calling accounts"
+  3. Reboot
+
+Change-Id: Iaa2546588464a34871d7da8bba0b366d0ca43ab8
+---
+ .../android/server/telecom/PhoneAccountRegistrar.java   | 17 +++++++++++------
+ 1 file changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/src/com/android/server/telecom/PhoneAccountRegistrar.java b/src/com/android/server/telecom/PhoneAccountRegistrar.java
+index 505b084..11b113c 100644
+--- a/src/com/android/server/telecom/PhoneAccountRegistrar.java
++++ b/src/com/android/server/telecom/PhoneAccountRegistrar.java
+@@ -70,6 +70,7 @@ import java.io.InputStream;
+ import java.lang.Integer;
+ import java.lang.SecurityException;
+ import java.lang.String;
++import java.lang.IllegalArgumentException;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.Comparator;
+@@ -262,12 +263,16 @@ public class PhoneAccountRegistrar {
+                 return mState.accounts.get(i).getAccountHandle();
+             }
+ 
+-            long subId = Long.parseLong(id);
+-            Log.i(this, "getUserSelectedVoicePhoneAccount, voice subId = "
+-                         + voiceSubId + " subId = " + subId + " mId = " + id);
+-            if (subId == voiceSubId) {
+-                prefPhoneAccount = mState.accounts.get(i).getAccountHandle();
+-                break;
++            try {
++                long subId = Long.parseLong(id);
++                Log.i(this, "getUserSelectedVoicePhoneAccount, voice subId = "
++                             + voiceSubId + " subId = " + subId + " mId = " + id);
++                if (subId == voiceSubId) {
++                    prefPhoneAccount = mState.accounts.get(i).getAccountHandle();
++                    break;
++                }
++            } catch (IllegalArgumentException e) {
++                Log.w(this, "getUserSelectedVoicePhoneAccount, accountHandle ID = " + id);
+             }
+         }
+ 
+-- 
+2.7.4
+

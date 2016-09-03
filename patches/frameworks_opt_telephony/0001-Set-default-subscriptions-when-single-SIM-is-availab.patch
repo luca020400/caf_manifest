@@ -1,0 +1,42 @@
+From a595a3dd611f1608a931e827906ec350108edfb5 Mon Sep 17 00:00:00 2001
+From: Ethan Chen <intervigil@gmail.com>
+Date: Mon, 23 Nov 2015 17:12:47 -0800
+Subject: [PATCH 01/13] Set default subscriptions when single SIM is available
+
+* Subscriptions are not updated when SIM cards are swapped. If there is
+  ever a SIM count of 1, direct all defaults to point at that
+  subscription, since there is no other option.
+
+Change-Id: Idb84140b65f3355e29cbdebcaff804318d826fe7
+---
+ .../internal/telephony/SubscriptionInfoUpdater.java        | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index a89f19c..bcaff1d 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -664,9 +664,17 @@ public class SubscriptionInfoUpdater extends Handler {
+             }
+         }
+ 
+-        // Ensure the modems are mapped correctly
+-        mSubscriptionManager.setDefaultDataSubId(
+-                mSubscriptionManager.getDefaultDataSubscriptionId());
++        if (insertedSimCount == 1) {
++            SubscriptionInfo sir = subInfos.get(0);
++            int subId = sir.getSubscriptionId();
++            mSubscriptionManager.setDefaultDataSubId(subId);
++            mSubscriptionManager.setDefaultVoiceSubId(subId);
++            mSubscriptionManager.setDefaultSmsSubId(subId);
++        } else {
++            // Ensure the modems are mapped correctly
++            mSubscriptionManager.setDefaultDataSubId(
++                    mSubscriptionManager.getDefaultDataSubscriptionId());
++        }
+ 
+         SubscriptionController.getInstance().notifySubscriptionInfoChanged();
+         logd("updateSubscriptionInfoByIccId:- SsubscriptionInfo update complete");
+-- 
+2.7.4
+

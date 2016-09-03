@@ -1,0 +1,46 @@
+From 324f520fd4e260f6faa8d1f00c9acd3cc5c8caae Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Sun, 4 Sep 2016 01:17:16 +0200
+Subject: [PATCH 13/13] Get rid of updateSubIdForNV()
+
+Change-Id: I0e9457fdf3c5a9f48b64b6cdeb15cb1a0dd91863
+---
+ src/java/com/android/internal/telephony/ServiceStateTracker.java     | 5 -----
+ src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java | 5 -----
+ 2 files changed, 10 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/ServiceStateTracker.java b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+index c7b3fe5..bf25f78 100644
+--- a/src/java/com/android/internal/telephony/ServiceStateTracker.java
++++ b/src/java/com/android/internal/telephony/ServiceStateTracker.java
+@@ -343,11 +343,6 @@ public class ServiceStateTracker extends Handler {
+                 }
+                 // update voicemail count and notify message waiting changed
+                 mPhone.updateVoiceMail();
+-
+-                SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
+-                if (subscriptionInfoUpdater != null) {
+-                    subscriptionInfoUpdater.updateSubIdForNV(subId);
+-                }
+             }
+         }
+     };
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index 0e60204..64f9616 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -561,11 +561,6 @@ public class SubscriptionInfoUpdater extends Handler {
+         updateCarrierServices(slotId, simState);
+     }
+ 
+-    public void updateSubIdForNV(int slotId) {
+-        mIccId[slotId] = ICCID_STRING_FOR_NV;
+-        update(slotId);
+-    }
+-
+     /**
+      * TODO: Simplify more, as no one is interested in what happened
+      * only what the current list contains.
+-- 
+2.7.4
+

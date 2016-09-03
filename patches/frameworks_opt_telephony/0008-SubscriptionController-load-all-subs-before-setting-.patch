@@ -1,0 +1,261 @@
+From 730b8e9c39bb5a5384ebef72978a715863f2cd10 Mon Sep 17 00:00:00 2001
+From: Roman Birg <roman@cyngn.com>
+Date: Mon, 9 May 2016 08:52:42 -0700
+Subject: [PATCH 08/13] SubscriptionController: load all subs before setting
+ defaults
+
+Switch the whole class to use the new inserted SIM logic added in
+change id Iab1225c83b508e055d8a8de55c1e21e2aa153ca5. The previous patch
+fixed scenarios going from two sims to one, but going from one to two
+(or switching between two sims) is still not working right as the
+addSubInfoRecord() still used getActiveSubInfoCountMax() to determine
+the number of SIMS.
+
+ - Update getActiveSubInfoCountMax() to return the correct number of SIMs.
+
+ - Furthermore, we need to _only_ update our subscription defaults if we
+   are sure we are not in the middle of an update.
+
+ - Let the subscription controller set defaults for 1 SIM device after
+   we're done loading
+
+Change-Id: I28eefaff61ae7c75732641465ca59eb67cf3e198
+Ticket: CYNGNOS-2185, CYNGNOS-2570
+---
+ .../internal/telephony/SubscriptionController.java | 32 ++++++--------
+ .../telephony/SubscriptionInfoUpdater.java         | 50 +++++++++++-----------
+ .../internal/telephony/UiccSmsController.java      |  5 +++
+ 3 files changed, 41 insertions(+), 46 deletions(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
+index 8c9c189..89dceb0 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionController.java
++++ b/src/java/com/android/internal/telephony/SubscriptionController.java
+@@ -186,7 +186,7 @@ public class SubscriptionController extends ISub.Stub {
+     }
+ 
+     private boolean isSubInfoReady() {
+-        return sSlotIdxToSubId.size() > 0;
++        return sSlotIdxToSubId.size() == getActiveSubInfoCountMax();
+     }
+ 
+     private SubscriptionController(Phone phone) {
+@@ -665,7 +665,11 @@ public class SubscriptionController extends ISub.Stub {
+     @Override
+     public int getActiveSubInfoCountMax() {
+         // FIXME: This valid now but change to use TelephonyDevController in the future
+-        return mTelephonyManager.getSimCount();
++        if (PhoneFactory.getSubscriptionInfoUpdater() != null) {
++            return PhoneFactory.getSubscriptionInfoUpdater().getInsertedSimCount();
++        } else {
++            return 0;
++        }
+     }
+ 
+     /**
+@@ -765,13 +769,18 @@ public class SubscriptionController extends ISub.Stub {
+                                         + " defaultSubId=" + defaultSubId + " simCount=" + subIdCountMax);
+                             }
+ 
++                            if (!isSubInfoReady()) {
++                                continue;
++                            }
++
+                             // Set the default sub if not set or if single sim device
+                             if (!SubscriptionManager.isValidSubscriptionId(defaultSubId)
+                                     || subIdCountMax == 1 || (!isActiveSubId(defaultSubId))) {
+                                 setDefaultFallbackSubId(subId);
+                             }
+                             // If single sim device, set this subscription as the default for everything
+-                            if (subIdCountMax == 1) {
++                            if (subIdCountMax == 1
++                                    && TelephonyManager.getDefault().getSimCount() == 1) {
+                                 if (DBG) {
+                                     logdl("[addSubInfoRecord] one sim set defaults to subId=" + subId);
+                                 }
+@@ -779,19 +788,6 @@ public class SubscriptionController extends ISub.Stub {
+                                 setDefaultSmsSubId(subId);
+                                 setDefaultVoiceSubId(subId);
+                             }
+-
+-                            // FIXME: Workaround the scenario where default sms subid is not
+-                            // being set externally
+-                            // CYNGNOS-2185
+-                            int phoneId = SubscriptionController.getInstance().getPhoneId(
+-                                    getDefaultSmsSubId());
+-                            if (phoneId < 0 || phoneId >= TelephonyManager.getDefault()
+-                                    .getPhoneCount()) {
+-                                Rlog.i(LOG_TAG, "Subscription is invalid. Set default to " + subId);
+-                                setDefaultSmsSubId(subId);
+-                                PhoneFactory.setSMSPromptEnabled(subIdCountMax > 1);
+-                            }
+-
+                         } else {
+                             if (DBG) {
+                                 logdl("[addSubInfoRecord] currentSubId != null"
+@@ -840,10 +836,6 @@ public class SubscriptionController extends ISub.Stub {
+ 
+             if (DBG) logdl("[addSubInfoRecord]- info size=" + sSlotIdxToSubId.size());
+ 
+-            if (PhoneFactory.getSubscriptionInfoUpdater().getInsertedSimCount() <= 1) {
+-                PhoneFactory.setSMSPromptEnabled(false);
+-            }
+-
+         } finally {
+             Binder.restoreCallingIdentity(identity);
+         }
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index f63f27a..caeb7e6 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -74,6 +74,9 @@ public class SubscriptionInfoUpdater extends Handler {
+     private static final int EVENT_SIM_LOCKED = 5;
+     private static final int EVENT_SIM_IO_ERROR = 6;
+     private static final int EVENT_SIM_UNKNOWN = 7;
++    private static final int EVENT_UPDATE_INSERTED_SIM_COUNT = 8;
++
++    private static final int DELAY_MILLIS = 500;
+ 
+     private static final String ICCID_STRING_FOR_NO_SIM = "";
+     private static final String ICCID_STRING_FOR_NV = "DUMMY_NV_ID";
+@@ -116,7 +119,7 @@ public class SubscriptionInfoUpdater extends Handler {
+     private int mCurrentlyActiveUserId;
+     private CarrierServiceBindHelper mCarrierServiceBindHelper;
+     private boolean mIsShutdown;
+-    private int mCurrentSimCount;
++    private int mCurrentSimCount = 0;
+ 
+     public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
+         logd("Constructor invoked");
+@@ -224,6 +227,9 @@ public class SubscriptionInfoUpdater extends Handler {
+             String simStatus = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
+             logd("simStatus: " + simStatus);
+ 
++            removeMessages(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId);
++            sendMessageDelayed(obtainMessage(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId), DELAY_MILLIS);
++
+             if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
+                 if (IccCardConstants.INTENT_VALUE_ICC_ABSENT.equals(simStatus)) {
+                     sendMessage(obtainMessage(EVENT_SIM_ABSENT, slotId, -1));
+@@ -304,9 +310,6 @@ public class SubscriptionInfoUpdater extends Handler {
+                     logd("Query IccId fail: " + ar.exception);
+                 }
+                 logd("sIccId[" + slotId + "] = " + mIccId[slotId]);
+-                if (isAllIccIdQueryDone()) {
+-                    updateSubscriptionInfoByIccId();
+-                }
+                 broadcastSimStateChanged(slotId, IccCardConstants.INTENT_VALUE_ICC_LOCKED,
+                                          uObj.reason);
+                 if (!ICCID_STRING_FOR_NO_SIM.equals(mIccId[slotId])) {
+@@ -349,6 +352,13 @@ public class SubscriptionInfoUpdater extends Handler {
+                 handleSimAbsentOrError(msg.arg1, IccCardConstants.INTENT_VALUE_ICC_CARD_IO_ERROR);
+                 break;
+ 
++            case EVENT_UPDATE_INSERTED_SIM_COUNT:
++                if (isAllIccIdQueryDone() && !hasMessages(EVENT_UPDATE_INSERTED_SIM_COUNT)) {
++                    updateSubscriptionInfoByIccId();
++                    logd("update inserted sim count, current sim count: " + mCurrentSimCount);
++                }
++                break;
++
+             default:
+                 logd("Unknown msg:" + msg.what);
+         }
+@@ -408,10 +418,6 @@ public class SubscriptionInfoUpdater extends Handler {
+         }
+         mIccId[slotId] = records.getIccId();
+ 
+-        if (isAllIccIdQueryDone()) {
+-            updateSubscriptionInfoByIccId();
+-        }
+-
+         int subId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
+         int[] subIds = SubscriptionController.getInstance().getSubId(slotId);
+         if (subIds != null) {   // Why an array?
+@@ -467,7 +473,7 @@ public class SubscriptionInfoUpdater extends Handler {
+                     PreferenceManager.getDefaultSharedPreferences(mContext);
+             int storedSubId = sp.getInt(CURR_SUBID + slotId, -1);
+ 
+-            if (storedSubId != subId) {
++            if (storedSubId != subId && storedSubId != -1) {
+                 int networkType = RILConstants.PREFERRED_NETWORK_MODE;
+ 
+                 // when known SIM inserted in another slot for which subId already
+@@ -530,19 +536,15 @@ public class SubscriptionInfoUpdater extends Handler {
+             logd("SIM" + (slotId + 1) + " hot plug out or error");
+         }
+         mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
+-        if (isAllIccIdQueryDone()) {
+-            updateSubscriptionInfoByIccId();
+-        }
+         updateCarrierServices(slotId, simState);
+     }
+ 
+     public void updateSubIdForNV(int slotId) {
+         mIccId[slotId] = ICCID_STRING_FOR_NV;
+-        logd("[updateSubIdForNV]+ Start");
+-        if (isAllIccIdQueryDone()) {
+-            logd("[updateSubIdForNV]+ updating");
+-            updateSubscriptionInfoByIccId();
+-        }
++        logd("[updateSubIdForNV]+ scheduled");
++        removeMessages(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId);
++        sendMessageDelayed(obtainMessage(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId),
++                DELAY_MILLIS);
+     }
+ 
+     /**
+@@ -566,6 +568,7 @@ public class SubscriptionInfoUpdater extends Handler {
+             }
+         }
+         logd("insertedSimCount = " + insertedSimCount);
++        mCurrentSimCount = insertedSimCount;
+ 
+         int index = 0;
+         for (int i = 0; i < PROJECT_SIM_NUM; i++) {
+@@ -683,15 +686,7 @@ public class SubscriptionInfoUpdater extends Handler {
+             }
+         }
+ 
+-        mCurrentSimCount = insertedSimCount;
+-
+-        if (!mIsShutdown && insertedSimCount == 1) {
+-            SubscriptionInfo sir = subInfos.get(0);
+-            int subId = sir.getSubscriptionId();
+-            mSubscriptionManager.setDefaultDataSubId(subId);
+-            mSubscriptionManager.setDefaultVoiceSubId(subId);
+-            mSubscriptionManager.setDefaultSmsSubId(subId);
+-        } else {
++        if (!mIsShutdown && insertedSimCount > 1) {
+             // Ensure the modems are mapped correctly
+             mSubscriptionManager.setDefaultDataSubId(
+                     mSubscriptionManager.getDefaultDataSubscriptionId());
+@@ -702,6 +697,9 @@ public class SubscriptionInfoUpdater extends Handler {
+     }
+ 
+     protected int getInsertedSimCount() {
++        if (!isAllIccIdQueryDone()) {
++            return 0;
++        }
+         return mCurrentSimCount;
+     }
+ 
+diff --git a/src/java/com/android/internal/telephony/UiccSmsController.java b/src/java/com/android/internal/telephony/UiccSmsController.java
+index 1c563eb..08ff4b3 100755
+--- a/src/java/com/android/internal/telephony/UiccSmsController.java
++++ b/src/java/com/android/internal/telephony/UiccSmsController.java
+@@ -302,6 +302,11 @@ public class UiccSmsController extends ISms.Stub {
+             Binder.restoreCallingIdentity(identity);
+         }
+ 
++        if (isSMSPromptEnabled()) {
++            // we will make the user pick
++            return false;
++        }
++
+         if (subInfoList != null) {
+             final int subInfoLength = subInfoList.size();
+ 
+-- 
+2.7.4
+

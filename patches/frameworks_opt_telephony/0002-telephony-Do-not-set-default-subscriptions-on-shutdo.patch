@@ -1,0 +1,64 @@
+From c2f0cca8fc5be523f1af6bc837801c927dfd19f7 Mon Sep 17 00:00:00 2001
+From: Christian Morlok <ChristianMorlok@gmail.com>
+Date: Wed, 20 Jan 2016 08:31:10 +0100
+Subject: [PATCH 02/13] telephony: Do not set default subscriptions on shutdown
+
+On some devices the SIM slots are not deactivated at the same time
+when the phone is shut down or rebooted. This means that at some point
+only one SIM is activated, and all default subscriptions are set to
+this SIM (a feature introduced in http://review.cyanogenmod.org/#/c/121239/).
+
+Change-Id: Ief36004619b75530a21b23efc767e1beb1fb0750
+---
+ .../android/internal/telephony/SubscriptionInfoUpdater.java    | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index bcaff1d..80fda48 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -114,6 +114,7 @@ public class SubscriptionInfoUpdater extends Handler {
+     // The current foreground user ID.
+     private int mCurrentlyActiveUserId;
+     private CarrierServiceBindHelper mCarrierServiceBindHelper;
++    private boolean mIsShutdown;
+ 
+     public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
+         logd("Constructor invoked");
+@@ -123,10 +124,12 @@ public class SubscriptionInfoUpdater extends Handler {
+         mSubscriptionManager = SubscriptionManager.from(mContext);
+         mPackageManager = IPackageManager.Stub.asInterface(ServiceManager.getService("package"));
+         mUserManager = (UserManager) mContext.getSystemService(Context.USER_SERVICE);
++        mIsShutdown = false;
+ 
+         IntentFilter intentFilter = new IntentFilter(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
+         intentFilter.addAction(IccCardProxy.ACTION_INTERNAL_SIM_STATE_CHANGED);
+         intentFilter.addAction(Intent.ACTION_USER_UNLOCKED);
++        intentFilter.addAction(Intent.ACTION_SHUTDOWN);
+         mContext.registerReceiver(sReceiver, intentFilter);
+ 
+         mCarrierServiceBindHelper = new CarrierServiceBindHelper(mContext);
+@@ -199,6 +202,11 @@ public class SubscriptionInfoUpdater extends Handler {
+                 return;
+             }
+ 
++            if (action.equals(Intent.ACTION_SHUTDOWN)) {
++                mIsShutdown = true;
++                return;
++            }
++
+             if (!action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED) &&
+                     !action.equals(IccCardProxy.ACTION_INTERNAL_SIM_STATE_CHANGED)) {
+                 return;
+@@ -664,7 +672,7 @@ public class SubscriptionInfoUpdater extends Handler {
+             }
+         }
+ 
+-        if (insertedSimCount == 1) {
++        if (!mIsShutdown && insertedSimCount == 1) {
+             SubscriptionInfo sir = subInfos.get(0);
+             int subId = sir.getSubscriptionId();
+             mSubscriptionManager.setDefaultDataSubId(subId);
+-- 
+2.7.4
+
