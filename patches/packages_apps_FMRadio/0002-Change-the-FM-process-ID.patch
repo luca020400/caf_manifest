@@ -1,0 +1,28 @@
+From cf1be924ef2eb9f4e38875ad6e5ef811b3b1eaff Mon Sep 17 00:00:00 2001
+From: Venkateshwarlu Domakonda <vdomak@codeaurora.org>
+Date: Mon, 20 Jul 2015 20:28:49 +0530
+Subject: [PATCH 2/3] Change the FM process ID
+
+Change the process ID to system to get permission
+to open the dev node and to run fm_dl service.
+
+Change-Id: I26c03300788af883d2ebf93fed6b7eb0fc29f6c5
+---
+ AndroidManifest.xml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index c1014ac..315edec 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -17,6 +17,7 @@
+ 
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     package="com.android.fmradio"
++    android:sharedUserId="android.uid.system"
+     android:versionCode="2"
+     android:versionName="2.0" >
+ 
+-- 
+2.9.3
+

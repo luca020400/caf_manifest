@@ -1,0 +1,116 @@
+From b38cc22eec27e48cbff951af2327b24e4099c407 Mon Sep 17 00:00:00 2001
+From: Matt Wagantall <mwagantall@cyngn.com>
+Date: Fri, 20 Nov 2015 11:08:17 -0800
+Subject: [PATCH 3/3] FMRadio: use software rendering for FM-to-earphone
+ playback
+
+Temporary: use software rendering for FM-to-earphone playback
+
+The Qualcomm audio HAL does not yet support volume control when
+direct FM-to-sink patches are created. Force use of software rendering
+(reading from AudioRecord and writing to AudioTrack) for now, as this
+has working software volume control.
+
+This change is obviously bad for power, as it requires SW involvement
+in the audio path. The change should be reverted when source HW volume
+control is available with audio patches.
+
+Playback through speaker, BT, and other sinks already go use software
+rendering and should be unaffected by this change.
+
+Change-Id: Ib732c8e8328035d2b3e60b7823446d1d75b3c107
+
+FmService: Make usage of audiopatch a build-time option
+Change Ib732c8e8328035d2b3e60b7823446d1d75b3c107 assumes all devices
+have issues with direct volume configuration and require audiopatching
+to be disabled in favor of soft rendering. Don't do that, make it
+configurable.
+
+Change-Id: Ia334052043a292d37b44e727769232e55a673d35
+---
+ res/values/config.xml                  | 19 ++++++++++++++++
+ src/com/android/fmradio/FmService.java | 40 +++++++++++++++++++---------------
+ 2 files changed, 42 insertions(+), 17 deletions(-)
+ create mode 100644 res/values/config.xml
+
+diff --git a/res/values/config.xml b/res/values/config.xml
+new file mode 100644
+index 0000000..b587355
+--- /dev/null
++++ b/res/values/config.xml
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2016 CyanogenMod
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <bool name="config_useSoftwareRenderingForAudio" translatable="false">true</bool>
++</resources>
+diff --git a/src/com/android/fmradio/FmService.java b/src/com/android/fmradio/FmService.java
+index e0f0242..725f25f 100644
+--- a/src/com/android/fmradio/FmService.java
++++ b/src/com/android/fmradio/FmService.java
+@@ -1678,25 +1678,31 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
+     private boolean isPatchMixerToEarphone(ArrayList<AudioPatch> patches) {
+         int deviceCount = 0;
+         int deviceEarphoneCount = 0;
+-        for (AudioPatch patch : patches) {
+-            AudioPortConfig[] sources = patch.sources();
+-            AudioPortConfig[] sinks = patch.sinks();
+-            AudioPortConfig sourceConfig = sources[0];
+-            AudioPortConfig sinkConfig = sinks[0];
+-            AudioPort sourcePort = sourceConfig.port();
+-            AudioPort sinkPort = sinkConfig.port();
+-            Log.d(TAG, "isPatchMixerToEarphone " + sourcePort + " ====> " + sinkPort);
+-            if (sourcePort instanceof AudioMixPort && sinkPort instanceof AudioDevicePort) {
+-                deviceCount++;
+-                int type = ((AudioDevicePort) sinkPort).type();
+-                if (type == AudioSystem.DEVICE_OUT_WIRED_HEADSET ||
+-                        type == AudioSystem.DEVICE_OUT_WIRED_HEADPHONE) {
+-                    deviceEarphoneCount++;
++        if (mContext.getResources().getBoolean(R.bool.config_useSoftwareRenderingForAudio)) {
++            Log.w(TAG, "FIXME: forcing isPatchMixerToEarphone to return false. "
++                    + "Software rendering will be used.");
++            return false;
++        } else {
++            for (AudioPatch patch : patches) {
++                AudioPortConfig[] sources = patch.sources();
++                AudioPortConfig[] sinks = patch.sinks();
++                AudioPortConfig sourceConfig = sources[0];
++                AudioPortConfig sinkConfig = sinks[0];
++                AudioPort sourcePort = sourceConfig.port();
++                AudioPort sinkPort = sinkConfig.port();
++                Log.d(TAG, "isPatchMixerToEarphone " + sourcePort + " ====> " + sinkPort);
++                if (sourcePort instanceof AudioMixPort && sinkPort instanceof AudioDevicePort) {
++                    deviceCount++;
++                    int type = ((AudioDevicePort) sinkPort).type();
++                    if (type == AudioSystem.DEVICE_OUT_WIRED_HEADSET ||
++                            type == AudioSystem.DEVICE_OUT_WIRED_HEADPHONE) {
++                        deviceEarphoneCount++;
++                    }
+                 }
+             }
+-        }
+-        if (deviceEarphoneCount == 1 && deviceCount == deviceEarphoneCount) {
+-            return true;
++            if (deviceEarphoneCount == 1 && deviceCount == deviceEarphoneCount) {
++                return true;
++            }
+         }
+         return false;
+     }
+-- 
+2.9.3
+
