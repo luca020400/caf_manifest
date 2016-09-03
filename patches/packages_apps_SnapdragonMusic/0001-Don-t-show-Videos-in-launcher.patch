@@ -1,0 +1,25 @@
+From 5b8e8bd05ee0dc4c69456dcf0d694a3b8964f941 Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Sat, 3 Sep 2016 16:43:14 +0200
+Subject: [PATCH] Don't show "Videos" in launcher
+
+Change-Id: Ib58a00ffb44f2046ce163b1ebbe1a67618cd316a
+---
+ AndroidManifest.xml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 05e8251..6c8eeaf 100755
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -218,7 +218,6 @@
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.DEFAULT" />
+-                <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
+             <intent-filter>
+                 <action android:name="android.intent.action.SEARCH" />
+-- 
+2.7.4
+
