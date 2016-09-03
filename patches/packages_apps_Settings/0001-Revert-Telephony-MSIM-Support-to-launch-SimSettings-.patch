@@ -1,0 +1,52 @@
+From e4c9057874070354d0b9453d6552e9f020c50f62 Mon Sep 17 00:00:00 2001
+From: thecrazyskull <anaskarbila@aospa.co>
+Date: Sat, 3 Sep 2016 18:38:20 +0200
+Subject: [PATCH 1/2] Revert "Telephony(MSIM): Support to launch SimSettings
+ from vendor space"
+
+This reverts commit 188be8eef8f3bd3235798fb8a864ee3b29439e10.
+
+Change-Id: I80cb50fd11a6ac79f74b74750b2a363528d9430d
+---
+ AndroidManifest.xml                            | 4 ++++
+ src/com/android/settings/SettingsActivity.java | 9 ---------
+ 2 files changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 9bccc44..771304e 100755
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -2907,6 +2907,10 @@
+                 android:label="@string/sim_settings_title"
+                 android:icon="@drawable/ic_settings_sim"
+                 android:taskAffinity="">
++            <intent-filter android:priority="1">
++                <action android:name="com.android.settings.sim.SIM_SUB_INFO_SETTINGS" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.DEFAULT" />
+diff --git a/src/com/android/settings/SettingsActivity.java b/src/com/android/settings/SettingsActivity.java
+index 05b1a76..280d5e7 100755
+--- a/src/com/android/settings/SettingsActivity.java
++++ b/src/com/android/settings/SettingsActivity.java
+@@ -1048,15 +1048,6 @@ public class SettingsActivity extends SettingsDrawerActivity
+      */
+     private Fragment switchToFragment(String fragmentName, Bundle args, boolean validate,
+             boolean addToBackStack, int titleResId, CharSequence title, boolean withTransition) {
+-        if (fragmentName.equals(SimSettings.class.getName())){
+-            Log.i(LOG_TAG, "switchToFragment, launch simSettings  ");
+-            Intent provisioningIntent =
+-                    new Intent("com.android.settings.sim.SIM_SUB_INFO_SETTINGS");
+-            startActivity(provisioningIntent);
+-            finish();
+-            return null;
+-        }
+-
+         if (LTE_4G_FRAGMENT.equals(fragmentName)) {
+             Intent newIntent = new Intent("android.settings.SETTINGS");
+             newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+-- 
+2.7.4
+
