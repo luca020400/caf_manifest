@@ -1,4 +1,4 @@
-From 9bb66031230f0030c3e52d8f25b66710a0585c18 Mon Sep 17 00:00:00 2001
+From ed4e212c03d054332e644b27004c3154db61a032 Mon Sep 17 00:00:00 2001
 From: Dan Pasanen <dan.pasanen@gmail.com>
 Date: Tue, 27 Oct 2015 22:52:37 -0500
 Subject: [PATCH] vold: add support for more filesystems for public storage
@@ -214,7 +214,7 @@ index 7ae22c5..8f218ef 100644
  
 diff --git a/fs/Exfat.cpp b/fs/Exfat.cpp
 new file mode 100644
-index 0000000..24a7831
+index 0000000..ab0f106
 --- /dev/null
 +++ b/fs/Exfat.cpp
 @@ -0,0 +1,86 @@
@@ -237,8 +237,8 @@ index 0000000..24a7831
 +#include "Exfat.h"
 +#include "Utils.h"
 +
-+#include <base/logging.h>
-+#include <base/stringprintf.h>
++#include <android-base/logging.h>
++#include <android-base/stringprintf.h>
 +
 +#include <vector>
 +#include <string>
@@ -351,7 +351,7 @@ index 0000000..cd4fb5d
 +#endif
 diff --git a/fs/Ntfs.cpp b/fs/Ntfs.cpp
 new file mode 100644
-index 0000000..56070a3
+index 0000000..9fc721e
 --- /dev/null
 +++ b/fs/Ntfs.cpp
 @@ -0,0 +1,96 @@
@@ -374,8 +374,8 @@ index 0000000..56070a3
 +#include "Ntfs.h"
 +#include "Utils.h"
 +
-+#include <base/logging.h>
-+#include <base/stringprintf.h>
++#include <android-base/logging.h>
++#include <android-base/stringprintf.h>
 +
 +#include <vector>
 +#include <string>
