@@ -1,7 +1,6 @@
 PRODUCT_PACKAGES += \
     BluetoothExt \
     SnapdragonGallery \
-    SnapdragonLauncher \
     SnapdragonMusic \
     SnapdragonCamera \
     Launcher3 \
