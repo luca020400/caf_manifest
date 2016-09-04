@@ -1,7 +1,7 @@
-From 2486a99c6755fc6d07fd8dabc1f38b9f77120d9e Mon Sep 17 00:00:00 2001
+From 736df5202014393e58b1776e42b1458c921c8d4c Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Mon, 16 May 2016 11:15:26 -0700
-Subject: [PATCH 09/13] SubscriptionController: fix subscription updating
+Subject: [PATCH 09/12] SubscriptionController: fix subscription updating
 
 We need to only repost messages on events we have handled, not
 prematurely posting them for every single eveng incoming.
@@ -16,9 +16,9 @@ Ticket: CYNGNOS-2185, CYNGNOS-2570
 Change-Id: I5b829662b466f609cd22adfa7d3b754757258463
 Signed-off-by: Roman Birg <roman@cyngn.com>
 ---
- .../internal/telephony/SubscriptionController.java | 18 +++++------
- .../telephony/SubscriptionInfoUpdater.java         | 36 ++++++++++++++--------
- 2 files changed, 31 insertions(+), 23 deletions(-)
+ .../internal/telephony/SubscriptionController.java | 18 ++++++-------
+ .../telephony/SubscriptionInfoUpdater.java         | 31 +++++++++++++++-------
+ 2 files changed, 30 insertions(+), 19 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
 index 89dceb0..c7c3f80 100644
@@ -79,10 +79,10 @@ index 89dceb0..c7c3f80 100644
                                  if (DBG) {
                                      logdl("[addSubInfoRecord] one sim set defaults to subId=" + subId);
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index caeb7e6..10f8328 100644
+index f1d95e3..ff7975b 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-@@ -227,9 +227,6 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -226,9 +226,6 @@ public class SubscriptionInfoUpdater extends Handler {
              String simStatus = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
              logd("simStatus: " + simStatus);
  
@@ -92,7 +92,7 @@ index caeb7e6..10f8328 100644
              if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
                  if (IccCardConstants.INTENT_VALUE_ICC_ABSENT.equals(simStatus)) {
                      sendMessage(obtainMessage(EVENT_SIM_ABSENT, slotId, -1));
-@@ -310,6 +307,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -309,6 +306,7 @@ public class SubscriptionInfoUpdater extends Handler {
                      logd("Query IccId fail: " + ar.exception);
                  }
                  logd("sIccId[" + slotId + "] = " + mIccId[slotId]);
@@ -100,7 +100,7 @@ index caeb7e6..10f8328 100644
                  broadcastSimStateChanged(slotId, IccCardConstants.INTENT_VALUE_ICC_LOCKED,
                                           uObj.reason);
                  if (!ICCID_STRING_FOR_NO_SIM.equals(mIccId[slotId])) {
-@@ -380,7 +378,6 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -379,7 +377,6 @@ public class SubscriptionInfoUpdater extends Handler {
              mIccId[slotId] = null;
          }
  
@@ -108,7 +108,7 @@ index caeb7e6..10f8328 100644
          IccFileHandler fileHandler = mPhone[slotId].getIccCard() == null ? null :
                  mPhone[slotId].getIccCard().getIccFileHandler();
  
-@@ -399,6 +396,14 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -398,6 +395,14 @@ public class SubscriptionInfoUpdater extends Handler {
          } else {
              logd("sFh[" + slotId + "] is null, ignore");
          }
@@ -123,7 +123,7 @@ index caeb7e6..10f8328 100644
      }
  
      protected void handleSimLoaded(int slotId) {
-@@ -417,6 +422,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -416,6 +421,7 @@ public class SubscriptionInfoUpdater extends Handler {
              return;
          }
          mIccId[slotId] = records.getIccId();
@@ -131,7 +131,7 @@ index caeb7e6..10f8328 100644
  
          int subId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
          int[] subIds = SubscriptionController.getInstance().getSubId(slotId);
-@@ -536,15 +542,13 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -535,6 +541,7 @@ public class SubscriptionInfoUpdater extends Handler {
              logd("SIM" + (slotId + 1) + " hot plug out or error");
          }
          mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
@@ -139,17 +139,7 @@ index caeb7e6..10f8328 100644
          updateCarrierServices(slotId, simState);
      }
  
-     public void updateSubIdForNV(int slotId) {
-         mIccId[slotId] = ICCID_STRING_FOR_NV;
--        logd("[updateSubIdForNV]+ scheduled");
--        removeMessages(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId);
--        sendMessageDelayed(obtainMessage(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId),
--                DELAY_MILLIS);
-+        update(slotId);
-     }
- 
-     /**
-@@ -554,7 +558,11 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -545,7 +552,11 @@ public class SubscriptionInfoUpdater extends Handler {
      synchronized protected void updateSubscriptionInfoByIccId() {
          logd("updateSubscriptionInfoByIccId:+ Start");
  
@@ -162,7 +152,7 @@ index caeb7e6..10f8328 100644
  
          for (int i = 0; i < PROJECT_SIM_NUM; i++) {
              mInsertSimState[i] = SIM_NOT_CHANGE;
-@@ -629,13 +637,13 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -620,13 +631,13 @@ public class SubscriptionInfoUpdater extends Handler {
              if (mInsertSimState[i] == SIM_NOT_INSERT) {
                  logd("updateSubscriptionInfoByIccId: No SIM inserted in slot " + i + " this time");
              } else {
@@ -178,7 +168,7 @@ index caeb7e6..10f8328 100644
                      mSubscriptionManager.addSubscriptionInfoRecord(mIccId[i], i);
                  }
                  if (isNewSim(mIccId[i], oldIccId)) {
-@@ -686,13 +694,15 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -677,13 +688,15 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  

@@ -1,7 +1,7 @@
-From c2f0cca8fc5be523f1af6bc837801c927dfd19f7 Mon Sep 17 00:00:00 2001
+From ab6cf4ac69444dfbf60804013245747228240085 Mon Sep 17 00:00:00 2001
 From: Christian Morlok <ChristianMorlok@gmail.com>
 Date: Wed, 20 Jan 2016 08:31:10 +0100
-Subject: [PATCH 02/13] telephony: Do not set default subscriptions on shutdown
+Subject: [PATCH 02/12] telephony: Do not set default subscriptions on shutdown
 
 On some devices the SIM slots are not deactivated at the same time
 when the phone is shut down or rebooted. This means that at some point

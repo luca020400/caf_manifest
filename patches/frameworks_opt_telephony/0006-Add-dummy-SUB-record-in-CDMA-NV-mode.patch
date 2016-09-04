@@ -1,7 +1,7 @@
-From b69dee2c04ccb1878890a23f1be1aff8858b2eaf Mon Sep 17 00:00:00 2001
+From de4fa8a275b7884cf1a5266aa39ec04f794c14e4 Mon Sep 17 00:00:00 2001
 From: Chaitanya Saggurthi <csaggurt@codeaurora.org>
 Date: Thu, 5 Feb 2015 18:37:59 +0530
-Subject: [PATCH 06/13] Add dummy SUB record in CDMA NV mode
+Subject: [PATCH 06/12] Add dummy SUB record in CDMA NV mode
 
 Add dummy SUB info record when NV is ready in CDMA NV mode.
 
@@ -9,10 +9,8 @@ CRs-Fixed: 789989
 
 Change-Id: Ie658087efaa9f93a329773d2d8f0601d083f3701
 ---
- src/java/com/android/internal/telephony/PhoneFactory.java      |  4 ++++
- .../com/android/internal/telephony/ServiceStateTracker.java    |  7 +++++++
- .../android/internal/telephony/SubscriptionInfoUpdater.java    | 10 ++++++++++
- 3 files changed, 21 insertions(+)
+ src/java/com/android/internal/telephony/PhoneFactory.java | 4 ++++
+ 1 file changed, 4 insertions(+)
 
 diff --git a/src/java/com/android/internal/telephony/PhoneFactory.java b/src/java/com/android/internal/telephony/PhoneFactory.java
 index ac659fe..6f53393 100644
@@ -27,59 +25,6 @@ index ac659fe..6f53393 100644
 +        return sSubInfoRecordUpdater;
 +    }
  }
-diff --git a/src/java/com/android/internal/telephony/ServiceStateTracker.java b/src/java/com/android/internal/telephony/ServiceStateTracker.java
-index 5f7478d..c7b3fe5 100644
---- a/src/java/com/android/internal/telephony/ServiceStateTracker.java
-+++ b/src/java/com/android/internal/telephony/ServiceStateTracker.java
-@@ -80,6 +80,8 @@ import java.util.TimeZone;
- import java.util.concurrent.atomic.AtomicInteger;
- 
- import com.android.internal.annotations.VisibleForTesting;
-+import com.android.internal.telephony.PhoneFactory;
-+import com.android.internal.telephony.SubscriptionInfoUpdater;
- import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
- import com.android.internal.telephony.cdma.EriInfo;
- import com.android.internal.telephony.dataconnection.DcTracker;
-@@ -341,6 +343,11 @@ public class ServiceStateTracker extends Handler {
-                 }
-                 // update voicemail count and notify message waiting changed
-                 mPhone.updateVoiceMail();
-+
-+                SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
-+                if (subscriptionInfoUpdater != null) {
-+                    subscriptionInfoUpdater.updateSubIdForNV(subId);
-+                }
-             }
-         }
-     };
-diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index 80fda48..92bdad0 100644
---- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-+++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-@@ -76,6 +76,7 @@ public class SubscriptionInfoUpdater extends Handler {
-     private static final int EVENT_SIM_UNKNOWN = 7;
- 
-     private static final String ICCID_STRING_FOR_NO_SIM = "";
-+    private static final String ICCID_STRING_FOR_NV = "DUMMY_NV_ID";
-     /**
-      *  int[] sInsertSimState maintains all slots' SIM inserted status currently,
-      *  it may contain 4 kinds of values:
-@@ -534,6 +535,15 @@ public class SubscriptionInfoUpdater extends Handler {
-         updateCarrierServices(slotId, simState);
-     }
- 
-+    public void updateSubIdForNV(int slotId) {
-+        mIccId[slotId] = ICCID_STRING_FOR_NV;
-+        logd("[updateSubIdForNV]+ Start");
-+        if (isAllIccIdQueryDone()) {
-+            logd("[updateSubIdForNV]+ updating");
-+            updateSubscriptionInfoByIccId();
-+        }
-+    }
-+
-     /**
-      * TODO: Simplify more, as no one is interested in what happened
-      * only what the current list contains.
 -- 
 2.7.4
 

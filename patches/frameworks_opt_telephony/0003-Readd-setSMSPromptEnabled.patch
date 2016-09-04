@@ -1,7 +1,7 @@
-From 61a3e1c6adb203d3a3f4e7b2cfc4d21185e2c4fb Mon Sep 17 00:00:00 2001
+From 5f9bb93956470f0f6c4f9560245cd8521f317c0f Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Sun, 4 Sep 2016 00:30:57 +0200
-Subject: [PATCH 03/13] Readd setSMSPromptEnabled()
+Subject: [PATCH 03/12] Readd setSMSPromptEnabled()
 
 Change-Id: I100a73af1c4caf68ea2c7a6a75e1f3b081947316
 ---

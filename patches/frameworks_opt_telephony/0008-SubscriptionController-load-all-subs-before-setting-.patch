@@ -1,7 +1,7 @@
-From 730b8e9c39bb5a5384ebef72978a715863f2cd10 Mon Sep 17 00:00:00 2001
+From bd657c9931c9dedf92d438d67174a7ad49270dd3 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Mon, 9 May 2016 08:52:42 -0700
-Subject: [PATCH 08/13] SubscriptionController: load all subs before setting
+Subject: [PATCH 08/12] SubscriptionController: load all subs before setting
  defaults
 
 Switch the whole class to use the new inserted SIM logic added in
@@ -22,10 +22,10 @@ the number of SIMS.
 Change-Id: I28eefaff61ae7c75732641465ca59eb67cf3e198
 Ticket: CYNGNOS-2185, CYNGNOS-2570
 ---
- .../internal/telephony/SubscriptionController.java | 32 ++++++--------
- .../telephony/SubscriptionInfoUpdater.java         | 50 +++++++++++-----------
+ .../internal/telephony/SubscriptionController.java | 32 +++++++----------
+ .../telephony/SubscriptionInfoUpdater.java         | 41 +++++++++++-----------
  .../internal/telephony/UiccSmsController.java      |  5 +++
- 3 files changed, 41 insertions(+), 46 deletions(-)
+ 3 files changed, 37 insertions(+), 41 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
 index 8c9c189..89dceb0 100644
@@ -105,7 +105,7 @@ index 8c9c189..89dceb0 100644
              Binder.restoreCallingIdentity(identity);
          }
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index f63f27a..caeb7e6 100644
+index 7ca8359..f1d95e3 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -74,6 +74,9 @@ public class SubscriptionInfoUpdater extends Handler {
@@ -117,8 +117,8 @@ index f63f27a..caeb7e6 100644
 +    private static final int DELAY_MILLIS = 500;
  
      private static final String ICCID_STRING_FOR_NO_SIM = "";
-     private static final String ICCID_STRING_FOR_NV = "DUMMY_NV_ID";
-@@ -116,7 +119,7 @@ public class SubscriptionInfoUpdater extends Handler {
+     /**
+@@ -115,7 +118,7 @@ public class SubscriptionInfoUpdater extends Handler {
      private int mCurrentlyActiveUserId;
      private CarrierServiceBindHelper mCarrierServiceBindHelper;
      private boolean mIsShutdown;
@@ -127,7 +127,7 @@ index f63f27a..caeb7e6 100644
  
      public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
          logd("Constructor invoked");
-@@ -224,6 +227,9 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -223,6 +226,9 @@ public class SubscriptionInfoUpdater extends Handler {
              String simStatus = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
              logd("simStatus: " + simStatus);
  
@@ -137,7 +137,7 @@ index f63f27a..caeb7e6 100644
              if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
                  if (IccCardConstants.INTENT_VALUE_ICC_ABSENT.equals(simStatus)) {
                      sendMessage(obtainMessage(EVENT_SIM_ABSENT, slotId, -1));
-@@ -304,9 +310,6 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -303,9 +309,6 @@ public class SubscriptionInfoUpdater extends Handler {
                      logd("Query IccId fail: " + ar.exception);
                  }
                  logd("sIccId[" + slotId + "] = " + mIccId[slotId]);
@@ -147,7 +147,7 @@ index f63f27a..caeb7e6 100644
                  broadcastSimStateChanged(slotId, IccCardConstants.INTENT_VALUE_ICC_LOCKED,
                                           uObj.reason);
                  if (!ICCID_STRING_FOR_NO_SIM.equals(mIccId[slotId])) {
-@@ -349,6 +352,13 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -348,6 +351,13 @@ public class SubscriptionInfoUpdater extends Handler {
                  handleSimAbsentOrError(msg.arg1, IccCardConstants.INTENT_VALUE_ICC_CARD_IO_ERROR);
                  break;
  
@@ -161,7 +161,7 @@ index f63f27a..caeb7e6 100644
              default:
                  logd("Unknown msg:" + msg.what);
          }
-@@ -408,10 +418,6 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -407,10 +417,6 @@ public class SubscriptionInfoUpdater extends Handler {
          }
          mIccId[slotId] = records.getIccId();
  
@@ -172,7 +172,7 @@ index f63f27a..caeb7e6 100644
          int subId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
          int[] subIds = SubscriptionController.getInstance().getSubId(slotId);
          if (subIds != null) {   // Why an array?
-@@ -467,7 +473,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -466,7 +472,7 @@ public class SubscriptionInfoUpdater extends Handler {
                      PreferenceManager.getDefaultSharedPreferences(mContext);
              int storedSubId = sp.getInt(CURR_SUBID + slotId, -1);
  
@@ -181,7 +181,7 @@ index f63f27a..caeb7e6 100644
                  int networkType = RILConstants.PREFERRED_NETWORK_MODE;
  
                  // when known SIM inserted in another slot for which subId already
-@@ -530,19 +536,15 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -529,9 +535,6 @@ public class SubscriptionInfoUpdater extends Handler {
              logd("SIM" + (slotId + 1) + " hot plug out or error");
          }
          mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
@@ -191,21 +191,7 @@ index f63f27a..caeb7e6 100644
          updateCarrierServices(slotId, simState);
      }
  
-     public void updateSubIdForNV(int slotId) {
-         mIccId[slotId] = ICCID_STRING_FOR_NV;
--        logd("[updateSubIdForNV]+ Start");
--        if (isAllIccIdQueryDone()) {
--            logd("[updateSubIdForNV]+ updating");
--            updateSubscriptionInfoByIccId();
--        }
-+        logd("[updateSubIdForNV]+ scheduled");
-+        removeMessages(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId);
-+        sendMessageDelayed(obtainMessage(EVENT_UPDATE_INSERTED_SIM_COUNT, slotId),
-+                DELAY_MILLIS);
-     }
- 
-     /**
-@@ -566,6 +568,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -556,6 +559,7 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
          logd("insertedSimCount = " + insertedSimCount);
@@ -213,7 +199,7 @@ index f63f27a..caeb7e6 100644
  
          int index = 0;
          for (int i = 0; i < PROJECT_SIM_NUM; i++) {
-@@ -683,15 +686,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -673,15 +677,7 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  
@@ -230,7 +216,7 @@ index f63f27a..caeb7e6 100644
              // Ensure the modems are mapped correctly
              mSubscriptionManager.setDefaultDataSubId(
                      mSubscriptionManager.getDefaultDataSubscriptionId());
-@@ -702,6 +697,9 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -692,6 +688,9 @@ public class SubscriptionInfoUpdater extends Handler {
      }
  
      protected int getInsertedSimCount() {

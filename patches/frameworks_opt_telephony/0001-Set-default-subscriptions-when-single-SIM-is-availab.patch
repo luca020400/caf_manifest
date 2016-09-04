@@ -1,7 +1,7 @@
-From a595a3dd611f1608a931e827906ec350108edfb5 Mon Sep 17 00:00:00 2001
+From 3f1194628516df0fd720edaeae71f0de7094be99 Mon Sep 17 00:00:00 2001
 From: Ethan Chen <intervigil@gmail.com>
 Date: Mon, 23 Nov 2015 17:12:47 -0800
-Subject: [PATCH 01/13] Set default subscriptions when single SIM is available
+Subject: [PATCH 01/12] Set default subscriptions when single SIM is available
 
 * Subscriptions are not updated when SIM cards are swapped. If there is
   ever a SIM count of 1, direct all defaults to point at that

@@ -1,7 +1,7 @@
-From b78c5546d03288a57085529c4c4041f254d691ae Mon Sep 17 00:00:00 2001
+From ea446724f709c2eb1db55151f301021273c0f730 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Thu, 5 May 2016 16:21:11 -0700
-Subject: [PATCH 07/13] SubscriptionController: properly detect when MSIM has 1
+Subject: [PATCH 07/12] SubscriptionController: properly detect when MSIM has 1
  SIM
 
 We cannot use sSlotIdxToSubId to determine when to turn the SIM dialog
@@ -33,10 +33,10 @@ index b86a4b5..8c9c189 100644
              }
  
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index 92bdad0..f63f27a 100644
+index 80fda48..7ca8359 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-@@ -116,6 +116,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -115,6 +115,7 @@ public class SubscriptionInfoUpdater extends Handler {
      private int mCurrentlyActiveUserId;
      private CarrierServiceBindHelper mCarrierServiceBindHelper;
      private boolean mIsShutdown;
@@ -44,7 +44,7 @@ index 92bdad0..f63f27a 100644
  
      public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
          logd("Constructor invoked");
-@@ -682,6 +683,8 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -672,6 +673,8 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  
@@ -53,7 +53,7 @@ index 92bdad0..f63f27a 100644
          if (!mIsShutdown && insertedSimCount == 1) {
              SubscriptionInfo sir = subInfos.get(0);
              int subId = sir.getSubscriptionId();
-@@ -698,6 +701,10 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -688,6 +691,10 @@ public class SubscriptionInfoUpdater extends Handler {
          logd("updateSubscriptionInfoByIccId:- SsubscriptionInfo update complete");
      }
  

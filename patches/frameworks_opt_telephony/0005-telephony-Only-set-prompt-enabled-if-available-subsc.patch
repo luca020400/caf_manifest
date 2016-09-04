@@ -1,7 +1,7 @@
-From 4fbb00fb966269ec7518e9dfadd2a401c05f7a59 Mon Sep 17 00:00:00 2001
+From fad1b6f90f639ec313cfe9dfd31b8b13d3f52179 Mon Sep 17 00:00:00 2001
 From: Adnan Begovic <adnan@cyngn.com>
 Date: Tue, 5 Apr 2016 08:14:29 -0700
-Subject: [PATCH 05/13] telephony: Only set prompt enabled if available
+Subject: [PATCH 05/12] telephony: Only set prompt enabled if available
  subscriptions > 1.
 
 TICKET: CRACKLING-1026

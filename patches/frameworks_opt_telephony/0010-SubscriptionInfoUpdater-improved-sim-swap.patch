@@ -1,7 +1,7 @@
-From 867bb9782160860df823322d365fe5ebcea5fca9 Mon Sep 17 00:00:00 2001
+From b7a0d1235337ceda76d51da489259efe85248e9c Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Tue, 17 May 2016 17:14:44 -0700
-Subject: [PATCH 10/13] SubscriptionInfoUpdater: improved sim swap
+Subject: [PATCH 10/12] SubscriptionInfoUpdater: improved sim swap
 
 We now keep track of the last number of inserted SIMs updated for. So
 when the number of SIMs has changed we do the following:
@@ -100,7 +100,7 @@ index c7c3f80..dc66485 100644
                  mDefaultFallbackSubId = subId;
                  // Update MCC MNC device configuration information
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index 10f8328..ead340e 100644
+index ff7975b..8ee2353 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -52,6 +52,7 @@ import com.android.internal.telephony.uicc.IccUtils;
@@ -111,7 +111,7 @@ index 10f8328..ead340e 100644
  import java.util.HashMap;
  import java.util.Iterator;
  import java.util.List;
-@@ -105,6 +106,8 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -104,6 +105,8 @@ public class SubscriptionInfoUpdater extends Handler {
  
      // Key used to read/write the current IMSI. Updated on SIM_STATE_CHANGED - LOADED.
      public static final String CURR_SUBID = "curr_subid";
@@ -120,7 +120,7 @@ index 10f8328..ead340e 100644
  
      private static Phone[] mPhone;
      private static Context mContext = null;
-@@ -120,6 +123,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -119,6 +122,7 @@ public class SubscriptionInfoUpdater extends Handler {
      private CarrierServiceBindHelper mCarrierServiceBindHelper;
      private boolean mIsShutdown;
      private int mCurrentSimCount = 0;
@@ -128,7 +128,7 @@ index 10f8328..ead340e 100644
  
      public SubscriptionInfoUpdater(Context context, Phone[] phone, CommandsInterface[] ci) {
          logd("Constructor invoked");
-@@ -248,6 +252,16 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -247,6 +251,16 @@ public class SubscriptionInfoUpdater extends Handler {
                      logd("Ignoring simStatus: " + simStatus);
                  }
              }
@@ -145,7 +145,7 @@ index 10f8328..ead340e 100644
              logd("[Receiver]-");
          }
      };
-@@ -351,6 +365,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -350,6 +364,7 @@ public class SubscriptionInfoUpdater extends Handler {
                  break;
  
              case EVENT_UPDATE_INSERTED_SIM_COUNT:
@@ -153,7 +153,7 @@ index 10f8328..ead340e 100644
                  if (isAllIccIdQueryDone() && !hasMessages(EVENT_UPDATE_INSERTED_SIM_COUNT)) {
                      updateSubscriptionInfoByIccId();
                      logd("update inserted sim count, current sim count: " + mCurrentSimCount);
-@@ -479,7 +494,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -478,7 +493,7 @@ public class SubscriptionInfoUpdater extends Handler {
                      PreferenceManager.getDefaultSharedPreferences(mContext);
              int storedSubId = sp.getInt(CURR_SUBID + slotId, -1);
  
@@ -162,7 +162,7 @@ index 10f8328..ead340e 100644
                  int networkType = RILConstants.PREFERRED_NETWORK_MODE;
  
                  // when known SIM inserted in another slot for which subId already
-@@ -694,18 +709,57 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -688,18 +703,57 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  

@@ -1,7 +1,7 @@
-From 3714ea3c7df208b4ceee3e18c5a0b89c64bb61cc Mon Sep 17 00:00:00 2001
+From b3bd8d257a542a493079c8699fe920ed55777e43 Mon Sep 17 00:00:00 2001
 From: Adnan Begovic <adnan@cyngn.com>
 Date: Wed, 30 Mar 2016 15:16:12 -0700
-Subject: [PATCH 04/13] telephony: Workaround default sms sub id not being set.
+Subject: [PATCH 04/12] telephony: Workaround default sms sub id not being set.
 
   In the scenario where default sms sub id isn't set externally
   the user can be stuck in an endless loop of prompts if they

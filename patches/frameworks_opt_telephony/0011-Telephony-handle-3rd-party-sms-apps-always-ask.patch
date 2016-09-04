@@ -1,7 +1,7 @@
-From ce4defda887716194758a4199b71812947ad7fde Mon Sep 17 00:00:00 2001
+From 2501d9d9c59a36dcdb94519bfe7d6bbe2f2c8a67 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Mon, 20 Jun 2016 11:13:54 -0700
-Subject: [PATCH 11/13] Telephony: handle 3rd party sms apps + 'always ask'
+Subject: [PATCH 11/12] Telephony: handle 3rd party sms apps + 'always ask'
 
 3rd party SMS apps may not be able to handle our always ask behavior, so
 they may get stuck in a bad state. An example of this is Hangouts, which
