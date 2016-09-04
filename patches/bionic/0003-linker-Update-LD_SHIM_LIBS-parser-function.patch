@@ -1,0 +1,37 @@
+From e31e41dc7ad0e1c5a82a72f63387be65851cf0f5 Mon Sep 17 00:00:00 2001
+From: Chippa-a <vusal1372@gmail.com>
+Date: Sat, 27 Aug 2016 14:56:30 +0200
+Subject: [PATCH 3/5] linker: Update LD_SHIM_LIBS parser function
+
+ * Upgrade the code using the same changes as
+    42d5fcb9f494eb45de3b6bf759f4a18076e84728
+    bda20e78f0f314dbbf0f0bbcf0740cf2d6a4b85e
+
+Change-Id: Ic8be0871945bd9feccd0f94a6770f3cc78a70a0f
+---
+ linker/linker.cpp | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/linker/linker.cpp b/linker/linker.cpp
+index 7873ac1..bfe9f33 100644
+--- a/linker/linker.cpp
++++ b/linker/linker.cpp
+@@ -1248,7 +1248,14 @@ static void reset_g_active_shim_libs(void) {
+ }
+ 
+ static void parse_LD_SHIM_LIBS(const char* path) {
+-  parse_path(path, " :", &g_ld_all_shim_libs);
++  g_ld_all_shim_libs.clear();
++  if (path != nullptr) {
++    // We have historically supported ':' as well as ' ' in LD_SHIM_LIBS.
++    g_ld_all_shim_libs = android::base::Split(path, " :");
++    std::remove_if(g_ld_all_shim_libs.begin(),
++                   g_ld_all_shim_libs.end(),
++                   [] (const std::string& s) { return s.empty(); });
++  }
+   reset_g_active_shim_libs();
+ }
+ 
+-- 
+2.9.3
+

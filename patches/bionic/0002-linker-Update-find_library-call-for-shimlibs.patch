@@ -1,0 +1,44 @@
+From 3926d52ded0fb91d714ec01a36c3633eb47b460a Mon Sep 17 00:00:00 2001
+From: Chirayu Desai <chirayudesai1@gmail.com>
+Date: Thu, 25 Aug 2016 19:02:41 +0530
+Subject: [PATCH 2/5] linker: Update find_library call for shimlibs
+
+commits 0cdef7e7f3c6837b56a969120d9098463d1df8d8
+"Respect caller DT_RUNPATH in dlopen()."
+and 42d5fcb9f494eb45de3b6bf759f4a18076e84728
+"Introducing linker namespaces"
+added new arguments to find_library, add them here.
+
+Change-Id: I8f35a45b00d14f8b2ce01a0a96d2dc7759be04a6
+---
+ linker/linker.cpp | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/linker/linker.cpp b/linker/linker.cpp
+index 2c2f174..7873ac1 100644
+--- a/linker/linker.cpp
++++ b/linker/linker.cpp
+@@ -1223,7 +1223,10 @@ typedef linked_list_t<soinfo> SoinfoLinkedList;
+ typedef linked_list_t<const char> StringLinkedList;
+ typedef std::vector<LoadTask*> LoadTaskList;
+ 
+-static soinfo* find_library(const char* name, int rtld_flags, const android_dlextinfo* extinfo);
++static soinfo* find_library(android_namespace_t* ns,
++                           const char* name, int rtld_flags,
++                           const android_dlextinfo* extinfo,
++                           soinfo* needed_by);
+ 
+ // g_ld_all_shim_libs maintains the references to memory as it used
+ // in the soinfo structures and in the g_active_shim_libs list.
+@@ -1275,7 +1278,7 @@ static void shim_libs_for_each(const char *const path, F action) {
+   for (const auto& one_pair : matched) {
+     const char* const pair = one_pair->c_str();
+     const char* sep = strchr(pair, '|');
+-    soinfo *child = find_library(sep+1, RTLD_GLOBAL, nullptr);
++    soinfo *child = find_library(&g_default_namespace, sep+1, RTLD_GLOBAL, nullptr, nullptr);
+     if (child) {
+       INFO("Using shim lib \"%s\"\n", sep+1);
+       action(child);
+-- 
+2.9.3
+
