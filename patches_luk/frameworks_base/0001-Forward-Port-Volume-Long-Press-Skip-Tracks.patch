@@ -1,0 +1,97 @@
+From cac1ae14db6f0d20c4925ddcc97a5a7d4c487a70 Mon Sep 17 00:00:00 2001
+From: "Austin T. Conn" <atc3030dev@gmail.com>
+Date: Wed, 17 Dec 2014 13:28:00 -0500
+Subject: [PATCH 1/2] Forward Port Volume Long Press Skip Tracks
+
+Bring Forward Volume Rocker Track Change
+
+Change-Id: I70b00e08fe48707110725dd1daa56b1e48d15a03
+---
+ .../android/server/policy/PhoneWindowManager.java  | 43 ++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+
+diff --git a/services/core/java/com/android/server/policy/PhoneWindowManager.java b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+index 6774a7c..1895080 100644
+--- a/services/core/java/com/android/server/policy/PhoneWindowManager.java
++++ b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+@@ -488,6 +488,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+     WindowState mFocusedWindow;
+     IApplicationToken mFocusedApp;
+ 
++    // Behavior of volbtn music controls
++    boolean mIsLongPress;
++
+     PointerLocationView mPointerLocationView;
+ 
+     // The current size of the screen; really; extends into the overscan area of
+@@ -730,6 +733,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+     private static final int MSG_SHOW_TV_PICTURE_IN_PICTURE_MENU = 17;
+     private static final int MSG_BACK_LONG_PRESS = 18;
+     private static final int MSG_DISPOSE_INPUT_CONSUMER = 19;
++    private static final int MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK = 20;
+ 
+     private static final int MSG_REQUEST_TRANSIENT_BARS_ARG_STATUS = 0;
+     private static final int MSG_REQUEST_TRANSIENT_BARS_ARG_NAVIGATION = 1;
+@@ -802,6 +806,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+                 case MSG_DISPOSE_INPUT_CONSUMER:
+                     disposeInputConsumer((InputConsumer) msg.obj);
+                     break;
++                case MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK:
++                    dispatchMediaKeyWithWakeLockToAudioService((KeyEvent)msg.obj);
++                    dispatchMediaKeyWithWakeLockToAudioService(KeyEvent.changeAction((KeyEvent)msg.obj, KeyEvent.ACTION_UP));
++                    break;
+             }
+         }
+     }
+@@ -5380,6 +5388,20 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+         setHdmiPlugged(!mHdmiPlugged);
+     }
+ 
++    /**
++     * @return Whether music is being played right now "locally" (e.g. on the device's speakers
++     *    or wired headphones) or "remotely" (e.g. on a device using the Cast protocol and
++     *    controlled by this device, or through remote submix).
++     */
++    private boolean isMusicActive() {
++        final AudioManager am = (AudioManager)mContext.getSystemService(Context.AUDIO_SERVICE);
++        if (am == null) {
++            Log.w(TAG, "isMusicActive: couldn't get AudioManager reference");
++            return false;
++        }
++        return am.isMusicActive();
++    }
++
+     final Object mScreenshotLock = new Object();
+     ServiceConnection mScreenshotConnection = null;
+ 
+@@ -5624,6 +5646,27 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+                         }
+                     }
+                 }
++
++                if (isMusicActive() && (result & ACTION_PASS_TO_USER) == 0) {
++                    if (down && (keyCode != KeyEvent.KEYCODE_VOLUME_MUTE)) {
++                        mIsLongPress = false;
++                        int newKeyCode = event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP ?
++                                KeyEvent.KEYCODE_MEDIA_NEXT : KeyEvent.KEYCODE_MEDIA_PREVIOUS;
++                        Message msg = mHandler.obtainMessage(MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK,
++                                new KeyEvent(event.getDownTime(), event.getEventTime(), event.getAction(), newKeyCode, 0));
++                        msg.setAsynchronous(true);
++                        mHandler.sendMessageDelayed(msg, ViewConfiguration.getLongPressTimeout());
++                        break;
++                    } else {
++                        if (!down) {
++                            mHandler.removeMessages(MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK);
++                            if (mIsLongPress) {
++                                break;
++                            }
++                        }
++                    }
++                }
++
+                 if (mUseTvRouting) {
+                     // On TVs, defer special key handlings to
+                     // {@link interceptKeyBeforeDispatching()}.
+-- 
+2.7.4
+
