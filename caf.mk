@@ -7,5 +7,6 @@ PRODUCT_PACKAGES += \
     LatinIME \
     messaging
 
+# Prebuilt
 PRODUCT_COPY_FILES += \
-    caf_manifest/apns-conf.xml:system/etc/apns-conf.xml
+    $(call find-copy-subdir-files, *, caf_manifest/prebuilt, system)
