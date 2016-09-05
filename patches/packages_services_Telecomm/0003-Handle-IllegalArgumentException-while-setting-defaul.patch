@@ -1,7 +1,7 @@
-From 36657d03f3aa7c458bffa980a71f7ac68b758afe Mon Sep 17 00:00:00 2001
+From 78d50af7b9deeeb89bdbd1eb9554d04b5550a6d2 Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Thu, 9 Jun 2016 15:43:39 +0200
-Subject: [PATCH 3/3] Handle IllegalArgumentException while setting default
+Subject: [PATCH 3/4] Handle IllegalArgumentException while setting default
  calling sub
 
 * How to reproduce:

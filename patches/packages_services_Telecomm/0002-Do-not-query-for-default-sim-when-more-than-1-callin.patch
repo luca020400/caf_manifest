@@ -1,7 +1,7 @@
-From acdca67e72459522319f77be148b26a4a3fc25cb Mon Sep 17 00:00:00 2001
+From 94c8918657ace156c4fb573a54cdbe11d5fc9bd9 Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Wed, 6 Jan 2016 17:25:30 +0100
-Subject: [PATCH 2/3] Do not query for default sim when more than 1 calling
+Subject: [PATCH 2/4] Do not query for default sim when more than 1 calling
  account is available
 
 * Fixes an issue when com.android.phone crashes if user has
