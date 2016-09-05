@@ -20,7 +20,6 @@ PRODUCT_COPY_FILES += \
 ALARM_PATH := caf_manifest/prebuilt/media/audio/alarms
 NOTIFICATION_PATH := caf_manifest/prebuilt/media/audio/notifications
 RINGTONE_PATH := caf_manifest/prebuilt/media/audio/ringtones
-UI_PATH := caf_manifest/prebuilt/media/audio/ui
 
 # Alarms
 PRODUCT_COPY_FILES += \
