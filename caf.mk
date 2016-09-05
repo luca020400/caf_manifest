@@ -34,3 +34,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.com.android.wifi-watchlist=GoogleGuest \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dataroaming=false
+
+# Overlay
+DEVICE_PACKAGE_OVERLAYS += caf_manifest/overlay
