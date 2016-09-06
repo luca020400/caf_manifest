@@ -1,0 +1,399 @@
+From 445d8406cddff14ba40ff2360f8bde9155b32e62 Mon Sep 17 00:00:00 2001
+From: Rashed Abdel-Tawab <rashed@linux.com>
+Date: Sun, 30 Nov 2014 00:17:03 -0500
+Subject: [PATCH] Status bar: Add HSPA+ icons
+
+Forward port H+ icon in the status bar when connected to HSPA+
+Uses new vector drawables by blunden
+
+Change-Id: Ia745c524d5e2530f50f12f961ea8533a4c8f5842
+---
+ .../drawable-hdpi/stat_sys_data_connected_hp.png   | Bin 1260 -> 0 bytes
+ .../stat_sys_data_fully_connected_hp.png           | Bin 1250 -> 0 bytes
+ .../SystemUI/res/drawable-mdpi/ic_qs_signal_hp.png | Bin 1254 -> 0 bytes
+ .../drawable-mdpi/stat_sys_data_connected_hp.png   | Bin 1140 -> 0 bytes
+ .../stat_sys_data_fully_connected_hp.png           | Bin 1144 -> 0 bytes
+ .../drawable-xhdpi/stat_sys_data_connected_hp.png  | Bin 1344 -> 0 bytes
+ .../stat_sys_data_fully_connected_hp.png           | Bin 1325 -> 0 bytes
+ packages/SystemUI/res/drawable/ic_qs_signal_hp.xml |  27 +++++++++++++++++
+ .../drawable/stat_sys_data_fully_connected_hp.xml  |  27 +++++++++++++++++
+ packages/SystemUI/res/values/strings.xml           |   3 ++
+ .../statusbar/policy/MobileSignalController.java   |   3 ++
+ .../statusbar/policy/NetworkControllerImpl.java    |   1 +
+ .../systemui/statusbar/policy/TelephonyIcons.java  |  32 ++++++++++++++++++++-
+ 13 files changed, 92 insertions(+), 1 deletion(-)
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_data_connected_hp.png
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_data_fully_connected_hp.png
+ delete mode 100644 packages/SystemUI/res/drawable-mdpi/ic_qs_signal_hp.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_data_connected_hp.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_data_fully_connected_hp.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_data_connected_hp.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_data_fully_connected_hp.png
+ create mode 100644 packages/SystemUI/res/drawable/ic_qs_signal_hp.xml
+ create mode 100644 packages/SystemUI/res/drawable/stat_sys_data_fully_connected_hp.xml
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_data_connected_hp.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_data_connected_hp.png
+deleted file mode 100755
+index 7f86ac3d989de68900a09e7b42cfcf412932911e..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1260
+zcmeAS@N?(olHy`uVBq!ia0vp^azHH2!3HF=|Jn-zDajJoh?3y^w370~qErUQl>DSr
+z1<%~X^wgl##FWaylc_cg49rTIArU1JzCKpT`MG+DAT@dwxdlMo3=B5*6$OdO*{LN8
+zNvY|XdA3ULckfqH$V{<S3ODsN@GWpo&B*kqDoPEm@(W3>%1*XSQL?vFu&J;D8jzb>
+zlBiITo0C^;Rbi_HHrEQs1_|pcDS(xfWZNo192Makpx~Tel&WB=XRMoSU}&gdW~OIo
+zVrph)sH0$HU}&Uo07PcGh9*{~W>!Y#3Q(W~w5=#5%__*n4QdyVXRDM^Qc_^0uU}qX
+zu2*iXmtT~wZ)j<02{OaTNEfI=x41H|B(Xv_uUHvof=g;~a#3bMNoIbY0?5R~r2Ntn
+zTP2`NAzsKWfE$}v3=Jk=fazBx7U&!58GyV5Q|Rl9UukYGTy=3tP%6T`SPd=?sVqp<
+z4@xc0FD*(2MqHXQ$f^P>=c3falKi5O{QMkPC<bKYm*f{`<QFJ72b(EqglFcZ<d+v~
+zg4O%_T6yLbmn7yTr+T{BDgjN<%gju%a<Q;5GBI&AadmWZGBk8Gax`}|aWyqCaxyV8
+zb8~TXgz0t3PcF?(%`1WFO+n~2#i<vR6mkoIHoK%2WtOF;xE1B+DuBIgm5JLeMmWub
+z>P^Az7Gs=x^?{Dj2SqGWM8kxDsRzV_CtDx~p72xifT_I*n5^%&eFf$g#sp6n$B>F!
+zZ>H?^VlfmrKKaed!Uy52W8S)}|6p0PR6jvmBRw&F|L&>1Q<v&1{9q}&6&ahV&egOa
+zqDz6}-m&@=w_^!iw^?$GKJ4}^^89CQ?73xY*wxatEtv^d^DjTCKX!Ukh~cui8?IHo
+zY0Zo6DZS$#8p^hg(fR?yoMz=&m)X@5q<9Y4{+QSA6MKkX@Nc4a;>1&`8@y(3_HFbP
+znitx+=J8kill!Za<yGF?%1)5HX!hkl)2-Vf-#2eNBvYw)jBEXVj<TbUv)QY!<mu*|
+z$ZyELwTC_JNPBFfwUzMk2V!%MEt{o0Z*f$#l(tLD`3J0-xi6&lEwq&hzfn=U?lx;g
+z;Z~OD2c`x4C(G*HyTNH2P|eiyFRI7m`faY+4I4i4g>Uk3J~XFso_V^_goQ6cigWLF
+zf91$KGDm#_|1PD!7bSmu-yXGW>ixHFF@|*xZYy7{P2O*F_2H>Qkrv$P4|Qa==rgi0
+YgiVU$kSofZ04jexUHx3vIVCg!0023^!2kdN
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_data_fully_connected_hp.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_data_fully_connected_hp.png
+deleted file mode 100755
+index 46dc18bbcc0618c3a2ea022a597ed79969bc502b..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1250
+zcmeAS@N?(olHy`uVBq!ia0vp^azHH2!3HF=|Jn-zDajJoh?3y^w370~qErUQl>DSr
+z1<%~X^wgl##FWaylc_cg49rTIArU1JzCKpT`MG+DAT@dwxdlMo3=B5*6$OdO*{LN8
+zNvY|XdA3ULckfqH$V{<S3ODsN@GWpo&B*kqDoPEm@(W3>%1*XSQL?vFu&J;D8jzb>
+zlBiITo0C^;Rbi_HHrEQs1_|pcDS(xfWZNo192Makpx~Tel&WB=XRMoSU}&gdW~OIo
+zVrph)sH0$HU}&Uo07PcGh9*{~W>!Y#3Q(W~w5=#5%__*n4QdyVXRDM^Qc_^0uU}qX
+zu2*iXmtT~wZ)j<02{OaTNEfI=x41H|B(Xv_uUHvof=g;~a#3bMNoIbY0?5R~r2Ntn
+zTP2`NAzsKWfE$}v3=Jk=fazBx7U&!58GyV5Q|Rl9UukYGTy=3tP%6T`SPd=?sVqp<
+z4@xc0FD*(2MqHXQ$f^P>=c3falKi5O{QMkPC<bKYm*f{`<QFJ72b(EqglFcZ<d+v~
+zg4O%_T6yLbmn7yTr+T{BDgjN<%gju%a&~q#G%_-Eb9HobGBk8Gax!x<bFpx=bT%-v
+zaB?<sg6Vb1PcF?(%`1WFO@Zq*Gr*}AloWCcfHu3N7G;*DrnnX5=PH1`Y?X=IEiO3C
+zgX&Ge=@wI0oO<<vj?o82EK)?ngn+3B#DphXAP1iCQ}ckSy$G1Bd73_3FfcHNdAc};
+zRNQ(qRoCCyP^9fT-?8HkzJ*6cCM*z8R?%oWkg)70vr5I4y2Bzubqq|rVg($}0whFw
+z62uR=7lqGrKIc0tt?6#{Nuf(>{<r3RyR+Ta_O0o;ou^c~X0G^f?CIvEwk@$4hk56`
+zp2H?{$VTS=TUGs;#&zK#wmI&Pxo$7G-;x{gF{gMDW3*PB*G#To@dge2=cgT#4pG&5
+zv&nVut6udR-<BRccm5NXbZ-;yqM)xiN>vYf^(+70IrQnHe?<GbTUk=?7V5o`k}FxW
+z`t9UJ3)ihUz;wm^DbvF@!Cy^xE|E%jEh;K@G4iL~oTfWlS*&(Rd=Ec4b?#^DJype*
+z0?)lEQD0wBF?UY+w0}-U)tRay(_ErjW;*Oxw{TnP{+OHVrX}*qJ&b#PV(~`K%LS{y
+z-w{X)kGLUWye;{n`9JlYQR4m&nT6)9yt?sA{hzsu3Pk!21zK?ZUsl6yz_95?O}61n
+Rmnu-H<LT<>vd$@?2>=#)zR&;w
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/ic_qs_signal_hp.png b/packages/SystemUI/res/drawable-mdpi/ic_qs_signal_hp.png
+deleted file mode 100644
+index 59c0e9f7862ac0a55eec481c8564a12c845079ce..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1254
+zcmeAS@N?(olHy`uVBq!ia0vp^3LwnE1|*BCs=fdz$r9IylHmNblJdl&R0hYC{G?O`
+z&)mfH)S%SFl*+=BsWuD@%u1Od5hW46K32*3xq68pHF_1f1wh>l3^w)^1&PVosU-?Y
+zsp*+{wo31J?^jaDOtDo8H}y5}EpSfF$n>ZxN)4{^3rViZPPR-@vbR&PsjvbXkegbP
+zs8ErclUHn2VXFi-*9yo63F|8<fR&VF+bTgE72zA8;GAESs$i;Tteb3LXsBRjre|nk
+zYG!7rqhMrUXryldL}t2%CRV0qRz~IuP@n{~ttchUD#*nRY8Q}atCUevQedU8UtV6W
+zS8lAAUzDzIXlZE)GQ-G77pOwFxH7LKu|hYmSQ%!5OKNd)QD#9&W`3Rm$i&2?{L&Iz
+zC7??oUdSzg8=F@Q4JKfK=~pBc=o{)8fV>1#=<ADLX>KlDb#X~hD#E>34K5C;EJ)Q4
+zN-fSWElLJPT$(b-ssbzLqSVBa{GyQj{2W*)24v)y<QHe;7brLfn<;37XXd5kmltb-
+z)%*HddFB<DB<3Zjdb-#u0Zq`$%uKN|vov*caWl7Yb#w%Vx~q|+qpPK*fvLHhk%^m$
+znVBU_uS<S%X>Mv>2~2MaLa!xGy`ZF!TL84#CABECEH%ZgC_h&L>}9J=+-@<$X&zK>
+z3U0TU<J7AUbc{YIVv!;mCIn19ASOK70y*%6pPC0u?M1+3eK6Jh1Oo$Ol&6bhNX4zB
+zKmY&RGaFe{f73CVF4z$$njmOyW|pQPZm`I@VdBJzDb5$pDzF*|1{FLzBRT1aCLd#h
+zhynA;{SGobM}!-9$ahpX&fx8+SM0pb^sz=Ejm_;~{DOT&6Ur2-`Ijm(bTb<&Ok+!`
+zlzB8M<B{xwCk|O08y-yj-R{<W<)6!Bah4?G1@Hem9i7sUBd+jQPC_VMvy?%37V|%c
+zm+>B-6y)DKT$;>wbU{YJ(kqM`UKFxD(sVe(dgOjXgt(_%ilFv|?ez_I?5fMS6n0OJ
+z3S{7BOwE{M?C9Jq>N`)VL0|gNqf$MAZibCKQ`WgmZf6Xbuzp#Zl8b*&{l$zaf4sB4
+zDeqEn3Od|zEPYX^$blNR(?$0$9I1DB`TmAelN8XjM@t>{2%cOtKjTq+;gZ&cp^_T~
+zR-{N2vKT9yHpypmT#z;}<S~#aJ+Ok=P1fL5Lm+#PRl*fU21Ygp^Y0lKXKmIA1eH9V
+Lu6{1-oD!M<8y=%z
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_data_connected_hp.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_data_connected_hp.png
+deleted file mode 100755
+index dd99d0321e09d5a17097e13752a2cc1bb1883842..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1140
+zcmaJ>J8aWj7<CDhs!%CZ2#F%ll?x>ZV#iM7CRRh6#0f;;Ql$|@>Hv;?(^|#8u6;`$
+z15m`H3?N|PG5!Ar9Xc=|qz*_Z;xSPqmI4zjyipe<1R`9QrZ5mJ+xMY!&i8%yJNEg(
+zfjw=l9jz2awWaq;88WUXPkT!<c@NM1@RDI8PUi3sD&V4GLn@}BJOpV&8G#w7Xyx(8
+zu$Q7dw4Tl3oV;IDk-;b~hA9~qVN+CZU&&I`F^EAPj_78T{yck+2D%od4~67_Y$f2R
+zzPDn-p~^s3t&FJ=jqckGdP^b^Fd$Yy$vA2{Vkt^5>WXCUZnHF4gy69#{VS=QJO~oV
+zh9JZQ{c3>YfFLkjcSsPpU4Rd8JR2al;ODx<kRb9sVCkYsG+Qf(87Z|Ci>#vbD8`n^
+zvc+PNDFzv2kFZ=M5^*(n-cJyIr)*-S<Tstpx`G59)z&SnBNMoaN*+z%C`~f`Rf1tH
+z%bL#8F_8mfONzyEOu#Lv4wU78Lk(jY?cfajo$p_Toov~HYz8`L!d6M+3Y~5!OH9~M
+z!N|@cbhLhogQEx|XB1f=F(d%rA>Gta(b=(xmt`?+I#@APn3ke6QDAgk6I1bUSO|6p
+zld*`zaY;TN3-`o?o@6o=NC=4-U*}3loiLz@>s;+Ox4R+NwSr-h$P%>mV^B-k$N-Ba
+zi+bZ+xQ2R5T&-~~d_yivl40G({?X|A7IBX|UA8S*EE^x1#O*e*HJ*A{B%j2av=qyh
+zp69>UYJHwilbT3)IxjU}?^siP+28A#Do@^RnJP9djDtcRLiyJ8^o``B{w`nhqy(7L
+zx4)je+cfp@^0PDTuj5@?zaa4AVzsuq+BeDU^Ss*Je`kDn_=O3C2P0rj`?u}h_nw8#
+zH^Yx^pSX9T)?9YB%*}o5XJ@axiXQ~WJym1QlCB<>r?19lDr@aF?~`+t>+8DG`%nM3
+zsU`2k=RXYY4&HivcGbIfudgXD_`YrP&Qc48uf{%odntFOTA(%@xu5#NcU~F0_W#WG
+l9Xq*9^!<g7@QSr7TLM(|Q@V9NIe)<Y52TX=(oFowsh?MWcryS1
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_data_fully_connected_hp.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_data_fully_connected_hp.png
+deleted file mode 100755
+index eca60006f6ce4bbc90be9603b00f5aaa8851f08c..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1144
+zcmeAS@N?(olHy`uVBq!ia0vp^B0wy}!3HFwFZ>e#Qj#UE5hcO-X(i=}MX3yqDfvmM
+z3ZA)%>8U}fi7AzZCsS=07?_nZLn2Bde0{8v^K<nQL2C3WatnaE85nHrD+&^mvr|hH
+zl2X$%^K6yg@7}MZkeOnu6mIHk;9KCFnvv;IRg@ZB<rk7%m7Q#vqGWHUU{hfQG$1#%
+zBvGLvHz%*ys=`(YY_1iM4HDK@QUEI{$+lI3I4Z(7K*2e`C{@8!&saCvz|c^^%uLVF
+z#MI2pP)EVYz|ctF0Eo<V4Na^}&8&>f6`()~Xj@TAnpKdC8`Lf!&sHg;q@=(~U%$M(
+zT(8_%FTW^V-_X+15@d#vkuFe$ZgFK^Nn(X=Ua>OF1ees}<f6=ilFa-(1(1n}N%^HE
+zwn{*kLcEY$05>+T7#d8#0MoBXEYLU9GXQxBrqI_HztY@Xxa#7Ppj3o=u^L<)Qdy9y
+zACy|0Us{w5jJPyqkW~d%&PAz-CHX}m`T04pPz=b(FUc>?$S+WE4mMNJ2+zz*$uBR~
+z1grP;werj>E=kNwPW5!LRRWrzmzkMj<?3u;YGGjF>gs6eVrb}UWMOG!=ICT;=IH2V
+zWa?(%1k>x1pIn-onpXnTn}X2mhEp#nDdZLaZFWg5$}CGwaVyHtRRDY0DigO`oN<~5
+z)tiFbEiO3q>H{644~kf%h=vIPQxAv<Pqsh~JmIJ20aJSsFj<QVJun1ji8r1ujv*Dd
+zlK%YvZ_jMXxcK9><vk8kDXWA9iWxqdDLi9&<e*^3e#G42)xVmm=~aqO>0*k^Gab4X
+z=Ey7XwQkzkV8Pt+b>fv)p~p^YD&NEv{`DOB&v3-PLC>4{(OidZ8xMAA?{2&yF~3pA
+z<IR1CHGD@lH_njksB~~Vcu1Y))3cZb3#}XC%2bcGDmdR`_^6d(@z0HmPawi~)$~NR
+zcWjSr9sUU4bVyQSx$9t-@#aud6SuBM2a^Kt{{?R%J=khk9tkPbaXtO7Y$YqSdcqB!
+z157?QUflcNe&j#@(Id}AveIqU*tD7hnb{XMGBC0+nC)`3UGHpY04fVSUHx3vIVCg!
+E0Bvr1jsO4v
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_data_connected_hp.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_data_connected_hp.png
+deleted file mode 100755
+index 65773655c7dc4ad6faedf62bf3ad5dd5d0f2f137..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1344
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!3HF`%#~*YDajJoh?3y^w370~qErUQl>DSr
+z1<%~X^wgl##FWaylc_cg49rTIArU1JzCKpT`MG+DAT@dwxdlMo3=B5*6$OdO*{LN8
+zNvY|XdA3ULckfqH$V{<S3ODsN@GWpo&B*kqDoPEm@(W3>%1*XSQL?vFu&J;D8jzb>
+zlBiITo0C^;Rbi_HHrEQs1_|pcDS(xfWZNo192Makpx~Tel&WB=XRMoSU}&gdW~OIo
+zVrph)sH0$HU}&Uo07PcGh9*{~W>!Y#3Q(W~w5=#5%__*n4QdyVXRDM^Qc_^0uU}qX
+zu2*iXmtT~wZ)j<02{OaTNEfI=x41H|B(Xv_uUHvof=g;~a#3bMNoIbY0?5R~r2Ntn
+zTP2`NAzsKWfE$}v3=Jk=fazBx7U&!58GyV5Q|Rl9UukYGTy=3tP%6T`SPd=?sVqp<
+z4@xc0FD*(2MqHXQ$f^P>=c3falKi5O{QMkPC<bKYm*f{`<QFJ72b(EqglFcZ<d+v~
+zg4O%_T6yLbmn7yTr+T{BDgjN<%gju%ay2$HaWu4aadotGHZ*iKax^zJax!){cXo0%
+za&fjWg6Vb1PcF?(%`1WFO+n~&#i<vR6mkoIHoK%2WtOF;xE1B+DuBIgm5JLePB_hj
+z>P^Az7H6D#^?{Dj2SqGWM8kxDsRzV_CtDx~p72xifT_I*n5=!SeB)$bVBF&A;uunK
+z>&>+NUd)aH$G*Q?#HrL3qkZGXtKf*P8K<HIww$na7OH7kA~^qmmw@)h0PTaP?uA=8
+z2K<?R`j_vVsfCfk6W`2CVy}Di_RPJz<<^^bi)XGCjof`VY;9O~$A#W2%QL^2{;uya
+zo$dSduomC^v@0tjmS2|KayPI1Nw-w*v4|sQn?*zv*!yjwRkEff8}4A|KehO1-|O6h
+zlR2C8A8tGMPkV!NpUrvUk3GQ!Pn6d#n<jQZDgJz<;Vb>lLZfF}pZVy1b+{iBd~kB1
+zcJljEn|G$^ZMw8}4Xe=UkD0UNx_|H#D;>-4S^O+!T7>+>6+&x`RNP+PX3kEK+S8c&
+zt-e-7%tdzdbz$yDoH<h!^QKO`_WNj0^?XaA0`7NfW=79!*)nMda{))z1J*Z}8V#Pz
+z`?~4KOc9~;HAywM?KbI1=NQ&o&N{X+DtY5pm(;7XyyuAJ9^_u+UoZEJ|Hu!Czw)yS
+zLf@o^x}T{DSnE^xEW#@NzxIx__=CD%zaJE_*!)iWY0ln+Db7E5A9qdNH1&v5X=`Zo
+zM32h*%QqZ6eJ1~xO4J&)8%;YD^g6g7!KsPg6b~@4T&`YKT`zP4RHk{l`njxgN@xNA
+Dv54?Z
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_data_fully_connected_hp.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_data_fully_connected_hp.png
+deleted file mode 100755
+index 4172082efebcf0e9ec802d1a6ac9cdb77267cece..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 1325
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!3HF`%#~*YDajJoh?3y^w370~qErUQl>DSr
+z1<%~X^wgl##FWaylc_cg49rTIArU1JzCKpT`MG+DAT@dwxdlMo3=B5*6$OdO*{LN8
+zNvY|XdA3ULckfqH$V{<S3ODsN@GWpo&B*kqDoPEm@(W3>%1*XSQL?vFu&J;D8jzb>
+zlBiITo0C^;Rbi_HHrEQs1_|pcDS(xfWZNo192Makpx~Tel&WB=XRMoSU}&gdW~OIo
+zVrph)sH0$HU}&Uo07PcGh9*{~W>!Y#3Q(W~w5=#5%__*n4QdyVXRDM^Qc_^0uU}qX
+zu2*iXmtT~wZ)j<02{OaTNEfI=x41H|B(Xv_uUHvof=g;~a#3bMNoIbY0?5R~r2Ntn
+zTP2`NAzsKWfE$}v3=Jk=fazBx7U&!58GyV5Q|Rl9UukYGTy=3tP%6T`SPd=?sVqp<
+z4@xc0FD*(2MqHXQ$f^P>=c3falKi5O{QMkPC<bKYm*f{`<QFJ72b(EqglFcZ<d+v~
+zg4O%_T6yLbmn7yTr+T{BDgjN<%gju%GBh_eb9Q!db9J<IHZ*iKa<p`FvNSR`aW-{v
+zvM_P7fa!I~PcF?(%`1WFO@ZrmHNdGCloWCcfHu3N7G;*DrnnX5=PH1`Y?X=IEiO3C
+zgX&Ge=@u7PoO<<vj?o82EK)?ngn+3B#DphXAP1iCQ}ckSy$G1B*>+r7!oa||(9^{+
+zq~g|_X=n9V97S4JXZ08yo40Y}HYFXKhSvQZb6b1Ynr}+V)Nb1FnW4o+>4=oR!ymut
+z!E>~yo_jIRC*-WoE0uUFU|c@?vUmIHsOapem(N^mwu+YuzTEy@%6{vwiLPgq!e&@U
+z=d2KTl`Xj0W$M#8hLszPN<T5IJ;N)Q{)lr=#ZE_qGp}~u+03PJe-5MM4CdD+TbcbF
+zSxpY=++bi%5Pwto-BR|#ho}|Xt~oZ>2c3Qz^VCgZz45Z-5Wg>+aR+y=o_0obz2xJz
+zsUaJ0t=i)y5m)LNw{h#INmown+g`UcxOkb0KATqVI{rAziP^WAW<0UF{w^^8hwJLN
+z?&kdhL59~?aT>Tfugl86<5Xg<ou2tj%I2AtdE5q1_w3ci<ve~4qBRYb8zKwN7wHrm
+zmHUQiC4a3u`q}Kp&0FVgzsi?YyZ&o|QT>@{w|)C<_GCZ1ICbXh=ND5fviGez!&?+<
+zQhaHd_lBcCcb$BichKzp?gX9g%y(TsgqX`+j?UP-XmhB~O|#<vdb;yp?$uaa6>&1g
+jX!;q|VmP&OABzOT^O&03sYc3~paRU()z4*}Q$iB}bVTC5
+
+diff --git a/packages/SystemUI/res/drawable/ic_qs_signal_hp.xml b/packages/SystemUI/res/drawable/ic_qs_signal_hp.xml
+new file mode 100644
+index 0000000..b8ff918
+--- /dev/null
++++ b/packages/SystemUI/res/drawable/ic_qs_signal_hp.xml
+@@ -0,0 +1,27 @@
++<!--
++    Copyright (C) 2014 The CyanogenMod Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++        android:width="16.4dp"
++        android:height="32dp"
++        android:viewportWidth="16.4"
++        android:viewportHeight="32">
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M8,14.667H5.867V10h-3.6v4.667H0V3.333h2.267v4.933h3.6V3.333H8V14.667Z" />
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M16.4,5.6h-2.267V3.333H12V5.6H9.733v2.133H12V10h2.133V7.733H16.4V5.6Z" />
++</vector>
+diff --git a/packages/SystemUI/res/drawable/stat_sys_data_fully_connected_hp.xml b/packages/SystemUI/res/drawable/stat_sys_data_fully_connected_hp.xml
+new file mode 100644
+index 0000000..a464e18
+--- /dev/null
++++ b/packages/SystemUI/res/drawable/stat_sys_data_fully_connected_hp.xml
+@@ -0,0 +1,27 @@
++<!--
++    Copyright (C) 2014 The CyanogenMod Project
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++         http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++        android:width="8.454dp"
++        android:height="17dp"
++        android:viewportWidth="8.454"
++        android:viewportHeight="17">
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M4.25,7.792H3.117V5.313H1.204v2.479H0V1.771h1.204v2.621h1.912V1.771H4.25V7.792Z" />
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M8.454,2.975H7.25V1.771H6.117v1.204H4.912v1.133h1.205v1.205H7.25V4.108h1.204V2.975Z" />
++</vector>
+diff --git a/packages/SystemUI/res/values/strings.xml b/packages/SystemUI/res/values/strings.xml
+index 8927a2c..b8b4853 100644
+--- a/packages/SystemUI/res/values/strings.xml
++++ b/packages/SystemUI/res/values/strings.xml
+@@ -339,6 +339,9 @@
+     <!-- Content description of the data connection type HSPA and its variants for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
+     <string name="accessibility_data_connection_hspa">HSPA</string>
+ 
++    <!-- Content description of the data connection type HSPA+ for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
++    <string name="accessibility_data_connection_hspap">HSPA+</string>
++
+     <!-- Content description of the data connection type 3G for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
+     <string name="accessibility_data_connection_3g">3G</string>
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index 6561ad8..8e7205b 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -230,6 +230,9 @@ public class MobileSignalController extends SignalController<
+         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSDPA, hGroup);
+         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSUPA, hGroup);
+         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPA, hGroup);
++        if (mConfig.hspaDataDistinguishable) {
++            hGroup = TelephonyIcons.HP;
++        }
+         mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPAP, hGroup);
+ 
+         if (mConfig.show4gForLte) {
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/NetworkControllerImpl.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/NetworkControllerImpl.java
+index 91274e6..bbbf4b4 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/NetworkControllerImpl.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/NetworkControllerImpl.java
+@@ -806,6 +806,7 @@ public class NetworkControllerImpl extends BroadcastReceiver
+                             datatype.equals("e") ? TelephonyIcons.E :
+                             datatype.equals("g") ? TelephonyIcons.G :
+                             datatype.equals("h") ? TelephonyIcons.H :
++                            datatype.equals("h+") ? TelephonyIcons.HP :
+                             datatype.equals("lte") ? TelephonyIcons.LTE :
+                             datatype.equals("roam") ? TelephonyIcons.ROAMING :
+                             TelephonyIcons.UNKNOWN;
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
+index a3b5fe7..990e949 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
+@@ -177,6 +177,20 @@ class TelephonyIcons {
+ 
+     static final int QS_DATA_H = R.drawable.ic_qs_signal_h;
+ 
++    //HSPA+
++    static final int[][] DATA_HP = {
++            { R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp },
++            { R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp,
++              R.drawable.stat_sys_data_fully_connected_hp }
++    };
++
++    static final int QS_DATA_HP = R.drawable.ic_qs_signal_hp;
++
+     //CDMA
+     // Use 3G icons for EVDO data and 1x icons for 1XRTT data
+     static final int[][] DATA_1X = {
+@@ -239,6 +253,7 @@ class TelephonyIcons {
+     static final int ICON_G = R.drawable.stat_sys_data_fully_connected_g;
+     static final int ICON_E = R.drawable.stat_sys_data_fully_connected_e;
+     static final int ICON_H = R.drawable.stat_sys_data_fully_connected_h;
++    static final int ICON_HP = R.drawable.stat_sys_data_fully_connected_hp;
+     static final int ICON_3G = R.drawable.stat_sys_data_fully_connected_3g;
+     static final int ICON_4G = R.drawable.stat_sys_data_fully_connected_4g;
+     static final int ICON_4G_PLUS = R.drawable.stat_sys_data_fully_connected_4g_plus;
+@@ -763,12 +778,27 @@ class TelephonyIcons {
+             TelephonyIcons.TELEPHONY_NO_NETWORK,
+             TelephonyIcons.QS_TELEPHONY_NO_NETWORK,
+             AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[0],
+-            R.string.accessibility_data_connection_3_5g,
++            R.string.accessibility_data_connection_hspa,
+             TelephonyIcons.ICON_H,
+             false,
+             TelephonyIcons.QS_DATA_H
+             );
+ 
++    static final MobileIconGroup HP = new MobileIconGroup(
++            "HP",
++            TelephonyIcons.TELEPHONY_SIGNAL_STRENGTH,
++            TelephonyIcons.QS_TELEPHONY_SIGNAL_STRENGTH,
++            AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH,
++            0, 0,
++            TelephonyIcons.TELEPHONY_NO_NETWORK,
++            TelephonyIcons.QS_TELEPHONY_NO_NETWORK,
++            AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[0],
++            R.string.accessibility_data_connection_hspap,
++            TelephonyIcons.ICON_HP,
++            false,
++            TelephonyIcons.QS_DATA_HP
++            );
++
+     static final MobileIconGroup FOUR_G = new MobileIconGroup(
+             "4G",
+             TelephonyIcons.TELEPHONY_SIGNAL_STRENGTH,
+-- 
+2.7.4
+
