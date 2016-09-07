@@ -1,7 +1,7 @@
-From a73451fb1f232bba85a56973b78ec18fe7b8a0fd Mon Sep 17 00:00:00 2001
+From b23a6abcd00f90e3442510477c5640539e59c575 Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Tue, 6 Sep 2016 14:37:56 +0200
-Subject: [PATCH 02/18] Fix NPE while setting network name
+Subject: [PATCH 2/4] Fix NPE while setting network name
 
 Change-Id: I124f86493e013d0b30d520cf988c5804a39d8a0a
 ---
