@@ -1,0 +1,318 @@
+From 2317ed182d073917174fc23e9a255dfa8fd56531 Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Wed, 7 Sep 2016 18:38:32 +0200
+Subject: [PATCH 4/4] Remove KK statusbar icons
+
+Change-Id: Ibc7a98f21ef4ca693b1afa430758d07cc47e5e68
+---
+ packages/SystemUI/res/drawable-hdpi/stat_sys_signal_1.png | Bin 680 -> 0 bytes
+ packages/SystemUI/res/drawable-hdpi/stat_sys_signal_2.png | Bin 728 -> 0 bytes
+ packages/SystemUI/res/drawable-hdpi/stat_sys_signal_3.png | Bin 777 -> 0 bytes
+ packages/SystemUI/res/drawable-hdpi/stat_sys_signal_4.png | Bin 806 -> 0 bytes
+ packages/SystemUI/res/drawable-mdpi/stat_sys_signal_1.png | Bin 555 -> 0 bytes
+ packages/SystemUI/res/drawable-mdpi/stat_sys_signal_2.png | Bin 585 -> 0 bytes
+ packages/SystemUI/res/drawable-mdpi/stat_sys_signal_3.png | Bin 621 -> 0 bytes
+ packages/SystemUI/res/drawable-mdpi/stat_sys_signal_4.png | Bin 633 -> 0 bytes
+ .../SystemUI/res/drawable-xhdpi/stat_sys_signal_1.png     | Bin 816 -> 0 bytes
+ .../SystemUI/res/drawable-xhdpi/stat_sys_signal_2.png     | Bin 873 -> 0 bytes
+ .../SystemUI/res/drawable-xhdpi/stat_sys_signal_3.png     | Bin 922 -> 0 bytes
+ .../SystemUI/res/drawable-xhdpi/stat_sys_signal_4.png     | Bin 964 -> 0 bytes
+ 12 files changed, 0 insertions(+), 0 deletions(-)
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_signal_1.png
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_signal_2.png
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_signal_3.png
+ delete mode 100755 packages/SystemUI/res/drawable-hdpi/stat_sys_signal_4.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_signal_1.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_signal_2.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_signal_3.png
+ delete mode 100755 packages/SystemUI/res/drawable-mdpi/stat_sys_signal_4.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_1.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_2.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_3.png
+ delete mode 100755 packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_4.png
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_1.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_1.png
+deleted file mode 100755
+index fd8d2f28dc003e6f56a4dcc47c69b564cc309d60..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 680
+zcmeAS@N?(olHy`uVBq!ia0vp^vOp}&!2%?;4*SdmQcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<3pIj0-(o978Nl&%LtWTgFl3z{mHq?>0BTkW$p@5YuGg=GENNbu?47
+zWs2CXjvK7n-h%ZCZ6;0|f)BpiBH+jp%(7<fC-#V&D_gr-56v~V*LfH7ecJB3SJ@9A
+zGMHcc`QDjzAC_q_a5S-g<$LiWg=J59N{Ng>!7R({g}(wKuKhgc{EYYdg8syLtPZJ5
+z6tDPfIw-6#GlRD(!|i6}T>qttCOn(Yv+GRiY&&cCrN~44S!l}2(8SEg6YPAx7zk%F
+zI&Apy#;|AIepW3}t_^1`r0n<2-105r+Khuo5`&|f?Pghuz0USoB4}|?ZQaLJY?J46
+zaunFjV%p8|?x{-f3w=F{XSYsgvuRvv$_)$2sp6h*?^7MV?8;%ryBD<u`XlbY6Zp4s
+zf1AI&ztykai7oGUzMH!`L+jO%UDFmWzO8RL_m6VNg;W;Z$9_w8T>rUt$<cP7l2+rq
+zpR3N@eJ}enaf?^u#HigG#xL&9_<i+S<oc%fF~N^lDKDAsvvO1ApPRc{igz9<36fRh
+z-D7<?V#7n*jN3oBS{7z5msw~z`}n`}<@TX24?Xx?HP;Gve&qSHz2s}av6lD17!)mW
+zjVN(0N=+=u%+FH@$;?e<Fw{4+)HgKZNR?j+RG<n{kdj!EYLyI9mC9gbU}&UkV5n<o
+z8Dd~&WngJ#Y^-ZwVP#;Tne$N)MMG|WN@iLmZVeHJo@;>`WI#3q=ckpFCl;kLIHu$$
+jr7E~(7NwTw7iAYKI0u^+ZhdS9RL9`y>gTe~DWM4fVEYvz
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_2.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_2.png
+deleted file mode 100755
+index 3b4aaa1c67ffd2a98e6082d5fb12a5213d7978c1..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 728
+zcmeAS@N?(olHy`uVBq!ia0vp^vOp}&!2%?;4*SdmQcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<3pIj2As!978Nl&%JWqJ0wu#z{mGH-}mv{^y!?cwxu9Y!}Q{^(7<O}
+zE&m!8oxQRyRaZ%TnTuhHQ?#hLuA36utt(0#XM9)xYY-D`-BF}+Qt|js`<Na(_u9|*
+zPIFIZpZ@vbyy|zA;Xl?JvM6xyT~S={TqIo4;z-}T@+Uv%R9#>A%>7}-Ip1r+>U(%i
+zr?vMmX{quqd}tP&!!)TY?=Zt*-n8=T!kHYptj}H^QCyi3A#++%>q|npE0e9C*zy9I
+z#fKtuUZ)<rlqdE>x7+T*l$|{{Z?o>Qo#V1m#p~CcnTaf$?YHUbew@zwlj+@~J0}-y
+zW>>zg@~21ADk9_&d;HqFm#?{-<fzmh60DnW{eRBW!vBkB1x^eU?EX9FvDM_L+0)C-
+zz3vIUxs$?Fd(gjY&qd4Nz1K{afACUz*l6Ut`B-+A<JCXA3V!7-V{ZSnWYKDl`B&Ue
+zcP3RX*q-+I-*a0||AdSc{O9Ct|JSXYuvPDyV#Y#$!JeLqi9d_pPi^z8a&)pf7rrVc
+z=zeWxSe~Tt_4ME8ZaL3&+K}|$=gGU(Z5cJuk7pY%IejOvG`f0%^x@w=Z^|ysQ9R4O
+zdfLN3Asg~!guHoUuS91YOD(*=sdhGRpyA1PAsNamg*GO0tC#dVS@pCSlrTg~Tq8=H
+zi&7IyGV}8kLNaqx84UFeE%gnJI8x<T0u`u&6r?1Uq*^6|RHZT)85kPr8W`#tT80>y
+zSs7Sb85`>wSXdbtXy$wrMA49&pOTqYiCaU2q32ql1{shI!TD(=<%vb942~)JNvR5M
+gnMJAP`9;~q3eLf%g<Bt+0o5^hy85}Sb4q9e07ok<jQ{`u
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_3.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_3.png
+deleted file mode 100755
+index 873a317c1631b993718b0bcd98bae6c625b15aa6..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 777
+zcmeAS@N?(olHy`uVBq!ia0vp^vOp}&!2%?;4*SdmQcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<5b_Or9=|Ar`0SPO;9I94K<U{(GHy?wYgg7o{#gTGZUz-&7j1@sUbX
+zvxTPKRb6jK_KnR^SA=?49c4mfYC>xotX?Q+*s+P1zIdh(HGwawtACl{-*<-<)s|#_
+zQvG%yQtx~D|Nq73cZPq6-^lEsut7nb(Ml+XIbX1=@AnUz{K!&X;hMvqI_Wo$`kZbv
+zzkIH$N1fMQf-R-{g{$2Jm8C+*-lq3hI&5i4Gjv$KYwi7|&94tly*_(UdPX{@^Qr63
+zzm=xX2@hfkc=$jgc1^;m*VkJcZ$|S8h~8Ao=xWf9JNPF`eE;%A*TQ!5nC_Y5yl2AS
+zW3Ru-uWB()y7x}ts*aGN`kUEHPs^={^LhKj#Kri}v!xZROY*<vaDF*7mzQV$Gp^h{
+z(+;h(vfsJ=@C_@W(u<EvK5)j1o_U<S*FC*=h4stQ3s={qHmnKyb?0Esu~}~C#B};U
+z&2-FLG2>irfBffyO*Twh1A`Bz))h7GnSOb)^zQd=x8{iQ-VSf}Q?5{(FSU#9c<{+R
+zoYm()pObMEKB0cCG_T^zR{gA;7w!SA^IR4j%~L-z_v4dm4(7idwO(l6o0L5H&kLjQ
+zqjGC!`<92U)z-Z9yw=>_EvY?KL1dlcW3NcZ<rWIvYV-T%9@y!zVva^C>({-RhyCi$
+z%)YoSQ2l?an%_pQ-WwX<YPY282^by8`Puf*WOwI<AKd5fE{Kj_cu5JEL_|wmBTAf$
+zQWHxu^Yau!GILWI4D}5y^$m?UQsq|y6{vy~q$HN4S|x*2r7{>97#iss80s2Yh8UPx
+z8CY5w8|xZaSQ!{-=6n=H(U6;;l9^VCTSJ7Q=USi!8ITRZ`DrEPiAAXljw$&`sS0kH
+fMXBZaMcKs)&cUXITOXSN)iHRw`njxgN@xNAS!6@&
+
+diff --git a/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_4.png b/packages/SystemUI/res/drawable-hdpi/stat_sys_signal_4.png
+deleted file mode 100755
+index d2381fcc5393d9862bf4911995cf431f42a70f2f..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 806
+zcmeAS@N?(olHy`uVBq!ia0vp^vOp}&!2%?;4*SdmQcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<5b_@}4e^Ar_~nPVw~!2^2a0|M@-Z$JtqOD}sA3Eizj<W#Z1$8H>am
+zFDl(~mF8|z;pkcs6B2ZCv8PDOfknQpfh@HFx{DU|y9$I{P*YmcQXtqD^7uv1`?@U>
+zv)$%?H)KEe?B3_y&+E@y$~c8SYj6&p(xdhv>%im_hf@#vtX;zQb1T;u4H2HwWNACQ
+z%}c+|X=M$r=s3TnwO1lt<C<S2n;_qvhWQcho^G!$wjOb0JKPu$$^MaX_J+CJSC_ZH
+z+Ff~%L4?cKnQ?~T-%mdt-gqjtHhreU7n`gN9PUS!+}YXAw)mF7iVEQm*W*++h$Qdv
+z-L_<txoKCB^TM+QALsh7w%08!Z&_Np(<}bq*BkxfYkWVl{g#VQ6FJ-Y?c^*r=8gWp
+z&OX|;dl6^WzbBQ8_%>B|u4gE@n{nsGsn&^dP3IqSEvh){v3`fiF6(6_ts<fqgF6yg
+zw#^9R_cM{59TZY{NqfQS4N{s*S|^Bqe=4(f&lFvYcSp@j9_{KledgJ%Y?-#d@0aAy
+zZ2KV1eBxt|OziCfYa!EFHn+|B=Q2FhtX?$Xg-o8`vnltrW_(WLSBd!+F<UkJ-T#cO
+zQ@+Krq`r_8P<d<Mvb}Ax>^hz(JJl~b_mrByzUeMpcS%pPdAfsUf+bhR)5ovE{r@l&
+zdmgATTJ}P<gr_>v@#(Hd%M*Q$n9GXpZMjwBl(_otarLF&UOidkd1X;Ro7)!FzxT4{
+z6n6gX_#3{kCP203t-d?chS?T|#(RM2N3_H>qQto<HL)Z!KTjbfGdGpNP~Xr}-_VF7
+zRemK<fhtHrN@7W>RWe9bDua=Mp^>hEp{}82h=G}vfu)tPv95uIm4Sg~&PPEM4Y~O#
+znQ4`{HAEPCt_5n40of3opH@<ySd_}(n3A8As^FGclv<u&lwGXg9Bf*+^|2XH9fPN<
+KpUXO@geCw*Oj2(E
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_1.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_1.png
+deleted file mode 100755
+index 43053510881aded0128758ce8bfc8818f942b8d9..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 555
+zcmeAS@N?(olHy`uVBq!ia0vp^!ayv<!2)8j>OKNeOiAAEE)4(M`_JqL@;D1TB8wRq
+zxP?HN@zUM8KMV|vDxNNmAsXj<FP_zQNfbH$@%`tb;~XnJPxef|xnM(pnOWD=R$J-%
+z!&j!rw!YE%!yI&~&GTfE*tRa&)xY^~XmVH1Jae^p{_#iWK0MfEdAitcZv1lPADf>s
+zvP@8(Hj{&;uhh#(I8#S@%||8UiHTEXr8s7GirrvO(PDN;oUz2s&eD0=yGciQ3f$z?
+zUY-(B*-%n+NP}(ap(qcA_A`kW-gX{ewqt4M<cMz(-zFa4#!=~%DH^=g>&@aPk_XJ1
+zMOM7N@Fd*g*tSIn6)RGFm~$?9H#67fc6BdZESG-!1pnFqhsRe|?wmDq-Cnj+JLO*(
+zmxP<W{d?if(@M)8w~{YUWf=K=GFBMq+|&8{SbSBEj_mzw77opAN_Q8X-mCxg-3~#<
+zch_&v>--U4%WyOyz-*)6X%Ao^ik7%WlsFfqCYEI8=P86_=B6?j>Kj_>8yaz>%C7_}
+zPz5PSNi0dVN(QM)WiT=@G}1LN)HSpWF)*_-u(UEZ)-|xOGBD80`6!5@AvZrIGp!Q0
+zh6qE?wLlFrARB`7(@M${i&7aJQ}UBi72Gn5Qp@v;vWpd*gG~#!J~jiYWAJqKb6Mw<
+G&;$Sv57g5D
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_2.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_2.png
+deleted file mode 100755
+index beb641bf20be82823292824ce7f1c312714ef25f..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 585
+zcmeAS@N?(olHy`uVBq!ia0vp^!ayv<!2)8j>OKNeOiAAEE)4(M`_JqL@;D1TB8wRq
+zxP?HN@zUM8KMV|vPM$7~AsXj<C!E!GNfbF&|NeLko8rokb9+4_qc#MtS@wfnM`umW
+zl{Gmoiro`iTQ>=u(pfR{%9|-`dwHc#9Xe;<(9^y8`@QRr%+8qJv6&sb{C?%U;=Tv|
+zz04d34o=@Fz@g(^ayr68c*7Z{R7q~hw20%bCn7SMY#sh}Wr~C)N-XlIt#IR=_KYul
+zS&fzE#lDq2Zd+QPxXH2j1&K)<Sa7KBh;IAojW@Pi_^VpB{WM#7NG)=S&bp-=Hvhcd
+zW3)}{C3o~wk?z3h{}S~~-%1Kby0@hE%1KpRXsn$1`o`X`+*tzrjA93sGkG^SaqCsq
+z=0zEQw)V`<em8x>Qr_NB_h(5JTOzKV3Nu<&f6{D&=Ka6D_a;tG+5Gjw)O^NiENmtz
+zFNO0NSALoK&YZDSP+B@F^Ti@hlUx0o&*y1RJn-*Cu+8I-_O(og{Rvh#zDzg`3}Vp|
+z*N775qSVBa%=|oskj&gv219*AOMOElj#T-TKn1EG1u2OosaDA#RjCX{28Kqu28OzZ
+zmLUdaRtA<<#>Tn^7FGrZnmHc@Q8eV{r(~v8;?@vh=(!fCK?Y<)aDG}zd16s2gJVj5
+jQmTSmW>IQ+eo=O@f^)EG;nv4yKy?hBu6{1-oD!M<i^|=t
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_3.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_3.png
+deleted file mode 100755
+index a4028cd2602aee1b7bd4bd880a35d607efb85e1d..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 621
+zcmeAS@N?(olHy`uVBq!ia0vp^!ayv<!2)8j>OKNeOiAAEE)4(M`_JqL@;D1TB8wRq
+zxP?HN@zUM8KMV|vX`U{QAsXj<C)j5M2a2@sFMeNXsCbY~TY^i_SVCOZi~Vki0N1YR
+zd~1{0x#!B1Ovsq-(aNX$R_zD7>6A;V3NLP`ibS!r`ze(PEu5@)Mg9BU*AwhbPI7-S
+zzxVm$-*Y<;ow&m&px~O~?x@-q$fP`v>%OnimUH~mHfANy`_z%9^lcJPyNSuuKQgDc
+z2>3P?9bmRC`1vz?{pKTVo*QCSyjRHInZDaRZf=4@0*7|+!_~SwZhgJKHRM6<@6rV&
+zqRlf5enm>$pZHPZ)wZvRp;1>-&wGE^U{-n6I?!rc@Y3%UPQm*mKN{!P-}T%5W6Gj-
+z+sDFk>E9QZU+s*1{;S&RMsZh7O0f63eFFA<ix18fU2sT3_uh+jr~UQwmh6?^b^m~n
+zc)*_8_fo;zx6R73HR{k@!>Ii%|I4C^V(a32?HcRMzq42bL_FFw=SYlJ{WWd9XEF1S
+zZ4c!VexmaF|6PCCLIua~%d0m2QGAl~lb_2gw_3YiG8-5Tq9v{oCC){ui6xo&c?uz!
+zxv30>`i7SJhDIEz@+*M~R6z<-5=&C8l0m9c8H@}JjdTqRbqy^;49u(yEUk=<bqy@6
+z3=A}LJ_@2}$jwj5OsmALA;QpeEl`6D$cEtjw370~qErUQl>DSr1-Hzi)bjkI>|zDy
+WVAH~_kIjJU7(8A5T-G@yGywn>=<fIc
+
+diff --git a/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_4.png b/packages/SystemUI/res/drawable-mdpi/stat_sys_signal_4.png
+deleted file mode 100755
+index b5ed22becc0e5ce1126f4a2720171773a226546e..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 633
+zcmeAS@N?(olHy`uVBq!ia0vp^!ayv<!2)8j>OKNeOiAAEE)4(M`_JqL@;D1TB8wRq
+zxP?HN@zUM8KMV|vMV>B>AsXj<C-{0y2^49YU;O^>oSAMxJ^^edu`ja1x>Phg1UPo_
+zhwFtJ9h;iC<${@3ms8iJL%nV)icLHkxjaq=j+{|jrbL}}68NK>zUzK@Y)11r{vUep
+zD=Y35uUnQ8chPP4n+cT{^j1lHnetx7yW8RFkH-;$IrDPw1uQz>Jagp-haXE6%zRto
+zWoGU0{p#L+_2p8t)&)Timj2Aru5Q2Aej>w_F<Le7(zCgDtHk1eiF0uLj8I<u=fc%8
+z<+?4eD$m94e>UaZB7v#j>chj=oL0W??rCRskk#{M@uR&Fxmg8aJm%Y?m&WdS=2NFt
+zcs@KxR`GS7=B67Gvn|%#`)==Zq-xFH+r`a$m$v!q%&MCGhTDzFzC4}Tz)MnGXLkO!
+zJ;eozZ({EK<q`@>DEPJbZf@S+nzSv>MTX492d3=$qMki(jjP-)6SmoNt!;E9JOZ@q
+znO8~epJ62}uxoMQbuDH?FV$B@cU9{x1m6GmPhD)OdiHM-Ys#;pYPp8&MqrePmbgZg
+zI2WZRmSpDVDTHL^rZO1n8(Qic8gZn`uLLSk1t~~LEJ?LW2B}JAFfuSS(ls#DHM9&d
+zFtakSv@$l<HL$QUFwo5TD2SpVH$NpatrE9}2t&`cKn*e=8-nxGO3D+9QW+dm@{>{(
+h+%k(&%kzt}ixr%MO$)a^HUp|-@O1TaS?83{1OP73^FaUr
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_1.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_1.png
+deleted file mode 100755
+index 9943613ab35be6659e45b42a863ad3e1582a8f3a..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 816
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!2%=~*u542QcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<5b_nw~C>As)w<Ufr85;wW+a<NGsjo)#U8F;VZxU+%bgfk0;jM_1nR
+z1sUnWI%{-}G;<^=uDI?RaKxmkHDibJqJ-q+%$NHodU<xW6g)eV8mE(|zw>r=VSHM5
+zZkpYnXEQ6yST)=4*Ko@Gaai_r+eRkIOGS1jy|y(8Dyq-TCr2(g#QSf_BPO3mAE&)u
+zqZnMkxXi%jp`6&&TjfDKDzk*n8+y1T=^YShyL~26pn>^=&~(4V9cQeIcBE}`iHY8%
+zxzDK0@omG&EOkSfr`)aA1XaAAZ#VF6^q+I2B+2uVr;KyR&IZ2ZjTZ7vVb5*D4fmFb
+z&Ez)de9US*<DRy1k>gd7w&OO37L@6^=ja`<F)5#U_*=Ya<88lXJC8~0eDM?O%)b51
+za#assobcK*p~IT{4DY??P%5e`?t3cGEyMHO;k(2IQDK?Gi7n}O^H%vR{(s+@`O?#g
+zSC0BSwsD15#oz9D=_T^>%#IC7r*~E6m6oTkDOvt8qa$$U#^cX-%8R}}JoTrqb4&>P
+znM;?avU|DbyWZrEX8TkW<Zo*e6ld;bIdMkyF}BqyMx~p}(mzkVuy($eQr<M9f_u^T
+zqxQ~>KVh}{QG((+7s2+R)3;)8ZQpP@QaveAF>jL0`m0?l=UV(JtT?md$Ng7*)#*1x
+zOoQbuH_w<`P~Up!$b=H{?TXzxZ|DD;XU)xXoM)T3;G?!VrA{gFr)C8jcC*cL+i`ME
+zQ+!BA`JCLvi*NKv3Y;sJ^OSoapI|cMfUes4C}2twEpd$~aV|<tEXmBzQwYh-O=U3D
+zH?-6@G~!5=UkOy83Q~}gSdwa$3{sWKU}Ruuq-$WPYiJo_U}j}tX=QAzYhYnzV4#`v
+zQ4mE#ZhlH;S|x4`5r&>?ff{5$HU#IVm6RtIr7}3C<R_&nxMdclmgg5`7b`din-*?;
+RYz9=v;OXk;vd$@?2>@afOA!D7
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_2.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_2.png
+deleted file mode 100755
+index 1fc177529fd5bb72775cc3537c0c4e11c6711cf0..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 873
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!2%=~*u542QcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<4Qlo-U3d9><qnIqMw~C~^Gbd&}pmjFWr%gm-wX>C6dSAfnr(ls5h1
+z=}o;`_=MQFl$M-mTf|cx>3TuQ>uqb3!-<UP^)CM#x>xiBl@!(Nd~Ty#5_Ej#$9vY#
+zb>2Oj!@vLYoaZsFbCq}h3gqxv^!n+)<V>j*(@!5-b@3GUtk+LAtv)GZa7^;wwWDhj
+zrTUl8NfV1@-`*yvbA4yW;VI{2MVWj3`=TREw2VN4&m|8nVqpBBH2qwH<w4^|C$ctq
+z+-Xa>TeE<*JCc3zRlnq$XR9wQ)$W+07kx-3^WG-;-ICpt{FF^TbuIq!G(zK@;Daeb
+z4=mL;PW2O;k<Ga5O3zQFJInc_E7KkFB+l}Edv(9=n^gG58DF1qoW08!c4dy=&26`T
+z$*udfj^R%1v%)X0RKLHx^oN%}aOz~%M@4g77w%=;z1sfkk_^$S8yRBcgSX6XvM=mP
+zeD39Mt7Pubxc;8Mc6;z*wRej{-hMUR!P9(T$-fuJt!^FLyCq`p+sG^(k4X<^%T2Of
+z`K;5Wy(s$rfop+J&pvzcM0Sx8&(W|r_1#Ck7}jL%Vy@6x?RNLovG(Zdsq!k3S4%4E
+zCIlQmBVYez*_Y#g7cFnfoO<c$Otwk8PQTwd>E!vSWEF+5M(LDBNhztWvTuhTIX_*U
+zYqeIbe5Osok=fBREvL(53Z)-PNR8?9V@Y0CYq_sjMbU3t_U&0Q;)Qav<F{>C|2TEc
+zQLi8MUzg3^s<X05*G#_V@|20LsT&kk>bbWsu%4M^|Hbki^ARUD?}ev!xD_r6xy&59
+zK`rItf%KhwdXF9`KgLl$SNhnpB<|V;M}+$|gnzJqOWR!a`y96xFbRs5xJHyX7o{ea
+zWaj57gk<KXG8pO`TIw4baiq$x1S(JkDM(2yNwrD_sY+!qGB7mKH89jQv<xvYvof%>
+zGB(yVu&^>P(9HQLh@v4kKP5A*61Rp3L(jE94Kg4bg7ec#$`gxH85~pclTsDjGK*5n
+c^NX^J6`X@j3%5Qt1FB>2boFyt=akR{01I7vkpKVy
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_3.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_3.png
+deleted file mode 100755
+index 82b9741bfed4ddac6d3070422a7e53add672270e..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 922
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!2%=~*u542QcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<5b_lRaG=Lp+Wzy?WL=BvIt}$M==<RzL1B>(f_hoZ;l8KSNZvDTZUK
+z!5XpLD3|VA9IQ^cN=-f-g3B^gMN_^gvAS_9Dn_~1J8jX^U1a2O(Np$$Wv1cY8!vi_
+z)6d1;Ia_J>=Up*h%)&FT&h2C2Umy6isD2}xmd5ngZEGezV7!`IboXWopTuJg`_qr=
+zlDisie=%y;YJSb|jJ5YESFMGKLx7Z+`dRlqM|l6n99}fh{<_32w~mW`*&hxTPD<2a
+z`XRJ)w}uU8@5-G|+*G@MEpK@?=}f{+!7aB}8oyK&{j9h9kZRFciypfizAx`~P8Xc3
+z+#=;Fbeid+LaxvCGn;2TD1O}HwY`%=(>DLoZQ=9HD<YqlaO4Rc-&B>Kxl+DA=UCU8
+zx0<t7FP*skRbT#!n??IK9lrhM*0d9<fqw)ZFRy)k_`wA8*U7F$*Bg7TtO(ziZ&KCd
+z^N&&NAn(S8#qN7I&OhfnckRY)O7-vCV(gC#gcRJ&vyHdk^oDExjS1FAO?<6V)%tfV
+zDdq@bE1xOyzA69O`_<KJ7Ku$f^p|yq8C%2kSFJ0v*3IXT+OX;2c9Dz@;m4b$zO602
+zI(cJS;m>KwrB5X*?R9$|FYSG}>dfRHdHJ=15%)^0IU^=|O)U^U>C!(VY0^_)^Aq7o
+zMFIZ}`q%&Z9JpD;qwrSMOSYMek5=6+iOZ3mvpMRw(#FyqjAApFE=oFiZf@K@O*fIF
+zZqcV>69jI^pGi;aKQ8aO=W^l(nRWBUY@*If+`sxm<JsK%8M)j=Z(VjS-GBSawrB03
+zTd%eMpZv!>(mN`sY-QE;%O11i#d>)aXPVwwl$E$E^Zn@z^#D<$2-!)8L#v*<Dw&6z
+zdNpA>Tiet-rr)IY8My5zT(|1K-tA(pBkXnyrm+8DO?`ba!pmCK9++lDOI#yLoQqNu
+zOEUBG6hbm{QyC2P4K4KzjW|-}R{|BNf)u1AmZVxGgH)w57#SEE=^7a78d`=Jm{}QE
+zS{WPb8dz8v7-;5v6hzUGo1c=IR*73fgrVnJpavO`4Z-<oCFO}lsSJ)O`AMk?Zka`?
+d<@rU~#R|^BriEJ{n*r4^c)I$ztaD0e0syFTjj{j$
+
+diff --git a/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_4.png b/packages/SystemUI/res/drawable-xhdpi/stat_sys_signal_4.png
+deleted file mode 100755
+index 9f4979ce2b93a3b54549b807038b831c297b6831..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 964
+zcmeAS@N?(olHy`uVBq!ia0vp^>Oic*!2%=~*u542QcOwS?k)`f+xyS#2l6-zJR*x3
+z7`TN%nDNrxx<5b_dp%toLp+Wzy?Wj|Bv6F?!~31zt&H=pd{m!lnBnGTzv5tr*Ctny
+zR2RYArLDP(S{S2QgjAiy4vDPoY3jOC*C42(;ws=#@3cjC(u5#qS9RI+cYBw+cK<On
+z-e+EX@7o>z`{m~wy)`y0vS{Gc>Cluu<lEu2GuI<=)+DiBO?$4Vi##5!ev`OrZT-HZ
+zj3J6QLRCJ_t~z_u;pOf}9+it0l*~<7azrrj@tb<#t_x?TXer#y>{;Bx_h`q<7ppB4
+zb+qN5&(&k;)szx$fBQB1>RYeP42GYc{1R}HIQwaFW!1`U-kI7A2A>|wIW;I=U2(5u
+z?X!LSI{&rj?X*x!+~Ayh<?-9%jY)@jeofcW*W=;V?SJ_!*th?mhh|0VgUn5Z5@!wv
+zdPi;d*~2At`)Z-hQteiGPRr%fw@u%#S5(q=S#F15gvwF#=3S>0|FfC7WLL)&r>;1b
+z{;^@TSJwO=Wt$t%TzNXF+c{yDNq=GKeydYf#?L0bW}L80=wqY4UD-LsxwQ>?J8sWt
+zcU}D>r7q@Q-NGX?7QNZ~x+riCo8t<-;QN6$r*GNmzvlGTL>^P4h3<a0c5GD$V2lwL
+z`msoj=lxm<kv_)2cmHH!n0GPubZxg1SSJ$}YOv+q{wEn6iXDX)PtVrwa&Jo9baPsA
+zWvXPQNT~!<Fmo02OYw!aIX76Rncnr&SaL%B)Z2nRd!}xgof3KZ=m%~`E0yJ6AMm~_
+z__9c;JZf2qp$`*Br<?4~O9Hb^gEo2VFkkOwJ+oj%#>F%9{O_syGUY8^`_xL1d4vDi
+zrRnEd*#6`!70(eBca@b0^2^FwDaWzt>DOy!>eo5gzdxDcnZx^?{S;4iy=R!uwS-Qg
+zw2c+lz3Z9PJr7k(_#&0(cqMVovX^^>83jH_tYO;H^?75e(tp{B2A3W$Wt3WZHT#Uv
+zkIwWDX6I73KH4Oi%dj!2wZ@L2p7HXE_l958O)P+^TeQSAqQto<HL)Z!KTjbfGdGpN
+zP~Xr}-_VF7RemK<fhtHrN@7W>RWe9bDua=Mp^>hEp{}82h=G}vfu)tPv95uIm4Sg~
+z&PPEM4Y~O#nQ4`{HAEPCt_5n40of3opH@<ySd_}(n3A8As^FGclv<u&lwGXg9Bf*+
+S^|2XH9fPN<pUXO@geCy0$dOY3
+
+-- 
+2.7.4
+
