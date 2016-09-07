@@ -1,0 +1,46 @@
+From a074dfad5acfe338bb8d5caff8ceb2a921613a4b Mon Sep 17 00:00:00 2001
+From: neatchee <neatchee@gmail.com>
+Date: Thu, 21 Aug 2014 17:25:13 -0700
+Subject: [PATCH 17/18] Lycamobile (MNC04) considered non-roaming on Vodafone
+ (MNC01)
+
+Change-Id: Icff916672e5ed666adf2cdfeb26d24bf43b64683
+---
+ core/res/res/values-mcc268-mnc04/config.xml | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+ create mode 100644 core/res/res/values-mcc268-mnc04/config.xml
+
+diff --git a/core/res/res/values-mcc268-mnc04/config.xml b/core/res/res/values-mcc268-mnc04/config.xml
+new file mode 100644
+index 0000000..cc70a32
+--- /dev/null
++++ b/core/res/res/values-mcc268-mnc04/config.xml
+@@ -0,0 +1,25 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++/*
++** Copyright 2013, The Android Open Source Project
++**
++** Licensed under the Apache License, Version 2.0 (the "License");
++** you may not use this file except in compliance with the License.
++** You may obtain a copy of the License at
++**
++**     http://www.apache.org/licenses/LICENSE-2.0
++**
++** Unless required by applicable law or agreed to in writing, software
++** distributed under the License is distributed on an "AS IS" BASIS,
++** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++** See the License for the specific language governing permissions and
++** limitations under the License.
++*/
++-->
++
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <!-- Lycamobile: Don't use roaming icon for Vodafone -->
++    <string-array translatable="false" name="config_operatorConsideredNonRoaming">
++        <item>26801</item>
++    </string-array>
++</resources>
+-- 
+2.7.4
+

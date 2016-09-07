@@ -1,0 +1,50 @@
+From 784d761df8a494ff111307463a351d7b91f5c999 Mon Sep 17 00:00:00 2001
+From: d95andek <andreas@gunneras.se>
+Date: Fri, 17 Jan 2014 22:20:33 +0100
+Subject: [PATCH 09/18] core: added national roaming info for Spring Mobil in
+ Sweden...
+
+Spring Mobil users in Sweden (MCC 240, MNC 10)
+can roam on Sweden 3G (MNC 05) and on Sweden 2G (MNC 24).
+
+Change-Id: Ie27ad3561de32557a1713d4962fcc9ec52a8b7fe
+---
+ core/res/res/values-mcc240-mnc10/config.xml | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+ create mode 100644 core/res/res/values-mcc240-mnc10/config.xml
+
+diff --git a/core/res/res/values-mcc240-mnc10/config.xml b/core/res/res/values-mcc240-mnc10/config.xml
+new file mode 100644
+index 0000000..28109e0
+--- /dev/null
++++ b/core/res/res/values-mcc240-mnc10/config.xml
+@@ -0,0 +1,26 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++/*
++** Copyright 2014, The Android Open Source Project
++**
++** Licensed under the Apache License, Version 2.0 (the "License");
++** you may not use this file except in compliance with the License.
++** You may obtain a copy of the License at
++**
++**     http://www.apache.org/licenses/LICENSE-2.0
++**
++** Unless required by applicable law or agreed to in writing, software
++** distributed under the License is distributed on an "AS IS" BASIS,
++** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++** See the License for the specific language governing permissions and
++** limitations under the License.
++*/
++-->
++
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <!-- Don't use roaming icon for considered operators -->
++    <string-array translatable="false" name="config_operatorConsideredNonRoaming">
++        <item>24005</item>
++        <item>24024</item>
++    </string-array>
++</resources>
+-- 
+2.7.4
+
