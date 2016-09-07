@@ -1,0 +1,26 @@
+From a503b8d108ed5212d6a0f151bce6e935a01f60ce Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Wed, 7 Sep 2016 18:50:46 +0200
+Subject: [PATCH] Don't enforce openJDK
+
+---
+ core/main.mk | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/core/main.mk b/core/main.mk
+index 4f65faf..71d11c8 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -219,9 +219,6 @@ endif
+ #
+ # For Java 1.7/1.8, we require OpenJDK on linux and Oracle JDK on Mac OS.
+ requires_openjdk := false
+-ifeq ($(BUILD_OS),linux)
+-requires_openjdk := true
+-endif
+ 
+ 
+ # Check for the current jdk
+-- 
+2.7.4
+
