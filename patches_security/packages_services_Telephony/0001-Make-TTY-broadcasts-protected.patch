@@ -1,0 +1,31 @@
+From d1d248d10cf03498efb7041f1a8c9c467482a19d Mon Sep 17 00:00:00 2001
+From: Brad Ebinger <breadley@google.com>
+Date: Mon, 18 Jul 2016 14:10:18 -0700
+Subject: [PATCH] Make TTY broadcasts protected
+
+Currently, any app can broadcast the intent to update the TTY mode. This
+change updates the intents to protected broadcasts so that only system
+can broadcast them. Otherwise, a SecurityException will be thown.
+
+Bug: 29832693
+Change-Id: Ic9a91be3d8d15043e3165b766348cff301dd5da1
+---
+ AndroidManifest.xml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 61257f8..b5e3e00 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -28,6 +28,8 @@
+ 
+     <original-package android:name="com.android.phone" />
+ 
++    <protected-broadcast android:name="android.telecom.action.TTY_PREFERRED_MODE_CHANGED" />
++    <protected-broadcast android:name="android.telecom.action.CURRENT_TTY_MODE_CHANGED" />
+     <protected-broadcast android:name="android.intent.action.SERVICE_STATE" />
+     <protected-broadcast android:name="android.intent.action.RADIO_TECHNOLOGY" />
+     <protected-broadcast android:name="android.intent.action.EMERGENCY_CALLBACK_MODE_CHANGED" />
+-- 
+2.9.3
+

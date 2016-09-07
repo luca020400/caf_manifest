@@ -1,0 +1,36 @@
+From 6c84557c2c3973547f986392471b406f9270dffc Mon Sep 17 00:00:00 2001
+From: Svetoslav Ganov <svetoslavganov@google.com>
+Date: Wed, 13 Jul 2016 13:41:33 -0700
+Subject: [PATCH] Hide toast windows when permissions UI shown
+
+When the permissions UI is showing we are hiding the
+system alrert windows that can overlay it in an attempt
+to redress the UI. It is however, also possible to use a
+toast window to overlay the permissions UI. This change
+makes sure we hide the toasts in addition to system
+alert windows when the permissions UI is showing.
+
+bug:30087538
+
+Change-Id: Ifb9ecf4593ca24b628212f0737d574a537f0cccd
+(cherry picked from commit cc5e0323e83d6124f45ca75f55bc58793b550035)
+---
+ .../android/packageinstaller/permission/ui/OverlayTouchActivity.java    | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/com/android/packageinstaller/permission/ui/OverlayTouchActivity.java b/src/com/android/packageinstaller/permission/ui/OverlayTouchActivity.java
+index b23ab2e..a7800ca 100644
+--- a/src/com/android/packageinstaller/permission/ui/OverlayTouchActivity.java
++++ b/src/com/android/packageinstaller/permission/ui/OverlayTouchActivity.java
+@@ -40,6 +40,8 @@ public class OverlayTouchActivity extends Activity {
+         if (appOpsManager != null) {
+             appOpsManager.setUserRestriction(AppOpsManager.OP_SYSTEM_ALERT_WINDOW,
+                     !allowed, mToken);
++            appOpsManager.setUserRestriction(AppOpsManager.OP_TOAST_WINDOW,
++                    !allowed, mToken);
+         }
+     }
+ }
+-- 
+2.9.3
+

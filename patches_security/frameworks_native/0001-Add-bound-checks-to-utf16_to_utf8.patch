@@ -1,0 +1,41 @@
+From 1f4b49e64adf4623eefda503bca61e253597b9bf Mon Sep 17 00:00:00 2001
+From: Sergio Giro <sgiro@google.com>
+Date: Tue, 28 Jun 2016 18:19:33 +0100
+Subject: [PATCH 1/2] Add bound checks to utf16_to_utf8
+
+Bug: 29250543
+Change-Id: I518e7b2fe10aaa3f1c1987586a09b1110aff7e1a
+(cherry picked from commit 7e93b2ddcb49b5365fbe1dab134ffb38e6f1c719)
+---
+ libs/binder/Parcel.cpp | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index c7e8ff2..e88ae29 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -1795,15 +1795,16 @@ status_t Parcel::readUtf8FromUtf16(std::string* str) const {
+        return NO_ERROR;
+     }
+ 
+-    ssize_t utf8Size = utf16_to_utf8_length(src, utf16Size);
+-    if (utf8Size < 0) {
++    // Allow for closing '\0'
++    ssize_t utf8Size = utf16_to_utf8_length(src, utf16Size) + 1;
++    if (utf8Size < 1) {
+         return BAD_VALUE;
+     }
+     // Note that while it is probably safe to assume string::resize keeps a
+-    // spare byte around for the trailing null, we're going to be explicit.
+-    str->resize(utf8Size + 1);
+-    utf16_to_utf8(src, utf16Size, &((*str)[0]));
++    // spare byte around for the trailing null, we still pass the size including the trailing null
+     str->resize(utf8Size);
++    utf16_to_utf8(src, utf16Size, &((*str)[0]), utf8Size);
++    str->resize(utf8Size - 1);
+     return NO_ERROR;
+ }
+ 
+-- 
+2.9.3
+

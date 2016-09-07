@@ -1,0 +1,26 @@
+From c17ad2f0c7e00fd1bbf01d0dfed41f72d78267ad Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Thu, 14 Jul 2016 13:50:32 -0700
+Subject: [PATCH 10/11] Fix build
+
+Change-Id: I48ba34b3df9c9a896d4b18c3f48e41744b7dab54
+---
+ media/libstagefright/codecs/mp3dec/SoftMP3.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+index 79206ea..0822c34 100644
+--- a/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
++++ b/media/libstagefright/codecs/mp3dec/SoftMP3.cpp
+@@ -122,7 +122,7 @@ void SoftMP3::initDecoder() {
+ 
+ void *SoftMP3::memsetSafe(OMX_BUFFERHEADERTYPE *outHeader, int c, size_t len) {
+     if (len > outHeader->nAllocLen) {
+-        ALOGE("memset buffer too small: got %lu, expected %zu", (unsigned long)outHeader->nAllocLen, len);
++        ALOGE("memset buffer too small: got %u, expected %zu", outHeader->nAllocLen, len);
+         android_errorWriteLog(0x534e4554, "29422022");
+         notify(OMX_EventError, OMX_ErrorUndefined, OUTPUT_BUFFER_TOO_SMALL, NULL);
+         mSignalledError = true;
+-- 
+2.9.3
+

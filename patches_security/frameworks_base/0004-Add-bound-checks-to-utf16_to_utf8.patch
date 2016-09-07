@@ -1,0 +1,62 @@
+From 866dc26ad4a98cc835d075b627326e7d7e52ffa1 Mon Sep 17 00:00:00 2001
+From: Sergio Giro <sgiro@google.com>
+Date: Tue, 28 Jun 2016 18:26:10 +0100
+Subject: [PATCH 4/7] Add bound checks to utf16_to_utf8
+
+Test: ran libaapt2_tests64
+Bug: 29250543
+Change-Id: I1ebc017af623b6514cf0c493e8cd8e1d59ea26c3
+(cherry picked from commit 4781057e78f63e0e99af109cebf3b6a78f4bfbb6)
+---
+ tools/aapt/Android.mk         | 2 +-
+ tools/aapt2/util/Util.cpp     | 4 +++-
+ tools/split-select/Android.mk | 2 +-
+ 3 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/tools/aapt/Android.mk b/tools/aapt/Android.mk
+index b701445..2a490d1 100644
+--- a/tools/aapt/Android.mk
++++ b/tools/aapt/Android.mk
+@@ -57,8 +57,8 @@ aaptTests := \
+ aaptHostStaticLibs := \
+     libandroidfw \
+     libpng \
+-    liblog \
+     libutils \
++    liblog \
+     libcutils \
+     libexpat \
+     libziparchive-host \
+diff --git a/tools/aapt2/util/Util.cpp b/tools/aapt2/util/Util.cpp
+index 7b0c71d..5a87c33 100644
+--- a/tools/aapt2/util/Util.cpp
++++ b/tools/aapt2/util/Util.cpp
+@@ -441,8 +441,10 @@ std::string utf16ToUtf8(const StringPiece16& utf16) {
+     }
+ 
+     std::string utf8;
++    // Make room for '\0' explicitly.
++    utf8.resize(utf8Length + 1);
++    utf16_to_utf8(utf16.data(), utf16.length(), &*utf8.begin(), utf8Length + 1);
+     utf8.resize(utf8Length);
+-    utf16_to_utf8(utf16.data(), utf16.length(), &*utf8.begin());
+     return utf8;
+ }
+ 
+diff --git a/tools/split-select/Android.mk b/tools/split-select/Android.mk
+index 239bed5..863abae 100644
+--- a/tools/split-select/Android.mk
++++ b/tools/split-select/Android.mk
+@@ -47,8 +47,8 @@ hostStaticLibs := \
+     libaapt \
+     libandroidfw \
+     libpng \
+-    liblog \
+     libutils \
++    liblog \
+     libcutils \
+     libexpat \
+     libziparchive-host \
+-- 
+2.9.3
+

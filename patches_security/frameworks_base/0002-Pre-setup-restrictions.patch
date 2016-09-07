@@ -1,0 +1,82 @@
+From e206f02d46ae5e38c74d138b51f6e1637e261abe Mon Sep 17 00:00:00 2001
+From: Jason Monk <jmonk@google.com>
+Date: Thu, 30 Jun 2016 13:15:48 -0400
+Subject: [PATCH 2/7] Pre-setup restrictions
+
+ - Prevent external tiles from system apps
+ - Disable help
+
+Bug: 29194585
+Change-Id: I92da498110db49f7a523d6f775f191c4b52a4ad6
+---
+ packages/SettingsLib/src/com/android/settingslib/HelpUtils.java    | 7 +++++++
+ .../SettingsLib/src/com/android/settingslib/drawer/TileUtils.java  | 7 ++++++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/packages/SettingsLib/src/com/android/settingslib/HelpUtils.java b/packages/SettingsLib/src/com/android/settingslib/HelpUtils.java
+index 320cd58..83a2123 100644
+--- a/packages/SettingsLib/src/com/android/settingslib/HelpUtils.java
++++ b/packages/SettingsLib/src/com/android/settingslib/HelpUtils.java
+@@ -25,6 +25,7 @@ import android.content.pm.PackageInfo;
+ import android.content.pm.PackageManager.NameNotFoundException;
+ import android.content.res.Resources.Theme;
+ import android.net.Uri;
++import android.provider.Settings.Global;
+ import android.text.TextUtils;
+ import android.util.Log;
+ import android.util.TypedValue;
+@@ -91,6 +92,9 @@ public class HelpUtils {
+      */
+     public static boolean prepareHelpMenuItem(final Activity activity, MenuItem helpMenuItem,
+             String helpUriString, String backupContext) {
++        if (Global.getInt(activity.getContentResolver(), Global.DEVICE_PROVISIONED, 0) == 0) {
++            return false;
++        }
+         if (TextUtils.isEmpty(helpUriString)) {
+             // The help url string is empty or null, so set the help menu item to be invisible.
+             helpMenuItem.setVisible(false);
+@@ -128,6 +132,9 @@ public class HelpUtils {
+ 
+     public static Intent getHelpIntent(Context context, String helpUriString,
+             String backupContext) {
++        if (Global.getInt(context.getContentResolver(), Global.DEVICE_PROVISIONED, 0) == 0) {
++            return null;
++        }
+         // Try to handle as Intent Uri, otherwise just treat as Uri.
+         try {
+             Intent intent = Intent.parseUri(helpUriString,
+diff --git a/packages/SettingsLib/src/com/android/settingslib/drawer/TileUtils.java b/packages/SettingsLib/src/com/android/settingslib/drawer/TileUtils.java
+index 418b138..1664c89 100644
+--- a/packages/SettingsLib/src/com/android/settingslib/drawer/TileUtils.java
++++ b/packages/SettingsLib/src/com/android/settingslib/drawer/TileUtils.java
+@@ -27,6 +27,7 @@ import android.graphics.drawable.Icon;
+ import android.os.Bundle;
+ import android.os.UserHandle;
+ import android.os.UserManager;
++import android.provider.Settings.Global;
+ import android.text.TextUtils;
+ import android.util.Log;
+ import android.util.Pair;
+@@ -115,6 +116,8 @@ public class TileUtils {
+     public static List<DashboardCategory> getCategories(Context context,
+             HashMap<Pair<String, String>, Tile> cache) {
+         final long startTime = System.currentTimeMillis();
++        boolean setup = Global.getInt(context.getContentResolver(), Global.DEVICE_PROVISIONED, 0)
++                != 0;
+         ArrayList<Tile> tiles = new ArrayList<>();
+         UserManager userManager = UserManager.get(context);
+         for (UserHandle user : userManager.getUserProfiles()) {
+@@ -127,7 +130,9 @@ public class TileUtils {
+                 getTilesForAction(context, user, MANUFACTURER_SETTINGS, cache,
+                         MANUFACTURER_DEFAULT_CATEGORY, tiles, false);
+             }
+-            getTilesForAction(context, user, EXTRA_SETTINGS_ACTION, cache, null, tiles, false);
++            if (setup) {
++                getTilesForAction(context, user, EXTRA_SETTINGS_ACTION, cache, null, tiles, false);
++            }
+         }
+         HashMap<String, DashboardCategory> categoryMap = new HashMap<>();
+         for (Tile tile : tiles) {
+-- 
+2.9.3
+

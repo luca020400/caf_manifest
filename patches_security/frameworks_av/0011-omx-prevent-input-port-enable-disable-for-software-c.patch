@@ -1,0 +1,33 @@
+From 1e9801783770917728b7edbdeff3d0ec09c621ac Mon Sep 17 00:00:00 2001
+From: Wonsik Kim <wonsik@google.com>
+Date: Thu, 7 Jul 2016 12:57:02 +0900
+Subject: [PATCH 11/11] omx: prevent input port enable/disable for software
+ codecs
+
+Bug: 29421804
+Change-Id: Iba1011e9af942a6dff7f659af769a51e3f5ba66f
+---
+ media/libstagefright/omx/SimpleSoftOMXComponent.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+index 60c1e2e..13afd45 100644
+--- a/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
++++ b/media/libstagefright/omx/SimpleSoftOMXComponent.cpp
+@@ -469,6 +469,13 @@ void SimpleSoftOMXComponent::onPortEnable(OMX_U32 portIndex, bool enable) {
+     CHECK_EQ((int)port->mTransition, (int)PortInfo::NONE);
+     CHECK(port->mDef.bEnabled == !enable);
+ 
++    if (port->mDef.eDir != OMX_DirOutput) {
++        ALOGE("Port enable/disable allowed only on output ports.");
++        notify(OMX_EventError, OMX_ErrorUndefined, 0, NULL);
++        android_errorWriteLog(0x534e4554, "29421804");
++        return;
++    }
++
+     if (!enable) {
+         port->mDef.bEnabled = OMX_FALSE;
+         port->mTransition = PortInfo::DISABLING;
+-- 
+2.9.3
+

@@ -1,0 +1,45 @@
+From 91fc934bb2e5ea59929bb2f574de6db9b5100745 Mon Sep 17 00:00:00 2001
+From: Benjamin Franz <bfranz@google.com>
+Date: Tue, 12 Jul 2016 13:42:21 +0100
+Subject: [PATCH 5/7] Block user from setting safe boot setting via adb
+
+Bug: 29900345
+Change-Id: Id3b4472b59ded2c7c29762ddf008ee8486009dbb
+---
+ .../src/com/android/providers/settings/SettingsProvider.java         | 5 +++++
+ services/core/java/com/android/server/pm/UserRestrictionsUtils.java  | 3 +++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+index 5c72215..90eade4 100644
+--- a/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
++++ b/packages/SettingsProvider/src/com/android/providers/settings/SettingsProvider.java
+@@ -1202,6 +1202,11 @@ public class SettingsProvider extends ContentProvider {
+                 restriction = UserManager.DISALLOW_CONFIG_VPN;
+                 break;
+ 
++            case Settings.Global.SAFE_BOOT_DISALLOWED:
++                if ("1".equals(value)) return false;
++                restriction = UserManager.DISALLOW_SAFE_BOOT;
++                break;
++
+             default:
+                 if (setting != null && setting.startsWith(Settings.Global.DATA_ROAMING)) {
+                     if ("0".equals(value)) return false;
+diff --git a/services/core/java/com/android/server/pm/UserRestrictionsUtils.java b/services/core/java/com/android/server/pm/UserRestrictionsUtils.java
+index 38a3f42..1f1c6f8 100644
+--- a/services/core/java/com/android/server/pm/UserRestrictionsUtils.java
++++ b/services/core/java/com/android/server/pm/UserRestrictionsUtils.java
+@@ -330,6 +330,9 @@ public class UserRestrictionsUtils {
+         // set, and in that case even if the restriction is lifted, changing it to ON would be
+         // wrong.  So just don't do anything in such a case.  If the user hopes to enable location
+         // later, they can do it on the Settings UI.
++        // WARNING: Remember that Settings.Global and Settings.Secure are changeable via adb.
++        // To prevent this from happening for a given user restriction, you have to add a check to
++        // SettingsProvider.isGlobalOrSecureSettingRestrictedForUser.
+ 
+         final ContentResolver cr = context.getContentResolver();
+         final long id = Binder.clearCallingIdentity();
+-- 
+2.9.3
+
