@@ -1,7 +1,7 @@
-From 445d8406cddff14ba40ff2360f8bde9155b32e62 Mon Sep 17 00:00:00 2001
+From d99eae0760d9a16ed2184de0c82aca6029c8d730 Mon Sep 17 00:00:00 2001
 From: Rashed Abdel-Tawab <rashed@linux.com>
 Date: Sun, 30 Nov 2014 00:17:03 -0500
-Subject: [PATCH 1/2] Status bar: Add HSPA+ icons
+Subject: [PATCH 1/3] Status bar: Add HSPA+ icons
 
 Forward port H+ icon in the status bar when connected to HSPA+
 Uses new vector drawables by blunden
@@ -395,5 +395,5 @@ index a3b5fe7..990e949 100644
              "4G",
              TelephonyIcons.TELEPHONY_SIGNAL_STRENGTH,
 -- 
-2.7.4
+2.9.3
 
