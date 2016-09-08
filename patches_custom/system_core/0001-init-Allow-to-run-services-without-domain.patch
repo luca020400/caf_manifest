@@ -1,7 +1,7 @@
-From 6bc266d57f058895538aa15751c24fa2879b5d37 Mon Sep 17 00:00:00 2001
+From e07e5063178a3104a86c537a2b0ccb9babeb33bd Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Sat, 27 Aug 2016 15:03:36 +0200
-Subject: [PATCH 1/4] init: Allow to run services without domain
+Subject: [PATCH 1/7] init: Allow to run services without domain
 
 Change-Id: I230326b64cce8c0d53d0e7c6e6a098d1fef25a9b
 ---

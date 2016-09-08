@@ -1,7 +1,7 @@
-From b9eb34196a0c3d27837332b86468149f11271fe7 Mon Sep 17 00:00:00 2001
+From b3d20053e357795d9bfea9ee6f0cd3e621ba8e28 Mon Sep 17 00:00:00 2001
 From: David Ng <dave@codeaurora.org>
 Date: Tue, 1 Mar 2016 11:13:56 -0800
-Subject: [PATCH 2/4] Add optional target-specific LD_PRELOAD to environment
+Subject: [PATCH 2/7] Add optional target-specific LD_PRELOAD to environment
 
 Append additional libraries defined in TARGET_LDPRELOAD to the
 LD_PRELOAD environment if it is defined.

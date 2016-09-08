@@ -1,7 +1,7 @@
-From 548a8371f3f58a8ed5e0d74daca20d28f311cf1d Mon Sep 17 00:00:00 2001
+From 7fb3f76ee08f7a871bfc77a0144f9ebe1c55ede4 Mon Sep 17 00:00:00 2001
 From: Aaron Kling <webgeek1234@gmail.com>
 Date: Thu, 31 Dec 2015 22:33:50 -0600
-Subject: [PATCH 4/4] Add vendor hook to handle_control_message
+Subject: [PATCH 4/7] Add vendor hook to handle_control_message
 
 This is needed for Nvidia Shield devices to handle a
 'restart consolemode' request from a blobbed stock app.
@@ -41,7 +41,7 @@ index 9d88409..4db1e73 100755
      if (svc == nullptr) {
          ERROR("no such service '%s'\n", name.c_str());
 diff --git a/init/vendor_init.cpp b/init/vendor_init.cpp
-index d3fd5ff..4b322bb 100644
+index d3fd5ff..41a263b 100644
 --- a/init/vendor_init.cpp
 +++ b/init/vendor_init.cpp
 @@ -28,6 +28,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
