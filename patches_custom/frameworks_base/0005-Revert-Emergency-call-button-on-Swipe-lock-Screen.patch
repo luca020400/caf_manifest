@@ -1,0 +1,145 @@
+From faa473a28732c6c29222679c7b5c8e25f237b681 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Thu, 8 Sep 2016 18:39:04 +0200
+Subject: [PATCH 5/5] Revert "Emergency call button on Swipe lock Screen."
+
+This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
+---
+ .../Keyguard/src/com/android/keyguard/EmergencyButton.java |  6 ++----
+ packages/SystemUI/res/layout/keyguard_bottom_area.xml      |  9 ---------
+ packages/SystemUI/res/values/dimens.xml                    |  2 +-
+ .../systemui/statusbar/phone/KeyguardBottomAreaView.java   | 14 --------------
+ 4 files changed, 3 insertions(+), 28 deletions(-)
+
+diff --git a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
+index ff94d1e..8d41145 100644
+--- a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
++++ b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
+@@ -24,7 +24,6 @@ import android.content.res.Configuration;
+ import android.os.PowerManager;
+ import android.os.RemoteException;
+ import android.os.SystemClock;
+-import android.os.SystemProperties;
+ import android.os.UserHandle;
+ import android.telecom.TelecomManager;
+ import android.util.AttributeSet;
+@@ -147,7 +146,7 @@ public class EmergencyButton extends Button {
+         }
+     }
+ 
+-    public void updateEmergencyCallButton() {
++    private void updateEmergencyCallButton() {
+         boolean visible = false;
+         if (mIsVoiceCapable) {
+             // Emergency calling requires voice capability.
+@@ -161,8 +160,7 @@ public class EmergencyButton extends Button {
+                     visible = mEnableEmergencyCallWhileSimLocked;
+                 } else {
+                     // Only show if there is a secure screen (pin/pattern/SIM pin/SIM puk);
+-                    visible = mLockPatternUtils.isSecure(KeyguardUpdateMonitor.getCurrentUser()) ||
+-                            SystemProperties.getBoolean("persist.radio.emgcy_btn_onswipe", false);
++                    visible = mLockPatternUtils.isSecure(KeyguardUpdateMonitor.getCurrentUser());
+                 }
+             }
+         }
+diff --git a/packages/SystemUI/res/layout/keyguard_bottom_area.xml b/packages/SystemUI/res/layout/keyguard_bottom_area.xml
+index de73538..444f0f0 100644
+--- a/packages/SystemUI/res/layout/keyguard_bottom_area.xml
++++ b/packages/SystemUI/res/layout/keyguard_bottom_area.xml
+@@ -36,15 +36,6 @@
+         android:textAppearance="?android:attr/textAppearanceSmall"
+         android:accessibilityLiveRegion="polite" />
+ 
+-    <include layout="@layout/keyguard_eca"
+-        android:id="@+id/keyguard_selector_fade_container"
+-        android:layout_width="wrap_content"
+-        android:layout_height="wrap_content"
+-        android:layout_marginBottom="36dp"
+-        android:orientation="vertical"
+-        android:layout_gravity="bottom|center_horizontal"
+-        android:gravity="center_horizontal" />
+-
+     <FrameLayout
+         android:id="@+id/preview_container"
+         android:layout_width="match_parent"
+diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
+index 12b782c..2a4752a 100644
+--- a/packages/SystemUI/res/values/dimens.xml
++++ b/packages/SystemUI/res/values/dimens.xml
+@@ -434,7 +434,7 @@
+     <dimen name="keyguard_affordance_icon_height">24dp</dimen>
+     <dimen name="keyguard_affordance_icon_width">24dp</dimen>
+ 
+-    <dimen name="keyguard_indication_margin_bottom">90dp</dimen>
++    <dimen name="keyguard_indication_margin_bottom">65dp</dimen>
+ 
+     <!-- The text size for battery level -->
+     <dimen name="battery_level_text_size">12sp</dimen>
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
+index e0290b0..772c766 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
+@@ -35,7 +35,6 @@ import android.os.IBinder;
+ import android.os.Message;
+ import android.os.Messenger;
+ import android.os.RemoteException;
+-import android.os.SystemProperties;
+ import android.os.UserHandle;
+ import android.provider.MediaStore;
+ import android.service.media.CameraPrewarmService;
+@@ -50,7 +49,6 @@ import android.widget.FrameLayout;
+ import android.widget.TextView;
+ 
+ import com.android.internal.widget.LockPatternUtils;
+-import com.android.keyguard.EmergencyButton;
+ import com.android.keyguard.KeyguardUpdateMonitor;
+ import com.android.keyguard.KeyguardUpdateMonitorCallback;
+ import com.android.systemui.EventLogConstants;
+@@ -94,7 +92,6 @@ public class KeyguardBottomAreaView extends FrameLayout implements View.OnClickL
+     private static final int DOZE_ANIMATION_STAGGER_DELAY = 48;
+     private static final int DOZE_ANIMATION_ELEMENT_DURATION = 250;
+ 
+-    private EmergencyButton mEmergencyButton;
+     private KeyguardAffordanceView mCameraImageView;
+     private KeyguardAffordanceView mLeftAffordanceView;
+     private LockIcon mLockIcon;
+@@ -192,7 +189,6 @@ public class KeyguardBottomAreaView extends FrameLayout implements View.OnClickL
+         super.onFinishInflate();
+         mLockPatternUtils = new LockPatternUtils(mContext);
+         mPreviewContainer = (ViewGroup) findViewById(R.id.preview_container);
+-        mEmergencyButton = (EmergencyButton) findViewById(R.id.emergency_call_button);
+         mCameraImageView = (KeyguardAffordanceView) findViewById(R.id.camera_button);
+         mLeftAffordanceView = (KeyguardAffordanceView) findViewById(R.id.left_button);
+         mLockIcon = (LockIcon) findViewById(R.id.lock_icon);
+@@ -202,7 +198,6 @@ public class KeyguardBottomAreaView extends FrameLayout implements View.OnClickL
+         mUnlockMethodCache = UnlockMethodCache.getInstance(getContext());
+         mUnlockMethodCache.addListener(this);
+         mLockIcon.update();
+-        updateEmergencyButton();
+         setClipChildren(false);
+         setClipToPadding(false);
+         mPreviewInflater = new PreviewInflater(mContext, new LockPatternUtils(mContext));
+@@ -253,7 +248,6 @@ public class KeyguardBottomAreaView extends FrameLayout implements View.OnClickL
+         lp.height = getResources().getDimensionPixelSize(R.dimen.keyguard_affordance_height);
+         mLeftAffordanceView.setLayoutParams(lp);
+         updateLeftAffordanceIcon();
+-        updateEmergencyButton();
+     }
+ 
+     public void setActivityStarter(ActivityStarter activityStarter) {
+@@ -704,12 +698,4 @@ public class KeyguardBottomAreaView extends FrameLayout implements View.OnClickL
+         updateLeftAffordanceIcon();
+         updateLeftPreview();
+     }
+-
+-    private void updateEmergencyButton() {
+-        if (SystemProperties.getBoolean("persist.radio.emgcy_btn_onswipe",false)) {
+-            if (mEmergencyButton != null) {
+-                mEmergencyButton.updateEmergencyCallButton();
+-            }
+-        }
+-    }
+ }
+-- 
+2.9.3
+
