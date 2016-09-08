@@ -1,4 +1,4 @@
-From df33aecab5306b5c2e9dbd9a749799e8666389a6 Mon Sep 17 00:00:00 2001
+From 275f6f4eac5e01bc249bf3088df73266f04c6104 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Mon, 29 Aug 2016 09:35:11 +0200
 Subject: [PATCH] wcnss-service: Squashed support for libwcnss-qmi
@@ -6,8 +6,8 @@ Subject: [PATCH] wcnss-service: Squashed support for libwcnss-qmi
 Change-Id: Id1f481660c8bf190bc5551d6a08e3e7b95a6c4cc
 ---
  wcnss-service/Android.mk      |  52 ++++++++++++++++++---
- wcnss-service/wcnss_service.c | 102 +++++++++++++++++++++++++++++++++++++++---
- 2 files changed, 141 insertions(+), 13 deletions(-)
+ wcnss-service/wcnss_service.c | 104 +++++++++++++++++++++++++++++++++++++++---
+ 2 files changed, 143 insertions(+), 13 deletions(-)
 
 diff --git a/wcnss-service/Android.mk b/wcnss-service/Android.mk
 index 16cc10e..f13a329 100644
@@ -86,7 +86,7 @@ index 16cc10e..f13a329 100644
 +
 +endif #TARGET_ARCH
 diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
-index 1d4346b..8920705 100644
+index 1d4346b..893d89f 100644
 --- a/wcnss-service/wcnss_service.c
 +++ b/wcnss-service/wcnss_service.c
 @@ -41,8 +41,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -139,7 +139,7 @@ index 1d4346b..8920705 100644
  int check_modem_compatability(struct dev_info *mdm_detect_info)
  {
  	char args[MODEM_BASEBAND_PROPERTY_SIZE] = {0};
-@@ -501,24 +506,102 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
+@@ -501,24 +506,104 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
  }
  #endif
  
@@ -203,7 +203,9 @@ index 1d4346b..8920705 100644
  	int rc;
  	int fd_dev, ret_cal;
 -#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
  	int nv_mac_addr = FAILED;
++#endif
 +#ifdef WCNSS_QMI
 +#ifdef MDM_DETECT
  	struct dev_info mdm_detect_info;
@@ -244,7 +246,7 @@ index 1d4346b..8920705 100644
  	nom = get_system_info(&mdm_detect_info);
  
  	if (nom > 0)
-@@ -536,6 +619,7 @@ int main(int argc, char *argv[])
+@@ -536,6 +621,7 @@ int main(int argc, char *argv[])
  		ALOGE("wcnss_service: Target does not have external modem");
  		goto nomodem;
  	}
@@ -252,7 +254,7 @@ index 1d4346b..8920705 100644
  
  	/* initialize the DMS client and request the wlan mac address */
  
-@@ -558,7 +642,7 @@ int main(int argc, char *argv[])
+@@ -558,7 +644,7 @@ int main(int argc, char *argv[])
  nomodem:
  #endif
  
@@ -261,7 +263,7 @@ index 1d4346b..8920705 100644
  	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
  #else
  	setup_wcnss_parameters(&ret_cal);
-@@ -590,5 +674,9 @@ nomodem:
+@@ -590,5 +676,9 @@ nomodem:
  
  	close(fd_dev);
  
