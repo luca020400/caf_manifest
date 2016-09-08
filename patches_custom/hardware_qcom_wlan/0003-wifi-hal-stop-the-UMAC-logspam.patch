@@ -1,0 +1,26 @@
+From 85fc1d5316e56f89a24d32f490c93af4f12ff446 Mon Sep 17 00:00:00 2001
+From: Altaf-Mahdi <altaf.mahdi@gmail.com>
+Date: Mon, 11 Jul 2016 16:03:06 +0100
+Subject: [PATCH 3/3] wifi-hal: stop the UMAC logspam
+
+Change-Id: I93818d0ccb31c281613c9c1cd0d4945aa441a7ae
+---
+ qcwcn/wifi_hal/wifilogger_diag.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/qcwcn/wifi_hal/wifilogger_diag.cpp b/qcwcn/wifi_hal/wifilogger_diag.cpp
+index ede3050..d0d98a8 100644
+--- a/qcwcn/wifi_hal/wifilogger_diag.cpp
++++ b/qcwcn/wifi_hal/wifilogger_diag.cpp
+@@ -2104,7 +2104,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
+     if (wnl->nlh.nlmsg_type == ANI_NL_MSG_PUMAC) {
+         if ((wnl->nlh.nlmsg_len <= sizeof(tAniNlHdr)) ||
+             (wnl->nlh.nlmsg_len < (sizeof(tAniNlHdr) + ntohs(wnl->wmsg.length)))) {
+-            ALOGE("Received UMAC message with insufficent length: %d",
++            ALOGV("Received UMAC message with insufficent length: %d",
+                   wnl->nlh.nlmsg_len);
+             return WIFI_ERROR_UNKNOWN;
+         }
+-- 
+2.9.3
+
