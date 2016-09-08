@@ -1,0 +1,45 @@
+From 65399ad67a0ae40d53143a8df2729c5c060c3df9 Mon Sep 17 00:00:00 2001
+From: Arne Coucheron <arco68@gmail.com>
+Date: Fri, 2 Sep 2016 20:43:01 +0200
+Subject: [PATCH 10/11] wcnss_service: Fix build fail when WCNSS_QMI_OSS is
+ defined
+
+Change-Id: I9b14f384901586df5c5e255b15cbeeba20bb6277
+---
+ wcnss-service/wcnss_service.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
+index 94d148e..9e1e4b0 100644
+--- a/wcnss-service/wcnss_service.c
++++ b/wcnss-service/wcnss_service.c
+@@ -371,7 +371,7 @@ unsigned int convert_string_to_hex(char* string)
+ }
+ 
+ 
+-#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
+ void setup_wcnss_parameters(int *cal, int nv_mac_addr)
+ #else
+ void setup_wcnss_parameters(int *cal)
+@@ -578,7 +578,7 @@ int main(int argc, char *argv[])
+ 	UNUSED(argc), UNUSED(argv);
+ 	int rc;
+ 	int fd_dev, ret_cal;
+-#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
+ 	int nv_mac_addr = FAILED;
+ #ifdef MDM_DETECT
+ 	struct dev_info mdm_detect_info;
+@@ -655,7 +655,7 @@ int main(int argc, char *argv[])
+ nomodem:
+ #endif
+ 
+-#ifdef WCNSS_QMI
++#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
+ 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
+ #else
+ 	setup_wcnss_parameters(&ret_cal);
+-- 
+2.9.3
+

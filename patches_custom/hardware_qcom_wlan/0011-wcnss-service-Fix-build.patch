@@ -1,0 +1,28 @@
+From 3d8408218f843cdf5220860740c7d753c75c11a8 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Thu, 8 Sep 2016 19:07:32 +0200
+Subject: [PATCH 11/11] wcnss-service: Fix build
+
+Change-Id: Ib5bedbea9742e96e140fae4b4e0b673f00815626
+---
+ wcnss-service/wcnss_service.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
+index 9e1e4b0..a82d8e6 100644
+--- a/wcnss-service/wcnss_service.c
++++ b/wcnss-service/wcnss_service.c
+@@ -582,9 +582,9 @@ int main(int argc, char *argv[])
+ 	int nv_mac_addr = FAILED;
+ #ifdef MDM_DETECT
+ 	struct dev_info mdm_detect_info;
+-#endif
+ 	int nom = 0;
+ #endif
++#endif
+ 
+ 	setup_wlan_config_file();
+ 
+-- 
+2.9.3
+

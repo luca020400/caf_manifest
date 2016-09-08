@@ -1,7 +1,7 @@
-From d75f4bbbef6d737d3c7372218fbf1ba66057bb61 Mon Sep 17 00:00:00 2001
+From 282badd25219762d6778c65039bab378c365cba6 Mon Sep 17 00:00:00 2001
 From: Steve Kondik <steve@cyngn.com>
 Date: Tue, 28 Jun 2016 23:53:28 -0700
-Subject: [PATCH 2/3] wifi-hal: Only try LOWI once
+Subject: [PATCH 08/11] wifi-hal: Only try LOWI once
 
  * There is no need to keep trying to use LOWI, which nobody
    is really deploying.

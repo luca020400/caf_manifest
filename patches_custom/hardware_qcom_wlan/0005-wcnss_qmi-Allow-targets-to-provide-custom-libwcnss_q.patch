@@ -1,0 +1,58 @@
+From fc2ae29f1a3572e33450dc586d5477fc4e3b5c34 Mon Sep 17 00:00:00 2001
+From: Ethan Chen <intervigil@gmail.com>
+Date: Thu, 13 Nov 2014 11:27:34 -0800
+Subject: [PATCH 05/11] wcnss_qmi: Allow targets to provide custom libwcnss_qmi
+
+Change-Id: I9aedd4b8633a81ecb3cd292299826e3daca60656
+---
+ wcnss-service/Android.mk | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/wcnss-service/Android.mk b/wcnss-service/Android.mk
+index 76a08ba..89e3a7d 100644
+--- a/wcnss-service/Android.mk
++++ b/wcnss-service/Android.mk
+@@ -10,9 +10,15 @@ LOCAL_SRC_FILES := wcnss_service.c
+ LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
+ 
+ ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
++
++ifeq ($(TARGET_PROVIDES_WCNSS_QMI),true)
++LOCAL_CFLAGS += -DWCNSS_QMI_OSS
++LOCAL_SHARED_LIBRARIES += libdl
++else
+ ifeq ($(TARGET_USES_WCNSS_MAC_ADDR_REV),true)
+ LOCAL_CFLAGS += -DWCNSS_QMI_MAC_ADDR_REV
+ endif
++
+ ifneq ($(QCPATH),)
+ LOCAL_CFLAGS += -DWCNSS_QMI
+ LOCAL_SHARED_LIBRARIES += libwcnss_qmi
+@@ -20,6 +26,9 @@ else
+ LOCAL_CFLAGS += -DWCNSS_QMI_OSS
+ LOCAL_SHARED_LIBRARIES += libdl
+ endif #QCPATH
++
++endif #TARGET_PROVIDES_WCNSS_QMI
++
+ endif #TARGET_USES_QCOM_WCNSS_QMI
+ 
+ LOCAL_MODULE_TAGS := optional
+@@ -27,6 +36,7 @@ LOCAL_CFLAGS += -Wall -Werror
+ 
+ include $(BUILD_EXECUTABLE)
+ 
++ifneq ($(TARGET_PROVIDES_WCNSS_QMI),true)
+ ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
+ ifneq ($(QCPATH),)
+ include $(CLEAR_VARS)
+@@ -56,5 +66,6 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ endif #QCPATH
+ endif #TARGET_USES_QCOM_WCNSS_QMI
++endif #TARGET_PROVIDES_WCNSS_QMI
+ 
+ endif #TARGET_ARCH == arm
+-- 
+2.9.3
+

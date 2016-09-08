@@ -1,19 +1,23 @@
-From 4a5522243865da7f7b6e52f52c45d53c925bd700 Mon Sep 17 00:00:00 2001
-From: Luca Stefani <luca.stefani.ge1@gmail.com>
-Date: Thu, 8 Sep 2016 18:51:36 +0200
-Subject: [PATCH 1/3] wcnss-service: Squashed support for libwcnss-qmi
+From 5d06c89154e4da708287ed79111f861725aad651 Mon Sep 17 00:00:00 2001
+From: Ethan Chen <intervigil@gmail.com>
+Date: Mon, 14 Apr 2014 15:52:41 -0700
+Subject: [PATCH 03/11] wcnss: Build and dlopen wcnss_qmi_client as a shared
+ library
 
-Change-Id: If26ff25c9674d37b8cc27becd1aac193ac2aeb6b
+* Allows us to decouple QMI from wcnss_service for those devices that
+  rely on QMI features for wcnss.
+
+Change-Id: I30a1f9a8760dcd19761d473cedb2104b7b33069c
 ---
- wcnss-service/Android.mk      |  60 ++++++++++++++++++++-----
- wcnss-service/wcnss_service.c | 102 +++++++++++++++++++++++++++++++++++++++---
- 2 files changed, 144 insertions(+), 18 deletions(-)
+ wcnss-service/Android.mk      | 40 +++++++++++++++++---
+ wcnss-service/wcnss_service.c | 87 ++++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 119 insertions(+), 8 deletions(-)
 
 diff --git a/wcnss-service/Android.mk b/wcnss-service/Android.mk
-index 16cc10e..4ee16ef 100644
+index c5310f0..242fac2 100644
 --- a/wcnss-service/Android.mk
 +++ b/wcnss-service/Android.mk
-@@ -1,25 +1,63 @@
+@@ -1,28 +1,56 @@
  ifneq (,$(filter arm aarch64 arm64, $(TARGET_ARCH)))
 +
  LOCAL_PATH := $(call my-dir)
@@ -23,90 +27,74 @@ index 16cc10e..4ee16ef 100644
  LOCAL_MODULE := wcnss_service
  LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/common/inc/
  LOCAL_SRC_FILES := wcnss_service.c
-+LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
+ LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
+-ifneq ($(QCPATH),)
 +
  ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
-+
-+ifeq ($(TARGET_PROVIDES_WCNSS_QMI),true)
-+LOCAL_CFLAGS += -DWCNSS_QMI_OSS
-+LOCAL_SHARED_LIBRARIES += libdl
-+else
-+
+ ifeq ($(TARGET_USES_WCNSS_MAC_ADDR_REV),true)
+ LOCAL_CFLAGS += -DWCNSS_QMI_MAC_ADDR_REV
+ endif
 +ifneq ($(QCPATH),)
  LOCAL_CFLAGS += -DWCNSS_QMI
--LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/inc
 +LOCAL_SHARED_LIBRARIES += libwcnss_qmi
 +else
 +LOCAL_CFLAGS += -DWCNSS_QMI_OSS
 +LOCAL_SHARED_LIBRARIES += libdl
 +endif #QCPATH
-+
-+endif #TARGET_PROVIDES_WCNSS_QMI
-+
 +endif #TARGET_USES_QCOM_WCNSS_QMI
 +
 +LOCAL_MODULE_TAGS := optional
-+LOCAL_CFLAGS += -Wall
++LOCAL_CFLAGS += -Wall -Werror
 +
 +include $(BUILD_EXECUTABLE)
 +
-+ifneq ($(TARGET_PROVIDES_WCNSS_QMI),true)
 +ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
 +ifneq ($(QCPATH),)
 +include $(CLEAR_VARS)
 +
-+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi-framework/inc
+ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/inc
  LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/services
  LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/platform
--LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/src
--LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/core/lib/inc
+ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/src
+ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/core/lib/inc
 -LOCAL_SRC_FILES += wcnss_qmi_client.c
--endif #TARGET_USES_QCOM_WCNSS_QMI
-+LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/inc
 +
- LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
--ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
--LOCAL_SHARED_LIBRARIES += libqmiservices libqmi libqcci_legacy libqmi_client_qmux
-+LOCAL_SHARED_LIBRARIES += libqmiservices libqmi_cci libidl
++LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
+ LOCAL_SHARED_LIBRARIES += libqmiservices libqmi libqcci_legacy libqmi_client_qmux
  LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libmdmdetect/inc
  LOCAL_SHARED_LIBRARIES += libmdmdetect
 -endif #TARGET_USES_QCOM_WCNSS_QMI
+-endif #QCPATH
 +
-+LOCAL_CFLAGS += -DWCNSS_QMI -DMDM_DETECT
++LOCAL_CFLAGS += -DWCNSS_QMI
 +LOCAL_SRC_FILES += wcnss_qmi_client.c
 +
 +LOCAL_MODULE := libwcnss_qmi
  LOCAL_MODULE_TAGS := optional
--LOCAL_CFLAGS += -Wall -Werror
+ LOCAL_CFLAGS += -Wall -Werror
 -include $(BUILD_EXECUTABLE)
 -endif
-+LOCAL_CFLAGS += -Wall
 +include $(BUILD_SHARED_LIBRARY)
 +
 +endif #QCPATH
 +endif #TARGET_USES_QCOM_WCNSS_QMI
-+endif #TARGET_PROVIDES_WCNSS_QMI
 +
 +endif #TARGET_ARCH == arm
 diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
-index 1d4346b..3c8d547 100644
+index 21e389e..6ad9a0e 100644
 --- a/wcnss-service/wcnss_service.c
 +++ b/wcnss-service/wcnss_service.c
-@@ -41,8 +41,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- #include <cutils/properties.h>
- #ifdef WCNSS_QMI
+@@ -43,6 +43,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #include "wcnss_qmi_client.h"
-+#ifdef MDM_DETECT
  #include "mdm_detect.h"
  #endif
-+#endif
 +#ifdef WCNSS_QMI_OSS
 +#include <dlfcn.h>
 +#endif
  
  #define SUCCESS 0
  #define FAILED -1
-@@ -79,7 +84,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -79,7 +82,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #define HEXA_A		10
  #define HEX_BASE		16
  
@@ -114,17 +102,8 @@ index 1d4346b..3c8d547 100644
 +#if defined (WCNSS_QMI) || defined(WCNSS_QMI_OSS)
  #define WLAN_ADDR_SIZE   6
  unsigned char wlan_nv_mac_addr[WLAN_ADDR_SIZE];
- #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
-@@ -362,7 +367,7 @@ unsigned int convert_string_to_hex(char* string)
- }
- 
- 
--#ifdef WCNSS_QMI
-+#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
- void setup_wcnss_parameters(int *cal, int nv_mac_addr)
- #else
- void setup_wcnss_parameters(int *cal)
-@@ -399,7 +404,7 @@ void setup_wcnss_parameters(int *cal)
+ #ifdef WCNSS_QMI_MAC_ADDR_REV
+@@ -403,7 +406,7 @@ void setup_wcnss_parameters(int *cal)
  		}
  	}
  
@@ -133,16 +112,7 @@ index 1d4346b..3c8d547 100644
  	if (SUCCESS == nv_mac_addr)
  	{
  		pos = 0;
-@@ -471,7 +476,7 @@ void setup_wlan_driver_ath_prop()
- 	property_set("wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
- }
- 
--#ifdef WCNSS_QMI
-+#ifdef MDM_DETECT
- int check_modem_compatability(struct dev_info *mdm_detect_info)
- {
- 	char args[MODEM_BASEBAND_PROPERTY_SIZE] = {0};
-@@ -501,24 +506,102 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
+@@ -514,6 +517,60 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
  }
  #endif
  
@@ -203,16 +173,7 @@ index 1d4346b..3c8d547 100644
  int main(int argc, char *argv[])
  {
  	UNUSED(argc), UNUSED(argv);
- 	int rc;
- 	int fd_dev, ret_cal;
--#ifdef WCNSS_QMI
-+#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
- 	int nv_mac_addr = FAILED;
-+#ifdef MDM_DETECT
- 	struct dev_info mdm_detect_info;
-+#endif
- 	int nom = 0;
- #endif
+@@ -527,6 +584,28 @@ int main(int argc, char *argv[])
  
  	setup_wlan_config_file();
  
@@ -241,30 +202,7 @@ index 1d4346b..3c8d547 100644
  #ifdef WCNSS_QMI
  	/* Call ESOC API to get the number of modems.
  	   If the number of modems is not zero, only then proceed
- 	   with the eap_proxy intialization.*/
--
-+#ifdef MDM_DETECT
- 	nom = get_system_info(&mdm_detect_info);
- 
- 	if (nom > 0)
-@@ -536,6 +619,7 @@ int main(int argc, char *argv[])
- 		ALOGE("wcnss_service: Target does not have external modem");
- 		goto nomodem;
- 	}
-+#endif
- 
- 	/* initialize the DMS client and request the wlan mac address */
- 
-@@ -558,7 +642,7 @@ int main(int argc, char *argv[])
- nomodem:
- #endif
- 
--#ifdef WCNSS_QMI
-+#if defined(WCNSS_QMI) || defined(WCNSS_QMI_OSS)
- 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
- #else
- 	setup_wcnss_parameters(&ret_cal);
-@@ -590,5 +674,9 @@ nomodem:
+@@ -603,5 +682,9 @@ nomodem:
  
  	close(fd_dev);
  

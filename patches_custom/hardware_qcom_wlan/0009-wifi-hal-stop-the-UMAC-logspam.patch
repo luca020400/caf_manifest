@@ -1,7 +1,7 @@
-From 85fc1d5316e56f89a24d32f490c93af4f12ff446 Mon Sep 17 00:00:00 2001
+From ec180c1ebb291367a850f7dbe61391af771a56e0 Mon Sep 17 00:00:00 2001
 From: Altaf-Mahdi <altaf.mahdi@gmail.com>
 Date: Mon, 11 Jul 2016 16:03:06 +0100
-Subject: [PATCH 3/3] wifi-hal: stop the UMAC logspam
+Subject: [PATCH 09/11] wifi-hal: stop the UMAC logspam
 
 Change-Id: I93818d0ccb31c281613c9c1cd0d4945aa441a7ae
 ---
