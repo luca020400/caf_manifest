@@ -1,0 +1,50 @@
+From 792546a8f7d55677054f8dbd6e493fbd1c8f334b Mon Sep 17 00:00:00 2001
+From: Danny Baumann <dannybaumann@web.de>
+Date: Thu, 8 Sep 2016 15:16:59 +0200
+Subject: [PATCH] Revert "Bluetooth : Handled Cert tools new timer permissio
+ issue"
+
+The wakeup timer is set with values derived from the alarm deadline,
+which in turn is populated with values from CLOCK_ID (= CLOCK_BOOTTIME).
+Comparing wall time and time since boot is not a good idea and will lead
+to 100% CPU load due to the timer being immediately re-fired.
+
+This reverts commit 7643de5a67608ef0d3f62c277af950ca9e0eaf2e.
+
+Change-Id: Ic2a9a6e0ea9a81aa14a82357ab5c0ddf219ca655
+---
+ osi/src/alarm.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/osi/src/alarm.c b/osi/src/alarm.c
+index 60668ad..69ded69 100644
+--- a/osi/src/alarm.c
++++ b/osi/src/alarm.c
+@@ -95,13 +95,13 @@ struct alarm_t {
+ // unit tests to run faster. It should not be modified by production code.
+ int64_t TIMER_INTERVAL_FOR_WAKELOCK_IN_MS = 3000;
+ static const clockid_t CLOCK_ID = CLOCK_BOOTTIME;
+-#if 0
++
+ #if defined(KERNEL_MISSING_CLOCK_BOOTTIME_ALARM) && (KERNEL_MISSING_CLOCK_BOOTTIME_ALARM == TRUE)
+ static const clockid_t CLOCK_ID_ALARM = CLOCK_BOOTTIME;
+ #else
+ static const clockid_t CLOCK_ID_ALARM = CLOCK_BOOTTIME_ALARM;
+ #endif
+-#endif
++
+ // This mutex ensures that the |alarm_set|, |alarm_cancel|, and alarm callback
+ // functions execute serially and not concurrently. As a result, this mutex
+ // also protects the |alarms| list.
+@@ -342,7 +342,7 @@ static bool lazy_initialize(void) {
+     goto error;
+   timer_initialized = true;
+ 
+-  if (!timer_create_internal(CLOCK_REALTIME, &wakeup_timer))
++  if (!timer_create_internal(CLOCK_ID_ALARM, &wakeup_timer))
+     goto error;
+   wakeup_timer_initialized = true;
+ 
+-- 
+2.9.3
+
