@@ -1,12 +1,13 @@
 # Packages
 PRODUCT_PACKAGES += \
     BluetoothExt \
-    SnapdragonGallery \
-    SnapdragonMusic \
-    SnapdragonCamera \
-    Launcher3 \
+    Development \
     LatinIME \
-    messaging
+    Launcher3 \
+    messaging \
+    SnapdragonCamera \
+    SnapdragonGallery \
+    SnapdragonMusic
 
 # Utils
 PRODUCT_PACKAGES += \
