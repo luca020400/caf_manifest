@@ -1,0 +1,95 @@
+From 37cc7b3ea486e40f9707d53bf8cbb4b17ee1e0d4 Mon Sep 17 00:00:00 2001
+From: Chirayu Desai <cdesai@cyanogenmod.org>
+Date: Wed, 5 Dec 2012 18:45:29 -0500
+Subject: [PATCH 2/2] Developer Options: launch the Development app
+
+Change-Id: I0f798d197888ef7f40688009536040e061c410f4
+---
+ res/values/caf_strings.xml                        | 19 +++++++++++++++++++
+ res/xml/development_prefs.xml                     | 11 +++++++++++
+ src/com/android/settings/DevelopmentSettings.java |  7 +++++++
+ 3 files changed, 37 insertions(+)
+ create mode 100644 res/values/caf_strings.xml
+
+diff --git a/res/values/caf_strings.xml b/res/values/caf_strings.xml
+new file mode 100644
+index 0000000..066547d
+--- /dev/null
++++ b/res/values/caf_strings.xml
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright (C) 2007 The Android Open Source Project
++
++     Licensed under the Apache License, Version 2.0 (the "License");
++     you may not use this file except in compliance with the License.
++     You may obtain a copy of the License at
++
++          http://www.apache.org/licenses/LICENSE-2.0
++
++     Unless required by applicable law or agreed to in writing, software
++     distributed under the License is distributed on an "AS IS" BASIS,
++     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++     See the License for the specific language governing permissions and
++     limitations under the License.
++-->
++<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
++    <!-- Launch Dev Tools -->
++    <string name="development_tools_title">Development tools</string>
++</resources>
+diff --git a/res/xml/development_prefs.xml b/res/xml/development_prefs.xml
+index 0145ff4..4945552 100644
+--- a/res/xml/development_prefs.xml
++++ b/res/xml/development_prefs.xml
+@@ -17,6 +17,17 @@
+ <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+         xmlns:settings="http://schemas.android.com/apk/res/com.android.settings"
+         android:title="@string/development_settings_title">
++
++    <PreferenceScreen
++            android:key="development_tools"
++            android:title="@string/development_tools_title"
++            android:persistent="false" >
++        <intent
++                android:action="android.settings.development.LAUNCH_TOOLS"
++                android:targetPackage="com.android.development"
++                android:targetClass="com.android.development.Development" />
++    </PreferenceScreen>
++
+     <com.android.settings.BugreportPreference
+             android:key="bugreport"
+             android:title="@*android:string/bugreport_title"
+diff --git a/src/com/android/settings/DevelopmentSettings.java b/src/com/android/settings/DevelopmentSettings.java
+index 4daa881..f8168ff 100644
+--- a/src/com/android/settings/DevelopmentSettings.java
++++ b/src/com/android/settings/DevelopmentSettings.java
+@@ -205,6 +205,8 @@ public class DevelopmentSettings extends RestrictedSettingsFragment
+ 
+     private static final String OTA_DISABLE_AUTOMATIC_UPDATE_KEY = "ota_disable_automatic_update";
+ 
++    private static final String DEVELOPMENT_TOOLS = "development_tools";
++
+     private static final int RESULT_DEBUG_APP = 1000;
+     private static final int RESULT_MOCK_LOCATION_APP = 1001;
+ 
+@@ -298,6 +300,8 @@ public class DevelopmentSettings extends RestrictedSettingsFragment
+ 
+     private SwitchPreference mColorTemperaturePreference;
+ 
++    private PreferenceScreen mDevelopmentTools;
++
+     private final ArrayList<Preference> mAllPrefs = new ArrayList<Preference>();
+ 
+     private final ArrayList<SwitchPreference> mResetSwitchPrefs
+@@ -489,6 +493,9 @@ public class DevelopmentSettings extends RestrictedSettingsFragment
+             removePreference(COLOR_TEMPERATURE_KEY);
+             mColorTemperaturePreference = null;
+         }
++
++        mDevelopmentTools = (PreferenceScreen) findPreference(DEVELOPMENT_TOOLS);
++        mAllPrefs.add(mDevelopmentTools);
+     }
+ 
+     private ListPreference addListPreference(String prefKey) {
+-- 
+2.9.3
+

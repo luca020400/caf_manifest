@@ -1,4 +1,4 @@
-From e4c9057874070354d0b9453d6552e9f020c50f62 Mon Sep 17 00:00:00 2001
+From 15be26b9a6ab4a6a9b96a94df646d94a5bc7450b Mon Sep 17 00:00:00 2001
 From: thecrazyskull <anaskarbila@aospa.co>
 Date: Sat, 3 Sep 2016 18:38:20 +0200
 Subject: [PATCH 1/2] Revert "Telephony(MSIM): Support to launch SimSettings
@@ -48,5 +48,5 @@ index 05b1a76..280d5e7 100755
              Intent newIntent = new Intent("android.settings.SETTINGS");
              newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 -- 
-2.7.4
+2.9.3
 

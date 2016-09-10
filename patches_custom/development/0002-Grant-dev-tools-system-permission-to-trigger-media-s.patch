@@ -1,0 +1,34 @@
+From bf4bc1eb55b116237e66713403073cd18f57040f Mon Sep 17 00:00:00 2001
+From: Allen Shen <ashen@nvidia.com>
+Date: Thu, 2 Jan 2014 17:33:13 +0800
+Subject: [PATCH 2/2] Grant dev tools system permission to trigger media-scan
+ service
+
+Google add the action ACTION_MEDIA_MOUNT into the list of
+protected boradcast, so that ordinary apps cannot trigger
+media scanning by directly sending the action out. The system
+built-in dev tool is granted system permission so that it
+will not crash when executing media scaning tools.
+
+Change-Id: I19797e61ba829df39d2b66f209cf41bf6565170f
+---
+ apps/Development/AndroidManifest.xml | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/apps/Development/AndroidManifest.xml b/apps/Development/AndroidManifest.xml
+index f09434c..ce77a08 100644
+--- a/apps/Development/AndroidManifest.xml
++++ b/apps/Development/AndroidManifest.xml
+@@ -16,7 +16,8 @@
+ 
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+         package="com.android.development"
+-        android:versionCode="1" android:versionName="1.0">
++        android:versionCode="1" android:versionName="1.0"
++        android:sharedUserId="android.uid.system">
+     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+-- 
+2.9.3
+
