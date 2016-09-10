@@ -1,7 +1,7 @@
 From bc4661c1d757fe0003069dce04e80445f61e19af Mon Sep 17 00:00:00 2001
 From: Jack Yu <jackyu@google.com>
 Date: Fri, 22 Jul 2016 15:39:09 -0700
-Subject: [PATCH 5/5] Fixed that emergency messages are not enabled for
+Subject: [PATCH 5/6] Fixed that emergency messages are not enabled for
  Japanese carriers
 
 The emergency ETWS (Earthquake and Tsunami Warning System) other

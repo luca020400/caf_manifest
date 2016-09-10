@@ -1,7 +1,7 @@
 From fa4425af586c051e22e214635fb1ff1e85bf45ef Mon Sep 17 00:00:00 2001
 From: Zach Jang <zachjang@google.com>
 Date: Mon, 8 Aug 2016 22:25:24 +0000
-Subject: [PATCH 4/5] Revert "Fixed that emergency messages are not enabled for
+Subject: [PATCH 4/6] Revert "Fixed that emergency messages are not enabled for
  Japanese carriers"
 
 This reverts commit bc0c1a983dd8d83d5c84afe4a2fa1f3ae09bed42.
