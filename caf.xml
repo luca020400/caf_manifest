@@ -15,6 +15,10 @@
     <copyfile src="core/root.mk" dest="Makefile" />
   </project>
 
+  <project path="external/libncurses" name="CyanogenMod/android_external_libncurses" revision="staging/cm-14.0" remote="github" />
+  <project path="external/openssh" name="CyanogenMod/android_external_openssh" revision="staging/cm-14.0" remote="github" />
+  <project path="external/nano" name="CyanogenMod/android_external_nano" revision="staging/cm-14.0" remote="github" />
+
   <project path="caf_manifest" name="luca020400/caf_manifest" remote="github" revision="master" />
 
   <!-- BEGIN ASUS -->
