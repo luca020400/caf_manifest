@@ -1,3 +1,7 @@
+# A2DP
+PRODUCT_PACKAGES += \
+    libbthost_if
+
 # Packages
 PRODUCT_PACKAGES += \
     BluetoothExt \
