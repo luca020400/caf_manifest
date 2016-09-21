@@ -5,6 +5,7 @@
            fetch="https://github.com" />
 
   <remove-project name="platform/build" />
+  <remove-project name="platform/build/kati" />
   <remove-project name="device/qcom/common" />
   <remove-project name="kernel/lk" />
   <remove-project name="kernel/msm-3.10" />
@@ -14,6 +15,7 @@
   <project path="build" name="luca020400/android_build" groups="pdk" revision="cm-14.0-caf" remote="github">
     <copyfile src="core/root.mk" dest="Makefile" />
   </project>
+  <project path="build/kati" name="luca020400/android_build_kati" remote="github" revision="cm-14.0-caf" />
 
   <project path="external/libncurses" name="CyanogenMod/android_external_libncurses" revision="staging/cm-14.0" remote="github" />
   <project path="external/openssh" name="CyanogenMod/android_external_openssh" revision="staging/cm-14.0" remote="github" />
