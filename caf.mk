@@ -72,3 +72,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Overlay
 DEVICE_PACKAGE_OVERLAYS += caf_manifest/overlay
+
+# include definitions for SDCLANG
+include caf_manifest/sdclang/sdclang.mk
