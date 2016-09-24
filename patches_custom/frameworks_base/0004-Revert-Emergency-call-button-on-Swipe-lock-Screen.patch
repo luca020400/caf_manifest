@@ -1,7 +1,7 @@
-From 8f4b56625623d0a0228225c8c21da42baabf4c6d Mon Sep 17 00:00:00 2001
+From 5737f16d83813ae0bb790b37ca525b06a96b2dc3 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Thu, 8 Sep 2016 18:39:04 +0200
-Subject: [PATCH 5/6] Revert "Emergency call button on Swipe lock Screen."
+Subject: [PATCH 4/5] Revert "Emergency call button on Swipe lock Screen."
 
 This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
 ---
@@ -12,7 +12,7 @@ This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
  4 files changed, 3 insertions(+), 28 deletions(-)
 
 diff --git a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-index ff94d1e..8d41145 100644
+index cf34e14..f69288c 100644
 --- a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 +++ b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 @@ -24,7 +24,6 @@ import android.content.res.Configuration;
@@ -23,7 +23,7 @@ index ff94d1e..8d41145 100644
  import android.os.UserHandle;
  import android.telecom.TelecomManager;
  import android.util.AttributeSet;
-@@ -147,7 +146,7 @@ public class EmergencyButton extends Button {
+@@ -151,7 +150,7 @@ public class EmergencyButton extends Button {
          }
      }
  
@@ -32,7 +32,7 @@ index ff94d1e..8d41145 100644
          boolean visible = false;
          if (mIsVoiceCapable) {
              // Emergency calling requires voice capability.
-@@ -161,8 +160,7 @@ public class EmergencyButton extends Button {
+@@ -165,8 +164,7 @@ public class EmergencyButton extends Button {
                      visible = mEnableEmergencyCallWhileSimLocked;
                  } else {
                      // Only show if there is a secure screen (pin/pattern/SIM pin/SIM puk);
@@ -63,7 +63,7 @@ index de73538..444f0f0 100644
          android:id="@+id/preview_container"
          android:layout_width="match_parent"
 diff --git a/packages/SystemUI/res/values/dimens.xml b/packages/SystemUI/res/values/dimens.xml
-index 12b782c..2a4752a 100644
+index 2f5653d..b8e6a0e 100644
 --- a/packages/SystemUI/res/values/dimens.xml
 +++ b/packages/SystemUI/res/values/dimens.xml
 @@ -434,7 +434,7 @@
