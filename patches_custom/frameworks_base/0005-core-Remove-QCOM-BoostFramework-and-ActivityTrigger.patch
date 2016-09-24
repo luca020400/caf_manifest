@@ -1,7 +1,7 @@
 From c10b6e4fe55153c52f67aadfadab1bd5a17b07c0 Mon Sep 17 00:00:00 2001
 From: Zhao Wei Liew <zhaoweiliew@gmail.com>
 Date: Thu, 8 Sep 2016 14:05:06 +0800
-Subject: [PATCH 5/6] core: Remove QCOM BoostFramework and ActivityTrigger
+Subject: [PATCH 5/7] core: Remove QCOM BoostFramework and ActivityTrigger
 
 These rely on a bunch of proprietary libs that not
 all devices support. CM has its own boosting solution

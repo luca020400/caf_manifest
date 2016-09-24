@@ -1,7 +1,7 @@
 From fafc81db8f359c831881c36ceeeb648403d03c8d Mon Sep 17 00:00:00 2001
 From: Rashed Abdel-Tawab <rashed@linux.com>
 Date: Sun, 30 Nov 2014 00:17:03 -0500
-Subject: [PATCH 1/6] Status bar: Add HSPA+ icons
+Subject: [PATCH 1/7] Status bar: Add HSPA+ icons
 
 Forward port H+ icon in the status bar when connected to HSPA+
 Uses new vector drawables by blunden
