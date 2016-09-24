@@ -1,4 +1,4 @@
-From 05da1ce3a6a13c7cb728e8932e34c048a8e93e1b Mon Sep 17 00:00:00 2001
+From a7df77e563b7736b85967a9aa081b1aa24400428 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sat, 24 Sep 2016 21:46:11 +0200
 Subject: [PATCH 6/6] Revert "UsbManager: Add the support of USB charging only
@@ -67,5 +67,5 @@ index d6f6b82..d6dbe90
          }
  
 -- 
-2.10.0
+2.8.2
 

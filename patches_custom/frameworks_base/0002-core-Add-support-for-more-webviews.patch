@@ -1,4 +1,4 @@
-From 1fb8307ff5a76da440eb93ceaf581af1a65a4f1d Mon Sep 17 00:00:00 2001
+From 795b55476558db126e5dee1f802209b066bcc253 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Wed, 7 Sep 2016 07:17:56 -0700
 Subject: [PATCH 2/6] core: Add support for more webviews
@@ -34,5 +34,5 @@ index f062b59..b22f8e2 100644
 +
  </webviewproviders>
 -- 
-2.10.0
+2.8.2
 

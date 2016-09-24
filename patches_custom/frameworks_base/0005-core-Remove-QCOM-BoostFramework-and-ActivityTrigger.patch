@@ -1,4 +1,4 @@
-From 3a25534419475f57e06600bd5480f41886b67649 Mon Sep 17 00:00:00 2001
+From 702d6df2771ea22510acc397fecbba848221ebd8 Mon Sep 17 00:00:00 2001
 From: Zhao Wei Liew <zhaoweiliew@gmail.com>
 Date: Thu, 8 Sep 2016 14:05:06 +0800
 Subject: [PATCH 5/6] core: Remove QCOM BoostFramework and ActivityTrigger
@@ -2149,5 +2149,5 @@ index 9e0279d..3687512 100644
                          }
                      }
 -- 
-2.10.0
+2.8.2
 

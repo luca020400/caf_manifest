@@ -1,29 +1,21 @@
-From da6f14db42099f71f9ed44763a2b9fc7ec1d6378 Mon Sep 17 00:00:00 2001
+From ec641bb2b9b27396e427e071f30941d59eb7576b Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Thu, 8 Sep 2016 18:39:04 +0200
 Subject: [PATCH 4/6] Revert "Emergency call button on Swipe lock Screen."
 
 This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
 ---
- .../Keyguard/src/com/android/keyguard/EmergencyButton.java |  6 ++----
+ .../Keyguard/src/com/android/keyguard/EmergencyButton.java |  5 ++---
  packages/SystemUI/res/layout/keyguard_bottom_area.xml      |  9 ---------
  packages/SystemUI/res/values/dimens.xml                    |  2 +-
  .../systemui/statusbar/phone/KeyguardBottomAreaView.java   | 14 --------------
- 4 files changed, 3 insertions(+), 28 deletions(-)
+ 4 files changed, 3 insertions(+), 27 deletions(-)
 
 diff --git a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-index cf34e14..f69288c 100644
+index cf34e14..a5269e5 100644
 --- a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 +++ b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-@@ -24,7 +24,6 @@ import android.content.res.Configuration;
- import android.os.PowerManager;
- import android.os.RemoteException;
- import android.os.SystemClock;
--import android.os.SystemProperties;
- import android.os.UserHandle;
- import android.telecom.TelecomManager;
- import android.util.AttributeSet;
-@@ -151,7 +150,7 @@ public class EmergencyButton extends Button {
+@@ -151,7 +151,7 @@ public class EmergencyButton extends Button {
          }
      }
  
@@ -32,7 +24,7 @@ index cf34e14..f69288c 100644
          boolean visible = false;
          if (mIsVoiceCapable) {
              // Emergency calling requires voice capability.
-@@ -165,8 +164,7 @@ public class EmergencyButton extends Button {
+@@ -165,8 +165,7 @@ public class EmergencyButton extends Button {
                      visible = mEnableEmergencyCallWhileSimLocked;
                  } else {
                      // Only show if there is a secure screen (pin/pattern/SIM pin/SIM puk);
@@ -141,5 +133,5 @@ index e0290b0..772c766 100644
 -    }
  }
 -- 
-2.10.0
+2.8.2
 
