@@ -1,0 +1,2153 @@
+From 03d1abec1fdb21d5de189c8de5981eccdf236a7c Mon Sep 17 00:00:00 2001
+From: Zhao Wei Liew <zhaoweiliew@gmail.com>
+Date: Thu, 8 Sep 2016 14:05:06 +0800
+Subject: [PATCH 6/6] core: Remove QCOM BoostFramework and ActivityTrigger
+
+These rely on a bunch of proprietary libs that not
+all devices support. CM has its own boosting solution
+anyway, rendering these additions unnecessary.
+
+One small, but important change has been omitted from the revert,
+that is the addition of ro.sys.fw.bg_apps_limit in the file
+services/core/java/com/android/server/am/ProcessList.java.
+
+This reverts the following commits:
+c35293c3be2b5a0eaf1986b6772040a19f2d828a Framework for LaunchBoost v2 and Frequency aggr during launch.
+91338fb35fcc9a155345d284bc24fad86f4d33a8 frameworks: Add custom boost for scroll/fling
+911884e18f8e7ec76bf9db5ea9a91e6f0d65ba6b Perf: Adding hooks for IO prefetcher into framework
+f56206d659dd686db3f7bf3c2660609917e9777d BoostFramework to enhance performance during critical scenarios
+d841ef6271723021a663243ff34284a33a15cebf add network related API into ActivityTrigger
+2f1b28122493a80448f3af499d660a5b7cbaa879 Set animation scale values for specific activity.
+4ea9a4ec7fac2bf280a72149277b74a53d222cbc frameworks/base: activity pause/stop event triggers
+015851c69698ff9558f3f0c7208a06083728cdad frameworks/base: Tap process start event to trigger perf lib.
+e14378bf325f07b9133156ff82a18bb15f3f3716 frameworks/base: Add support for low resolution rendering
+4d9ec1350434aa71540801e7fa42cee82c06beed ActivityTrigger: New class to invoke when activity starts/resumes
+
+Change-Id: Iafdc3866c39d4e0d51ca2d40931ea9a5baba7de5
+---
+ core/java/android/app/Activity.java                |  41 ---
+ core/java/android/content/pm/ApplicationInfo.java  |  12 -
+ core/java/android/util/BoostFramework.java         | 252 ----------------
+ core/java/android/util/ResolutionOverride.java     | 143 ---------
+ core/java/android/view/SurfaceView.java            |  19 +-
+ core/java/android/widget/OverScroller.java         |  48 ---
+ core/java/android/widget/Scroller.java             |  36 ---
+ .../com/android/internal/app/ActivityTrigger.java  | 127 --------
+ core/jni/Android.mk                                |   3 +-
+ core/jni/AndroidRuntime.cpp                        |   3 +-
+ .../com_android_internal_app_ActivityTrigger.cpp   | 334 ---------------------
+ core/res/res/values/config.xml                     |  53 ----
+ core/res/res/values/symbols.xml                    |  53 ----
+ .../systemui/statusbar/phone/PanelView.java        |  24 --
+ .../android/server/am/ActivityManagerService.java  | 153 ----------
+ .../java/com/android/server/am/ActivityStack.java  |  38 +--
+ .../android/server/am/ActivityStackSupervisor.java |  74 -----
+ .../server/wm/TaskTapPointerEventListener.java     |  12 -
+ .../android/server/wm/WindowManagerService.java    |  45 +--
+ 19 files changed, 8 insertions(+), 1462 deletions(-)
+ delete mode 100644 core/java/android/util/BoostFramework.java
+ delete mode 100644 core/java/android/util/ResolutionOverride.java
+ delete mode 100644 core/java/com/android/internal/app/ActivityTrigger.java
+ delete mode 100644 core/jni/com_android_internal_app_ActivityTrigger.cpp
+
+diff --git a/core/java/android/app/Activity.java b/core/java/android/app/Activity.java
+index 65aec72..ae3e0ce 100644
+--- a/core/java/android/app/Activity.java
++++ b/core/java/android/app/Activity.java
+@@ -127,7 +127,6 @@ import java.lang.annotation.RetentionPolicy;
+ import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+-import android.util.BoostFramework;
+ 
+ /**
+  * An activity is a single, focused thing that the user can do.  Almost all
+@@ -690,10 +689,6 @@ public class Activity extends ContextThemeWrapper
+         OnCreateContextMenuListener, ComponentCallbacks2,
+         Window.OnWindowDismissedCallback, WindowControllerCallback {
+     private static final String TAG = "Activity";
+-    private static BoostFramework mPerf = null;
+-    private static int mDragBoostPossible = -1;
+-    private static int mPerfLockDuration = -1;
+-    private static int mAsParamVal[];
+     private static final boolean DEBUG_LIFECYCLE = false;
+ 
+     /** Standard activity result: operation canceled. */
+@@ -3060,42 +3055,6 @@ public class Activity extends ContextThemeWrapper
+      * @return boolean Return true if this event was consumed.
+      */
+     public boolean dispatchTouchEvent(MotionEvent ev) {
+-        if(mDragBoostPossible == -1) {
+-            mDragBoostPossible = 0;
+-            String currentActivity = getPackageName();
+-            String[] activityList = getResources().getStringArray(
+-                com.android.internal.R.array.boost_activityList);
+-            if(activityList != null){
+-                for (String match : activityList) {
+-                    if (currentActivity.indexOf(match) != -1){
+-                        mDragBoostPossible = 1;
+-                        break;
+-                    }
+-                }
+-            }
+-        }
+-
+-       Context context = getApplicationContext();
+-       if (mPerf == null){
+-           mPerf = new BoostFramework();
+-       }
+-       boolean override = mPerf.boostOverride(context, ev, getResources().getDisplayMetrics());
+-
+-       if (mDragBoostPossible == 1 && override != true) {
+-            if (mPerf == null){
+-                mPerf = new BoostFramework();
+-            }
+-            if(mPerfLockDuration == -1){
+-                mPerfLockDuration = getResources().getInteger(
+-                    com.android.internal.R.integer.ascrollboost_timeout);
+-                mAsParamVal = getResources().getIntArray(
+-                    com.android.internal.R.array.ascrollboost_param_value);
+-            }
+-            mPerf.perfLockAcquireTouch(ev,
+-                getResources().getDisplayMetrics(),
+-                mPerfLockDuration, mAsParamVal);
+-        }
+-
+         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+             onUserInteraction();
+         }
+diff --git a/core/java/android/content/pm/ApplicationInfo.java b/core/java/android/content/pm/ApplicationInfo.java
+index cf30f0c..b7364e2 100644
+--- a/core/java/android/content/pm/ApplicationInfo.java
++++ b/core/java/android/content/pm/ApplicationInfo.java
+@@ -542,13 +542,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+     public int privateFlags;
+ 
+     /**
+-     * Boolean indicating whether the resolution of the SurfaceView associated
+-     * with this appplication can be overriden.
+-     * {@hide}
+-     */
+-    public int overrideRes = 0;
+-
+-    /**
+      * The required smallest screen width the application can run on.  If 0,
+      * nothing has been specified.  Comes from
+      * {@link android.R.styleable#AndroidManifestSupportsScreens_requiresSmallestWidthDp
+@@ -904,7 +897,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         theme = orig.theme;
+         flags = orig.flags;
+         privateFlags = orig.privateFlags;
+-        overrideRes = orig.overrideRes;
+         requiresSmallestWidthDp = orig.requiresSmallestWidthDp;
+         compatibleWidthLimitDp = orig.compatibleWidthLimitDp;
+         largestWidthLimitDp = orig.largestWidthLimitDp;
+@@ -961,7 +953,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         dest.writeInt(theme);
+         dest.writeInt(flags);
+         dest.writeInt(privateFlags);
+-        dest.writeInt(overrideRes);
+         dest.writeInt(requiresSmallestWidthDp);
+         dest.writeInt(compatibleWidthLimitDp);
+         dest.writeInt(largestWidthLimitDp);
+@@ -1018,7 +1009,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         theme = source.readInt();
+         flags = source.readInt();
+         privateFlags = source.readInt();
+-        overrideRes = source.readInt();
+         requiresSmallestWidthDp = source.readInt();
+         compatibleWidthLimitDp = source.readInt();
+         largestWidthLimitDp = source.readInt();
+@@ -1224,7 +1214,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+     /** {@hide} */ public void setResourcePath(String resourcePath) { scanPublicSourceDir = resourcePath; }
+     /** {@hide} */ public void setBaseResourcePath(String baseResourcePath) { publicSourceDir = baseResourcePath; }
+     /** {@hide} */ public void setSplitResourcePaths(String[] splitResourcePaths) { splitPublicSourceDirs = splitResourcePaths; }
+-    /** {@hide} */ public void setOverrideRes(int overrideResolution) { overrideRes = overrideResolution; }
+ 
+     /** {@hide} */ public String getCodePath() { return scanSourceDir; }
+     /** {@hide} */ public String getBaseCodePath() { return sourceDir; }
+@@ -1232,5 +1221,4 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+     /** {@hide} */ public String getResourcePath() { return scanPublicSourceDir; }
+     /** {@hide} */ public String getBaseResourcePath() { return publicSourceDir; }
+     /** {@hide} */ public String[] getSplitResourcePaths() { return splitSourceDirs; }
+-    /** {@hide} */ public int canOverrideRes() { return overrideRes; }
+ }
+diff --git a/core/java/android/util/BoostFramework.java b/core/java/android/util/BoostFramework.java
+deleted file mode 100644
+index 856f425..0000000
+--- a/core/java/android/util/BoostFramework.java
++++ /dev/null
+@@ -1,252 +0,0 @@
+-/*
+- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are
+- * met:
+- *    * Redistributions of source code must retain the above copyright
+- *      notice, this list of conditions and the following disclaimer.
+- *    * Redistributions in binary form must reproduce the above
+- *      copyright notice, this list of conditions and the following
+- *      disclaimer in the documentation and/or other materials provided
+- *      with the distribution.
+- *    * Neither the name of The Linux Foundation nor the names of its
+- *      contributors may be used to endorse or promote products derived
+- *      from this software without specific prior written permission.
+- *
+- * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+- * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- */
+-
+-package android.util;
+-
+-import android.util.Log;
+-import dalvik.system.PathClassLoader;
+-import java.lang.reflect.Constructor;
+-import java.lang.reflect.Method;
+-import java.lang.System;
+-import android.view.MotionEvent;
+-import android.util.DisplayMetrics;
+-import android.os.SystemProperties;
+-import android.content.Context;
+-
+-/** @hide */
+-public class BoostFramework {
+-
+-    private static final String TAG = "BoostFramework";
+-    private static final String PERFORMANCE_JAR = "/system/framework/QPerformance.jar";
+-    private static final String PERFORMANCE_CLASS = "com.qualcomm.qti.Performance";
+-
+-/** @hide */
+-    private static boolean mIsLoaded = false;
+-    private static Method mAcquireFunc = null;
+-    private static Method mReleaseFunc = null;
+-    private static Method mAcquireTouchFunc = null;
+-    private static Method mIOPStart = null;
+-    private static Method mIOPStop  = null;
+-    private static Constructor<Class> mConstructor = null;
+-    private static int mLockDuration = -1;
+-    private static int mParamVal[];
+-    private static String mBoostActivityList[];
+-    private static long mStartTime;
+-    private static final int mDebugBoost = getDebugBoostProperty();
+-
+-/** @hide */
+-    private Object mPerf = null;
+-
+-/** @hide */
+-    public BoostFramework() {
+-
+-        if (mIsLoaded == false) {
+-            try {
+-                Class perfClass;
+-                PathClassLoader perfClassLoader;
+-
+-	        perfClassLoader = new PathClassLoader(PERFORMANCE_JAR,
+-                                  ClassLoader.getSystemClassLoader());
+-                perfClass = perfClassLoader.loadClass(PERFORMANCE_CLASS);
+-                mConstructor = perfClass.getConstructor();
+-
+-                Class[] argClasses = new Class[] {int.class, int[].class};
+-                mAcquireFunc =  perfClass.getDeclaredMethod("perfLockAcquire", argClasses);
+-                Log.v(TAG,"mAcquireFunc method = " + mAcquireFunc);
+-
+-                argClasses = new Class[] {};
+-                mReleaseFunc =  perfClass.getDeclaredMethod("perfLockRelease", argClasses);
+-                Log.v(TAG,"mReleaseFunc method = " + mReleaseFunc);
+-
+-                argClasses = new Class[] {MotionEvent.class, DisplayMetrics.class, int.class, int[].class};
+-                mAcquireTouchFunc =  perfClass.getDeclaredMethod("perfLockAcquireTouch", argClasses);
+-                Log.v(TAG,"mAcquireTouchFunc method = " + mAcquireTouchFunc);
+-
+-                argClasses = new Class[] {int.class, String.class};
+-                mIOPStart =  perfClass.getDeclaredMethod("perfIOPrefetchStart", argClasses);
+-                Log.v(TAG,"mIOPStart method = " + mIOPStart);
+-
+-                argClasses = new Class[] {};
+-                mIOPStop =  perfClass.getDeclaredMethod("perfIOPrefetchStop", argClasses);
+-                Log.v(TAG,"mIOPStop method = " + mIOPStop);
+-
+-                mIsLoaded = true;
+-            }
+-            catch(Exception e) {
+-                Log.e(TAG,"BoostFramework() : Exception_1 = " + e);
+-            }
+-        }
+-
+-        try {
+-            if (mConstructor != null) {
+-                mPerf = mConstructor.newInstance();
+-            }
+-        }
+-        catch(Exception e) {
+-            Log.e(TAG,"BoostFramework() : Exception_2 = " + e);
+-        }
+-
+-        Log.v(TAG,"BoostFramework() : mPerf = " + mPerf);
+-    }
+-
+-/** @hide */
+-/*    private static void loadNative() {
+-        if(!isLoaded){
+-            //System.loadLibrary("perf_jni");
+-            System.loadLibrary("qti_performance");
+-            isLoaded=true;
+-        }
+-        return;
+-    }
+-*/
+-
+-/** @hide */
+-    public int perfLockAcquire(int duration, int... list) {
+-        int ret = -1;
+-        try {
+-            Object retVal = mAcquireFunc.invoke(mPerf, duration, list);
+-            ret = (int)retVal;
+-        } catch(Exception e) {
+-            Log.e(TAG,"Exception " + e);
+-        }
+-        return ret;
+-    }
+-
+-/** @hide */
+-    public int perfLockRelease() {
+-        int ret = -1;
+-        try {
+-            Object retVal = mReleaseFunc.invoke(mPerf);
+-            ret = (int)retVal;
+-        } catch(Exception e) {
+-            Log.e(TAG,"Exception " + e);
+-        }
+-        return ret;
+-    }
+-
+-/** @hide Reads system property
+-     * @return 1 if property is set
+-     */
+-    public static int getDebugBoostProperty() {
+-       return SystemProperties.getInt("persist.debugboost.enable", 0);
+-    }
+-
+-/** @hide Acquires debug boost perflock
+-     * @param ev Touch Screen event
+-     */
+-    public void enableDebugBoost(Context context, MotionEvent ev, DisplayMetrics metrics) {
+-
+-       final int NANO_TO_MILLI = 1000000;
+-       long elapsedMillis;
+-       boolean mDebugBoostPossible = false;
+-
+-       /* extract the XML params */
+-       if (mLockDuration == -1 || mParamVal == null || mBoostActivityList == null) {
+-          mLockDuration = context.getResources().getInteger(
+-             com.android.internal.R.integer.debugBoost_timeout);
+-          mParamVal = context.getResources().getIntArray(
+-             com.android.internal.R.array.debugBoost_param_value);
+-          mBoostActivityList = context.getResources().getStringArray(
+-             com.android.internal.R.array.debugBoost_activityList);
+-       }
+-
+-       String currentActivity = context.getPackageName();
+-
+-       /* search for the current activity in list */
+-       for (String match : mBoostActivityList) {
+-          if (currentActivity.indexOf(match) != -1) {
+-             /* break if found */
+-             mDebugBoostPossible = true;
+-             break;
+-          }
+-       }
+-
+-       elapsedMillis = (System.nanoTime() - mStartTime)/NANO_TO_MILLI;
+-
+-       /* elapsed should be atleast greater than lock duration */
+-       if (mDebugBoostPossible == true && elapsedMillis > mLockDuration) {
+-          perfLockAcquireTouch(ev, metrics, mLockDuration, mParamVal);
+-          mStartTime = System.nanoTime();
+-          Log.i(TAG, "dBoost: activity = " + currentActivity + " " + "elapsed = " + elapsedMillis);
+-       }
+-    }
+-
+-/** @hide sets debug boost if property is set
+-    */
+-    public boolean boostOverride(Context context, MotionEvent ev, DisplayMetrics metrics) {
+-       /* Enable debug boost if property is set and
+-        * current actiivity is present in list
+-        */
+-       if (mDebugBoost == 1) {
+-          enableDebugBoost(context, ev, metrics);
+-          return true;
+-       }
+-       return false;
+-    }
+-
+-/** @hide */
+-    public int perfLockAcquireTouch(MotionEvent ev, DisplayMetrics metrics,
+-                                   int duration, int... list) {
+-        int ret = -1;
+-        try {
+-            Object retVal = mAcquireTouchFunc.invoke(mPerf, ev, metrics, duration, list);
+-            ret = (int)retVal;
+-        } catch(Exception e) {
+-            Log.e(TAG,"Exception " + e);
+-        }
+-        return ret;
+-    }
+-
+-/** @hide */
+-    public int perfIOPrefetchStart(int pid, String pkg_name)
+-    {
+-        int ret = -1;
+-        try {
+-            Object retVal = mIOPStart.invoke(mPerf,pid,pkg_name);
+-            ret = (int)retVal;
+-        } catch(Exception e) {
+-            Log.e(TAG,"Exception " + e);
+-        }
+-        return ret;
+-    }
+-
+-/** @hide */
+-    public int perfIOPrefetchStop()
+-    {
+-        int ret = -1;
+-         try {
+-             Object retVal = mIOPStop.invoke(mPerf);
+-             ret = (int)retVal;
+-         } catch(Exception e) {
+-             Log.e(TAG,"Exception " + e);
+-         }
+-         return ret;
+-    }
+-
+-};
+diff --git a/core/java/android/util/ResolutionOverride.java b/core/java/android/util/ResolutionOverride.java
+deleted file mode 100644
+index 5bb0668..0000000
+--- a/core/java/android/util/ResolutionOverride.java
++++ /dev/null
+@@ -1,143 +0,0 @@
+-/* Copyright (c) 2015-2016 The Linux Foundation. All rights reserved.
+-*
+-* Redistribution and use in source and binary forms, with or without
+-* modification, are permitted provided that the following conditions are
+-* met:
+-*     * Redistributions of source code must retain the above copyright
+-*       notice, this list of conditions and the following disclaimer.
+-*     * Redistributions in binary form must reproduce the above
+-*       copyright notice, this list of conditions and the following
+-*       disclaimer in the documentation and/or other materials provided
+-*       with the distribution.
+-*     * Neither the name of The Linux Foundation nor the names of its
+-*       contributors may be used to endorse or promote products derived
+-*       from this software without specific prior written permission.
+-*
+-* THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+-* ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-*
+-*/
+-
+-package android.util;
+-
+-import android.content.ComponentName;
+-import android.content.pm.ActivityInfo;
+-import android.content.pm.PackageManager;
+-import android.content.res.Configuration;
+-import android.graphics.Matrix;
+-import android.os.SystemProperties;
+-import android.util.Log;
+-import android.view.MotionEvent;
+-import android.view.SurfaceView;
+-import android.view.View;
+-
+-/** @hide */
+-public class ResolutionOverride {
+-    /** @hide */
+-    static private final boolean DEBUG = false;
+-    static private final String TAG = "ResolutionOverride";
+-    private static final String RES_OVERRIDE = "persist.debug.app_res_override";
+-    private boolean mIsEnabled = false;
+-    private int mOverrideXres = 0;
+-    private int mOverrideYres = 0;
+-
+-    /** @hide */
+-    public ResolutionOverride(SurfaceView view) {
+-        boolean enable = (view.getContext().getApplicationInfo().canOverrideRes() == 1);
+-        String resStr = SystemProperties.get(RES_OVERRIDE, null);
+-
+-        if (!enable || resStr == null || resStr.length() == 0 ||
+-                view.getResources() == null) {
+-            return;
+-        }
+-
+-        int orientation = view.getResources().getConfiguration().orientation;
+-
+-        if(orientation == Configuration.ORIENTATION_PORTRAIT ||
+-                orientation == Configuration.ORIENTATION_LANDSCAPE) {
+-            resStr = resStr.toLowerCase();
+-            final int pos = resStr.indexOf('x');
+-            if (pos > 0 && resStr.lastIndexOf('x') == pos) {
+-                try {
+-                    mOverrideXres = Integer.parseInt(resStr.substring(0, pos));
+-                    mOverrideYres = Integer.parseInt(resStr.substring(pos + 1));
+-                } catch (NumberFormatException ex) {
+-                    Log.e(TAG, "Error in extracting the overriding xres and yres");
+-                }
+-            }
+-
+-            if(orientation == Configuration.ORIENTATION_LANDSCAPE) {
+-                int tmp = mOverrideXres;
+-                mOverrideXres = mOverrideYres;
+-                mOverrideYres = tmp;
+-            }
+-
+-            if(mOverrideXres > 0 && mOverrideYres > 0) {
+-                mIsEnabled = true;
+-                if (DEBUG) Log.i(TAG, "Orientation: " + orientation +
+-                        " Overriding resolution to" + " xres: " + mOverrideXres
+-                        + " yres: " + mOverrideYres);
+-            }
+-        }
+-    }
+-
+-    /** @hide */
+-    public void setFixedSize(SurfaceView view) {
+-        if(!mIsEnabled) {
+-            return;
+-        }
+-
+-        view.getHolder().setFixedSize(mOverrideXres, mOverrideYres);
+-    }
+-
+-    /** @hide */
+-    public void handleTouch(SurfaceView view, MotionEvent ev) {
+-        if(!mIsEnabled) {
+-            return;
+-        }
+-
+-        Matrix matrix = new Matrix();
+-        //mOverride{Xres, Yres} are already swapped if orientation is landscape
+-        float xscale = (mOverrideXres * 1.0f) / view.getWidth();
+-        float yscale = (mOverrideYres * 1.0f) / view.getHeight();
+-
+-        if (DEBUG) Log.i(TAG, "Before overriding the touch event x/y : " + ev);
+-        matrix.postScale(xscale, yscale);
+-        ev.transform(matrix);
+-        if (DEBUG) Log.i(TAG, "After overriding the touch event x/y : " + ev);
+-    }
+-
+-    /** @hide */
+-    public void handleResize(final SurfaceView surfaceView) {
+-        if(!mIsEnabled) {
+-            return;
+-        }
+-
+-        /* Change the visibility to GONE and back to VISIBLE and post it
+-         * on the main thread for the touch events to be effective on the
+-         * changed SurfaceView with the new dimensions
+-         */
+-        surfaceView.post(new Runnable() {
+-            @Override
+-            public void run() {
+-                surfaceView.setVisibility(View.GONE);
+-            }
+-        });
+-
+-        surfaceView.postDelayed(new Runnable() {
+-            @Override
+-            public void run() {
+-                surfaceView.setVisibility(View.VISIBLE);
+-            }
+-        }, 100);
+-    }
+-};
+diff --git a/core/java/android/view/SurfaceView.java b/core/java/android/view/SurfaceView.java
+index b12fceb..203b825 100644
+--- a/core/java/android/view/SurfaceView.java
++++ b/core/java/android/view/SurfaceView.java
+@@ -33,7 +33,6 @@ import android.os.SystemClock;
+ import android.os.ParcelFileDescriptor;
+ import android.util.AttributeSet;
+ import android.util.Log;
+-import android.util.ResolutionOverride;
+ 
+ import java.lang.ref.WeakReference;
+ import java.util.ArrayList;
+@@ -190,7 +189,6 @@ public class SurfaceView extends View {
+     private Translator mTranslator;
+     private int mWindowInsetLeft;
+     private int mWindowInsetTop;
+-    ResolutionOverride mResolutionOverride = null;
+ 
+     private boolean mGlobalListenersAdded;
+ 
+@@ -216,8 +214,6 @@ public class SurfaceView extends View {
+ 
+     private void init() {
+         setWillNotDraw(true);
+-        mResolutionOverride = new ResolutionOverride(this);
+-        mResolutionOverride.setFixedSize(this);
+     }
+ 
+     /**
+@@ -310,16 +306,6 @@ public class SurfaceView extends View {
+         setMeasuredDimension(width, height);
+     }
+ 
+-    /**
+-     * Transforms the touch events to the new resolution coordinate system
+-     * if the resolution has changed
+-     */
+-    @Override
+-    public boolean dispatchTouchEvent(MotionEvent ev) {
+-        mResolutionOverride.handleTouch(this, ev);
+-        return super.dispatchTouchEvent(ev);
+-    }
+-
+     /** @hide */
+     @Override
+     protected boolean setFrame(int left, int top, int right, int bottom) {
+@@ -823,13 +809,10 @@ public class SurfaceView extends View {
+                 Rect visibleInsets, Rect stableInsets, Rect outsets, boolean reportDraw,
+                 Configuration newConfig, Rect backDropRect, boolean forceLayout,
+                 boolean alwaysConsumeNavBar) {
+-            final SurfaceView surfaceView = mSurfaceView.get();
++            SurfaceView surfaceView = mSurfaceView.get();
+             if (surfaceView != null) {
+                 if (DEBUG) Log.v(TAG, surfaceView + " got resized: w=" + frame.width()
+                         + " h=" + frame.height() + ", cur w=" + mCurWidth + " h=" + mCurHeight);
+-
+-                surfaceView.mResolutionOverride.handleResize(surfaceView);
+-
+                 surfaceView.mSurfaceLock.lock();
+                 try {
+                     if (reportDraw) {
+diff --git a/core/java/android/widget/OverScroller.java b/core/java/android/widget/OverScroller.java
+index ba5d39e..50569d7 100644
+--- a/core/java/android/widget/OverScroller.java
++++ b/core/java/android/widget/OverScroller.java
+@@ -22,7 +22,6 @@ import android.util.Log;
+ import android.view.ViewConfiguration;
+ import android.view.animation.AnimationUtils;
+ import android.view.animation.Interpolator;
+-import android.util.BoostFramework;
+ 
+ /**
+  * This class encapsulates scrolling with the ability to overshoot the bounds
+@@ -600,18 +599,6 @@ public class OverScroller {
+         private static final int CUBIC = 1;
+         private static final int BALLISTIC = 2;
+ 
+-        /*
+-         * Perf boost related variables
+-         * Enabled/Disabled using config_enableCpuBoostForOverScrollerFling
+-         * true value turns it on, by default will be turned off
+-         */
+-        private BoostFramework mPerf = null;
+-        private boolean mIsPerfLockAcquired = false;
+-        private boolean mIsPerfBoostEnabled = false;
+-        private int fBoostTimeOut = 0;
+-        private int flingBoostTimeOut = 0;
+-        private int fBoostParamVal[];
+-
+         static {
+             float x_min = 0.0f;
+             float y_min = 0.0f;
+@@ -656,19 +643,6 @@ public class OverScroller {
+                     * 39.37f // inch/meter
+                     * ppi
+                     * 0.84f; // look and feel tuning
+-
+-            mIsPerfBoostEnabled = context.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_enableCpuBoostForOverScrollerFling);
+-            if (mIsPerfBoostEnabled) {
+-            fBoostTimeOut = context.getResources().getInteger(
+-                   com.android.internal.R.integer.flingboost_timeout_param);
+-            fBoostParamVal = context.getResources().getIntArray(
+-                        com.android.internal.R.array.flingboost_param_value);
+-            }
+-
+-            if (mPerf == null && mIsPerfBoostEnabled) {
+-                mPerf = new BoostFramework();
+-            }
+         }
+ 
+         void updateScroll(float q) {
+@@ -716,11 +690,6 @@ public class OverScroller {
+         }
+ 
+         void finish() {
+-            if (mIsPerfLockAcquired && mPerf != null) {
+-                mPerf.perfLockRelease();
+-                mIsPerfLockAcquired = false;
+-            }
+-
+             mCurrentPosition = mFinal;
+             // Not reset since WebView relies on this value for fast fling.
+             // TODO: restore when WebView uses the fast fling implemented in this class.
+@@ -780,11 +749,6 @@ public class OverScroller {
+             mStartTime = AnimationUtils.currentAnimationTimeMillis();
+             mCurrentPosition = mStart = start;
+ 
+-            if (mIsPerfLockAcquired && mPerf != null) {
+-                mPerf.perfLockRelease();
+-                mIsPerfLockAcquired = false;
+-            }
+-
+             if (start > max || start < min) {
+                 startAfterEdge(start, min, max, velocity);
+                 return;
+@@ -949,18 +913,6 @@ public class OverScroller {
+                 return false;
+             }
+ 
+-            if (mPerf != null && !mIsPerfLockAcquired) {
+-                mIsPerfLockAcquired = true;
+-                if (0 == fBoostTimeOut) {
+-                    //config value is not defined
+-                    flingBoostTimeOut = mDuration;
+-                } else {
+-                    //config value is present
+-                    flingBoostTimeOut = fBoostTimeOut;
+-                }
+-                mPerf.perfLockAcquire(flingBoostTimeOut, fBoostParamVal);
+-            }
+-
+             double distance = 0.0;
+             switch (mState) {
+                 case SPLINE: {
+diff --git a/core/java/android/widget/Scroller.java b/core/java/android/widget/Scroller.java
+index d0ba9e6..357c9c3 100644
+--- a/core/java/android/widget/Scroller.java
++++ b/core/java/android/widget/Scroller.java
+@@ -22,7 +22,6 @@ import android.os.Build;
+ import android.view.ViewConfiguration;
+ import android.view.animation.AnimationUtils;
+ import android.view.animation.Interpolator;
+-import android.util.BoostFramework;
+ 
+ 
+ /**
+@@ -109,17 +108,6 @@ public class Scroller  {
+     private float mDeceleration;
+     private final float mPpi;
+ 
+-    /*
+-    * Perf boost related variables
+-    * Enabled/Disabled using config_enableCpuBoostForScroller
+-    * true value turns it on, by default will be turned off
+-    */
+-    private BoostFramework mPerf = null;
+-    boolean bIsPerfBoostEnabled = false;
+-    private int sBoostTimeOut = 0;
+-    private int scrollBoostTimeOut = 0;
+-    private int sBoostParamVal[];
+-
+     // A context-specific coefficient adjusted to physical values.
+     private float mPhysicalCoeff;
+ 
+@@ -179,7 +167,6 @@ public class Scroller  {
+      * not to support progressive "flywheel" behavior in flinging.
+      */
+     public Scroller(Context context, Interpolator interpolator, boolean flywheel) {
+-        boolean bIsPerfBoostEnabled = false;
+         mFinished = true;
+         if (interpolator == null) {
+             mInterpolator = new ViscousFluidInterpolator();
+@@ -191,18 +178,6 @@ public class Scroller  {
+         mFlywheel = flywheel;
+ 
+         mPhysicalCoeff = computeDeceleration(0.84f); // look and feel tuning
+-        bIsPerfBoostEnabled = context.getResources().getBoolean(
+-             com.android.internal.R.bool.config_enableCpuBoostForScroller);
+-        if (bIsPerfBoostEnabled) {
+-        sBoostTimeOut = context.getResources().getInteger(
+-               com.android.internal.R.integer.scrollboost_timeout_param);
+-        sBoostParamVal = context.getResources().getIntArray(
+-               com.android.internal.R.array.scrollboost_param_value);
+-        }
+-        if (mPerf == null && bIsPerfBoostEnabled) {
+-            mPerf = new BoostFramework();
+-        }
+-
+     }
+ 
+     /**
+@@ -420,17 +395,6 @@ public class Scroller  {
+         mDeltaX = dx;
+         mDeltaY = dy;
+         mDurationReciprocal = 1.0f / (float) mDuration;
+-
+-        if ((mPerf != null) && (duration != 0)) {
+-            if (0 == sBoostTimeOut) {
+-                //config value is not defined
+-                scrollBoostTimeOut = mDuration;
+-            } else {
+-                //config value is present
+-                scrollBoostTimeOut = sBoostTimeOut;
+-            }
+-            mPerf.perfLockAcquire(scrollBoostTimeOut, sBoostParamVal);
+-        }
+     }
+ 
+     /**
+diff --git a/core/java/com/android/internal/app/ActivityTrigger.java b/core/java/com/android/internal/app/ActivityTrigger.java
+deleted file mode 100644
+index 8186701..0000000
+--- a/core/java/com/android/internal/app/ActivityTrigger.java
++++ /dev/null
+@@ -1,127 +0,0 @@
+-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are
+- * met:
+- *     * Redistributions of source code must retain the above copyright
+- *       notice, this list of conditions and the following disclaimer.
+- *     * Redistributions in binary form must reproduce the above
+- *       copyright notice, this list of conditions and the following
+- *       disclaimer in the documentation and/or other materials provided
+- *       with the distribution.
+- *     * Neither the name of The Linux Foundation nor the names of its
+- *       contributors may be used to endorse or promote products derived
+- *       from this software without specific prior written permission.
+- *
+- * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+- * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- *
+- */
+-
+-package com.android.internal.app;
+-
+-import android.content.ComponentName;
+-import android.content.Intent;
+-import android.content.pm.ActivityInfo;
+-import android.content.pm.ApplicationInfo;
+-import android.util.Log;
+-
+-public class ActivityTrigger
+-{
+-    private static final String TAG = "ActivityTrigger";
+-
+-    private static final int FLAG_OVERRIDE_RESOLUTION = 1;
+-    private static final int FLAG_HARDWARE_ACCELERATED =
+-            ActivityInfo.FLAG_HARDWARE_ACCELERATED;
+-
+-
+-    /** &hide */
+-    public ActivityTrigger() {
+-        //Log.d(TAG, "ActivityTrigger initialized");
+-    }
+-
+-    /** &hide */
+-    protected void finalize() {
+-        native_at_deinit();
+-    }
+-
+-    /** &hide */
+-    public void activityStartProcessTrigger(String process, int pid) {
+-        native_at_startProcessActivity(process, pid);
+-    }
+-
+-    /** &hide */
+-    public void activityStartTrigger(Intent intent, ActivityInfo acInfo, ApplicationInfo appInfo) {
+-        ComponentName cn = intent.getComponent();
+-        int overrideFlags = 0;
+-        String activity = null;
+-
+-        if(cn != null)
+-            activity = cn.flattenToString() + "/" + appInfo.versionCode;
+-
+-        overrideFlags = native_at_startActivity(activity, overrideFlags);
+-
+-        if((overrideFlags & FLAG_HARDWARE_ACCELERATED) != 0) {
+-            acInfo.flags |= ActivityInfo.FLAG_HARDWARE_ACCELERATED;
+-        }
+-        if((overrideFlags & FLAG_OVERRIDE_RESOLUTION) != 0) {
+-            appInfo.setOverrideRes(1);
+-        }
+-    }
+-
+-    /** &hide */
+-    public void activityResumeTrigger(Intent intent, ActivityInfo acInfo, ApplicationInfo appInfo) {
+-        ComponentName cn = intent.getComponent();
+-        String activity = null;
+-
+-        if (cn != null)
+-            activity = cn.flattenToString() + "/" + appInfo.versionCode;
+-        native_at_resumeActivity(activity);
+-    }
+-
+-    public void activityPauseTrigger(Intent intent, ActivityInfo acInfo, ApplicationInfo appInfo) {
+-        ComponentName cn = intent.getComponent();
+-        String activity = null;
+-        Log.d(TAG, "ActivityTrigger activityPauseTrigger ");
+-        if (null != cn && null != appInfo)
+-            activity = cn.flattenToString() + "/" + appInfo.versionCode;
+-        native_at_pauseActivity(activity);
+-    }
+-
+-    public void activityStopTrigger(Intent intent, ActivityInfo acInfo, ApplicationInfo appInfo) {
+-        ComponentName cn = intent.getComponent();
+-        String activity = null;
+-        Log.d(TAG, "ActivityTrigger activityStopTrigger ");
+-        if (null != cn && null != appInfo)
+-            activity = cn.flattenToString() + "/" + appInfo.versionCode;
+-        native_at_stopActivity(activity);
+-    }
+-
+-    /** &hide */
+-    public float animationScalesCheck(String activity, int scaleType) {
+-        return native_at_animationScalesCheck(activity, scaleType);
+-    }
+-
+-    /** &hide */
+-    public void networkOptsCheck (int flag, int netType, String packageName) {
+-        native_at_networkOptsCheck(flag, netType, packageName);
+-    }
+-
+-    private native int native_at_startActivity(String activity, int flags);
+-    private native void native_at_resumeActivity(String activity);
+-    private native void native_at_pauseActivity(String activity);
+-    private native void native_at_stopActivity(String activity);
+-    private native void native_at_deinit();
+-    private native void native_at_startProcessActivity(String process, int pid);
+-    private native float native_at_animationScalesCheck(String activity, int scaleType);
+-    private native void native_at_networkOptsCheck(int flag, int netType, String packageName);
+-}
+\ No newline at end of file
+diff --git a/core/jni/Android.mk b/core/jni/Android.mk
+index ee3d14c..b3c47a7 100644
+--- a/core/jni/Android.mk
++++ b/core/jni/Android.mk
+@@ -178,8 +178,7 @@ LOCAL_SRC_FILES:= \
+     com_android_internal_os_PathClassLoaderFactory.cpp \
+     com_android_internal_os_Zygote.cpp \
+     com_android_internal_util_VirtualRefBasePtr.cpp \
+-    com_android_internal_view_animation_NativeInterpolatorFactoryHelper.cpp \
+-    com_android_internal_app_ActivityTrigger.cpp
++    com_android_internal_view_animation_NativeInterpolatorFactoryHelper.cpp
+ 
+ LOCAL_C_INCLUDES += \
+     $(JNI_H_INCLUDE) \
+diff --git a/core/jni/AndroidRuntime.cpp b/core/jni/AndroidRuntime.cpp
+index 5eae338..1fda0b7 100644
+--- a/core/jni/AndroidRuntime.cpp
++++ b/core/jni/AndroidRuntime.cpp
+@@ -204,7 +204,6 @@ extern int register_com_android_internal_net_NetworkStatsFactory(JNIEnv *env);
+ extern int register_com_android_internal_os_PathClassLoaderFactory(JNIEnv* env);
+ extern int register_com_android_internal_os_Zygote(JNIEnv *env);
+ extern int register_com_android_internal_util_VirtualRefBasePtr(JNIEnv *env);
+-extern int register_com_android_internal_app_ActivityTrigger(JNIEnv *env);
+ 
+ static AndroidRuntime* gCurRuntime = NULL;
+ 
+@@ -1411,7 +1410,7 @@ static const RegJNIRec gRegJNI[] = {
+     REG_JNI(register_android_animation_PropertyValuesHolder),
+     REG_JNI(register_com_android_internal_content_NativeLibraryHelper),
+     REG_JNI(register_com_android_internal_net_NetworkStatsFactory),
+-    REG_JNI(register_com_android_internal_app_ActivityTrigger),
++
+ };
+ 
+ /*
+diff --git a/core/jni/com_android_internal_app_ActivityTrigger.cpp b/core/jni/com_android_internal_app_ActivityTrigger.cpp
+deleted file mode 100644
+index 26381e4..0000000
+--- a/core/jni/com_android_internal_app_ActivityTrigger.cpp
++++ /dev/null
+@@ -1,334 +0,0 @@
+-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are
+- * met:
+- *     * Redistributions of source code must retain the above copyright
+- *       notice, this list of conditions and the following disclaimer.
+- *     * Redistributions in binary form must reproduce the above
+- *       copyright notice, this list of conditions and the following
+- *       disclaimer in the documentation and/or other materials provided
+- *       with the distribution.
+- *     * Neither the name of The Linux Foundation nor the names of its
+- *       contributors may be used to endorse or promote products derived
+- *       from this software without specific prior written permission.
+- *
+- * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+- * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+- *
+- */
+-
+-#define LOG_TAG "ActTriggerJNI"
+-
+-#include "jni.h"
+-#include "JNIHelp.h"
+-#include <android_runtime/AndroidRuntime.h>
+-
+-#include <dlfcn.h>
+-#include <limits.h>
+-#include <string.h>
+-
+-#include <cutils/properties.h>
+-#include <utils/Log.h>
+-
+-#define LIBRARY_PATH_PREFIX "/vendor/lib/"
+-
+-namespace android
+-{
+-
+-// ----------------------------------------------------------------------------
+-/*
+- * Stuct containing handle to dynamically loaded lib as well as function
+- * pointers to key interfaces.
+- */
+-typedef struct dlLibHandler {
+-    void *dlhandle;
+-    void (*startActivity)(const char *, int *);
+-    void (*resumeActivity)(const char *);
+-    void (*pauseActivity)(const char *);
+-    void (*stopActivity)(const char *);
+-    void (*animationScalesCheck)(const char *, int, float *);
+-    void (*networkOptsCheck)(int, int, const char *);
+-    void (*init)(void);
+-    void (*deinit)(void);
+-    void (*startProcessActivity)(const char *, int);
+-    const char *dlname;
+-}dlLibHandler;
+-
+-/*
+- * Array of dlhandlers
+- * library -both handlers for Start and Resume events.
+- */
+-static dlLibHandler mDlLibHandlers[] = {
+-    {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+-     "ro.vendor.at_library"},
+-    {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+-     "ro.vendor.gt_library"},
+-};
+-
+-static size_t gTotalNumLibs = 0;
+-// ----------------------------------------------------------------------------
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_init()
+-{
+-    const char *rc;
+-    char buf[PROPERTY_VALUE_MAX];
+-    bool errored = false;
+-    size_t numlibs = 0;
+-
+-    gTotalNumLibs = numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-
+-    for(size_t i = 0; i < numlibs; i++) {
+-        errored = false;
+-
+-        /* Retrieve name of vendor library */
+-        if (property_get(mDlLibHandlers[i].dlname, buf, NULL) <= 0) {
+-            continue;
+-        }
+-
+-        /* Sanity check - ensure */
+-        buf[PROPERTY_VALUE_MAX-1] = '\0';
+-        if (strstr(buf, "/") != NULL) {
+-            continue;
+-        }
+-
+-        mDlLibHandlers[i].dlhandle = dlopen(buf, RTLD_NOW | RTLD_LOCAL);
+-        if (mDlLibHandlers[i].dlhandle == NULL) {
+-            continue;
+-        }
+-
+-        dlerror();
+-
+-        *(void **) (&mDlLibHandlers[i].startActivity) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_start");
+-        if ((rc = dlerror()) != NULL) {
+-            errored = true;
+-        }
+-
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].resumeActivity) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_resume");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].pauseActivity) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_pause");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].stopActivity) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_stop");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].init) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_init");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].startProcessActivity) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_process_start");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].animationScalesCheck) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_animationScalesCheck");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (!errored) {
+-            *(void **) (&mDlLibHandlers[i].networkOptsCheck) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_networkOptsCheck");
+-            if ((rc = dlerror()) != NULL) {
+-                errored = true;
+-            }
+-        }
+-        if (errored) {
+-            mDlLibHandlers[i].startActivity  = NULL;
+-            mDlLibHandlers[i].resumeActivity = NULL;
+-            mDlLibHandlers[i].pauseActivity  = NULL;
+-            mDlLibHandlers[i].stopActivity = NULL;
+-            mDlLibHandlers[i].startProcessActivity = NULL;
+-            mDlLibHandlers[i].animationScalesCheck = NULL;
+-            mDlLibHandlers[i].networkOptsCheck = NULL;
+-            if (mDlLibHandlers[i].dlhandle) {
+-                dlclose(mDlLibHandlers[i].dlhandle);
+-                mDlLibHandlers[i].dlhandle = NULL;
+-            }
+-            gTotalNumLibs = 0;
+-        } else {
+-            (*mDlLibHandlers[i].init)();
+-        }
+-    }
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_deinit(JNIEnv *env, jobject clazz)
+-{
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-
+-    for(size_t i = 0; i < numlibs; i++) {
+-        if (mDlLibHandlers[i].dlhandle) {
+-            mDlLibHandlers[i].startActivity  = NULL;
+-            mDlLibHandlers[i].resumeActivity = NULL;
+-            mDlLibHandlers[i].pauseActivity  = NULL;
+-            mDlLibHandlers[i].stopActivity = NULL;
+-            mDlLibHandlers[i].startProcessActivity = NULL;
+-            mDlLibHandlers[i].animationScalesCheck = NULL;
+-            mDlLibHandlers[i].networkOptsCheck = NULL;
+-
+-            *(void **) (&mDlLibHandlers[i].deinit) = dlsym(mDlLibHandlers[i].dlhandle, "activity_trigger_deinit");
+-            if (mDlLibHandlers[i].deinit) {
+-                (*mDlLibHandlers[i].deinit)();
+-            }
+-
+-            dlclose(mDlLibHandlers[i].dlhandle);
+-            mDlLibHandlers[i].dlhandle = NULL;
+-        }
+-    }
+-    gTotalNumLibs = 0;
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_startProcessActivity(JNIEnv *env, jobject clazz, jstring process, jint pid)
+-{
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-    const char *actStr = env->GetStringUTFChars(process, NULL);
+-    for(size_t i = 0; i < numlibs; i++){
+-        if(mDlLibHandlers[i].startProcessActivity && process && actStr) {
+-            (*mDlLibHandlers[i].startProcessActivity)(actStr, pid);
+-        }
+-    }
+-    env->ReleaseStringUTFChars(process, actStr);
+-}
+-
+-static jint
+-com_android_internal_app_ActivityTrigger_native_at_startActivity(JNIEnv *env, jobject clazz, jstring activity, jint flags)
+-{
+-    int activiyFlags = flags;
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-    for(size_t i = 0; i < numlibs; i++){
+-        if(mDlLibHandlers[i].startActivity && activity) {
+-            const char *actStr = env->GetStringUTFChars(activity, NULL);
+-            if (actStr) {
+-                (*mDlLibHandlers[i].startActivity)(actStr, &activiyFlags);
+-                env->ReleaseStringUTFChars(activity, actStr);
+-            }
+-        }
+-    }
+-    return activiyFlags;
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_resumeActivity(JNIEnv *env, jobject clazz, jstring activity)
+-{
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-
+-    for(size_t i = 0; i < numlibs; i++){
+-        if(mDlLibHandlers[i].resumeActivity && activity) {
+-            const char *actStr = env->GetStringUTFChars(activity, NULL);
+-            if (actStr) {
+-                (*mDlLibHandlers[i].resumeActivity)(actStr);
+-                env->ReleaseStringUTFChars(activity, actStr);
+-            }
+-        }
+-    }
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_pauseActivity(JNIEnv *env, jobject clazz, jstring activity)
+-{
+-    for(size_t i = 0; i < gTotalNumLibs; i++){
+-        if(mDlLibHandlers[i].pauseActivity && activity) {
+-            const char *actStr = env->GetStringUTFChars(activity, NULL);
+-            if ( NULL != actStr) {
+-                (*mDlLibHandlers[i].pauseActivity)(actStr);
+-                env->ReleaseStringUTFChars(activity, actStr);
+-            }
+-        }
+-    }
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_stopActivity(JNIEnv *env, jobject clazz, jstring activity)
+-{
+-    for(size_t i = 0; i < gTotalNumLibs; i++){
+-        if(mDlLibHandlers[i].stopActivity && activity) {
+-            const char *actStr = env->GetStringUTFChars(activity, NULL);
+-            if (NULL != actStr) {
+-                (*mDlLibHandlers[i].stopActivity)(actStr);
+-                env->ReleaseStringUTFChars(activity, actStr);
+-            }
+-        }
+-    }
+-}
+-
+-static jfloat
+-com_android_internal_app_ActivityTrigger_native_at_animationScalesCheck(JNIEnv *env, jobject clazz, jstring activity, jint scaleType)
+-{
+-    int type = scaleType;
+-    float scaleValue = -1.0f;
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-    for (size_t i = 0; i < numlibs; i++) {
+-        if (mDlLibHandlers[i].animationScalesCheck && activity) {
+-            const char *actStr = env->GetStringUTFChars(activity, NULL);
+-            if (actStr) {
+-                (*mDlLibHandlers[i].animationScalesCheck)(actStr, type, &scaleValue);
+-                env->ReleaseStringUTFChars(activity, actStr);
+-            }
+-        }
+-    }
+-    return scaleValue;
+-}
+-
+-static void
+-com_android_internal_app_ActivityTrigger_native_at_networkOptsCheck(JNIEnv *env, jobject clazz, jint flag, jint netType, jstring packageName)
+-{
+-    size_t numlibs = sizeof (mDlLibHandlers) / sizeof (*mDlLibHandlers);
+-
+-    for (size_t i = 0; i < numlibs; i++) {
+-        if (mDlLibHandlers[i].networkOptsCheck && packageName) {
+-            const char *actStr = env->GetStringUTFChars(packageName, NULL);
+-            if (actStr) {
+-                (*mDlLibHandlers[i].networkOptsCheck)(flag, netType, actStr);
+-                env->ReleaseStringUTFChars(packageName, actStr);
+-            }
+-        }
+-    }
+-}
+-// ----------------------------------------------------------------------------
+-
+-static JNINativeMethod gMethods[] = {
+-    {"native_at_startActivity",  "(Ljava/lang/String;I)I", (void *)com_android_internal_app_ActivityTrigger_native_at_startActivity},
+-    {"native_at_resumeActivity", "(Ljava/lang/String;)V", (void *)com_android_internal_app_ActivityTrigger_native_at_resumeActivity},
+-    {"native_at_pauseActivity", "(Ljava/lang/String;)V", (void *)com_android_internal_app_ActivityTrigger_native_at_pauseActivity},
+-    {"native_at_stopActivity", "(Ljava/lang/String;)V", (void *)com_android_internal_app_ActivityTrigger_native_at_stopActivity},
+-    {"native_at_deinit",         "()V",                   (void *)com_android_internal_app_ActivityTrigger_native_at_deinit},
+-    {"native_at_startProcessActivity", "(Ljava/lang/String;I)V", (void *)com_android_internal_app_ActivityTrigger_native_at_startProcessActivity},
+-    {"native_at_animationScalesCheck", "(Ljava/lang/String;I)F", (void *)com_android_internal_app_ActivityTrigger_native_at_animationScalesCheck},
+-    {"native_at_networkOptsCheck", "(IILjava/lang/String;)V", (void *)com_android_internal_app_ActivityTrigger_native_at_networkOptsCheck},
+-};
+-
+-
+-int register_com_android_internal_app_ActivityTrigger(JNIEnv *env)
+-{
+-    com_android_internal_app_ActivityTrigger_native_at_init();
+-
+-    return AndroidRuntime::registerNativeMethods(env,
+-            "com/android/internal/app/ActivityTrigger", gMethods, NELEM(gMethods));
+-}
+-
+-}   // namespace android
+\ No newline at end of file
+diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
+index d216a05..193b1be 100755
+--- a/core/res/res/values/config.xml
++++ b/core/res/res/values/config.xml
+@@ -2486,59 +2486,6 @@
+     <!-- Package of the unbundled tv remote service which can connect to tv
+          remote provider -->
+     <string name="config_tvRemoteServicePackage" translatable="false"></string>
+-    <!-- Whether cpu boost is enabled for AppLaunch -->
+-    <bool name="config_enableCpuBoostForAppLaunch">false</bool>
+-    <integer name="launchboost_timeout_param">0</integer>
+-    <integer-array name="launchboost_param_value"/>
+-
+-    <!-- Whether cpu freq aggr is enabled for AppLaunch -->
+-    <bool name="config_enableLaunchBoostv2">false</bool>
+-    <integer name="lboostv2_timeout_param">0</integer>
+-    <integer-array name="lboostv2_param_value"/>
+-
+-    <!-- Whether cpu freq aggr is enabled for AppLaunch -->
+-    <bool name="config_enableFreqAggr">false</bool>
+-    <integer name="freqaggr_timeout_param">0</integer>
+-    <integer-array name="freqaggr_init_param_value"/>
+-    <integer-array name="freqaggr_param_value"/>
+-
+-    <!-- Whether disablepacking is enabled or not -->
+-    <bool name="config_disablePacking">false</bool>
+-    <integer name="disablepacking_timeout_param">0</integer>
+-    <integer-array name="launchboost_packing_param_value"/>
+-
+-    <!-- Whether cpu boost is enabled for animation. -->
+-    <bool name="config_enablePerfBoostForAnimation">false</bool>
+-    <integer name="animationboost_timeout_param">0</integer>
+-    <integer-array name="animationboost_param_value"/>
+-
+-    <!-- Whether cpu boost is enabled for overscroller fling. -->
+-    <bool name="config_enableCpuBoostForOverScrollerFling">false</bool>
+-    <integer name="flingboost_timeout_param">0</integer>
+-    <integer-array name="flingboost_param_value"/>
+-
+-    <!-- Whether cpu boost is enabled for horizontal scroll. -->
+-    <bool name="config_enableCpuBoostForScroller">false</bool>
+-    <integer name="scrollboost_timeout_param">0</integer>
+-    <integer-array name="scrollboost_param_value"/>
+-
+-    <!-- Activities list for boost -->
+-    <string-array translatable="false" name="boost_activityList">
+-    </string-array>
+-
+-    <!-- Activity scroll boost params -->
+-    <integer name="ascrollboost_timeout">0</integer>
+-    <integer-array name="ascrollboost_param_value"/>
+-
+-    <!-- SSDOU scroll boost optimization -->
+-    <bool name="config_debugBoost">false</bool>
+-    <string-array  translatable="false" name="debugBoost_activityList"></string-array>
+-    <integer name="debugBoost_timeout">0</integer>
+-    <integer-array name="debugBoost_param_value"/>
+-
+-    <!-- cpu boost for PanelView fling -->
+-    <bool name="config_enableCpuBoostForPanelViewFling">false</bool>
+-    <integer-array name="panelview_flingboost_param_value" />
+ 
+     <!-- True if the device supports persisting security logs across reboots.
+          This requires the device's kernel to have pstore and pmsg enabled,
+diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
+index da63b0a..4d21f40 100644
+--- a/core/res/res/values/symbols.xml
++++ b/core/res/res/values/symbols.xml
+@@ -2634,59 +2634,6 @@
+   <java-symbol type="layout" name="unsupported_display_size_dialog_content" />
+   <java-symbol type="string" name="unsupported_display_size_message" />
+ 
+-  <!-- cpu boost for AppLaunch -->
+-  <java-symbol type="bool" name="config_enableCpuBoostForAppLaunch" />
+-  <java-symbol type="integer" name="launchboost_timeout_param" />
+-  <java-symbol type="array" name="launchboost_param_value" />
+-
+-  <!-- cpu boost v2 for Applaunch -->
+-  <java-symbol type="bool" name="config_enableLaunchBoostv2" />
+-  <java-symbol type="integer" name="lboostv2_timeout_param" />
+-  <java-symbol type="array" name="lboostv2_param_value" />
+-
+-  <!-- freq aggr for Applaunch -->
+-  <java-symbol type="bool" name="config_enableFreqAggr" />
+-  <java-symbol type="integer" name="freqaggr_timeout_param" />
+-  <java-symbol type="array" name="freqaggr_init_param_value" />
+-  <java-symbol type="array" name="freqaggr_param_value" />
+-
+-  <!-- cpu boost for AppLaunch -->
+-  <java-symbol type="bool" name="config_disablePacking" />
+-  <java-symbol type="integer" name="disablepacking_timeout_param" />
+-  <java-symbol type="array" name="launchboost_packing_param_value" />
+-
+-  <!-- cpu boost for Animationboost -->
+-  <java-symbol type="bool" name="config_enablePerfBoostForAnimation" />
+-  <java-symbol type="integer" name="animationboost_timeout_param" />
+-  <java-symbol type="array" name="animationboost_param_value" />
+-
+-  <!-- cpu boost for overscroller fling -->
+-  <java-symbol type="bool" name="config_enableCpuBoostForOverScrollerFling" />
+-  <java-symbol type="integer" name="flingboost_timeout_param" />
+-  <java-symbol type="array" name="flingboost_param_value" />
+-
+-  <!-- cpu boost for horizontal scroll -->
+-  <java-symbol type="bool" name="config_enableCpuBoostForScroller" />
+-  <java-symbol type="integer" name="scrollboost_timeout_param" />
+-  <java-symbol type="array" name="scrollboost_param_value" />
+-
+-  <!-- Activities list for boost -->
+-  <java-symbol type="array"  name="boost_activityList" />
+-
+-  <!-- Activity scroll boost params -->
+-  <java-symbol type="integer" name="ascrollboost_timeout" />
+-  <java-symbol type="array" name="ascrollboost_param_value" />
+-
+-  <!-- SSDOU scroll boost optimization -->
+-  <java-symbol type="bool" name="config_debugBoost" />
+-  <java-symbol type="array" name="debugBoost_activityList" />
+-  <java-symbol type="integer" name="debugBoost_timeout" />
+-  <java-symbol type="array" name="debugBoost_param_value" />
+-
+-  <!-- cpu boost for PanelView fling -->
+-  <java-symbol type="bool" name="config_enableCpuBoostForPanelViewFling" />
+-  <java-symbol type="array" name="panelview_flingboost_param_value" />
+-
+   <!-- SIM contact batch operation -->
+   <java-symbol type="bool" name="config_sim_phonebook_batch_operation" />
+   <!-- config 2G/3G/4G RAT strings for carriers -->
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PanelView.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PanelView.java
+index 7a6a19f..e4aa103 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/PanelView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/PanelView.java
+@@ -41,7 +41,6 @@ import com.android.systemui.doze.DozeLog;
+ import com.android.systemui.statusbar.FlingAnimationUtils;
+ import com.android.systemui.statusbar.StatusBarState;
+ import com.android.systemui.statusbar.policy.HeadsUpManager;
+-import android.util.BoostFramework;
+ 
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+@@ -90,12 +89,6 @@ public abstract class PanelView extends FrameLayout {
+     private FalsingManager mFalsingManager;
+ 
+     /**
+-     * For PanelView fling perflock call
+-     */
+-    private BoostFramework mPerf = null;
+-    private int mBoostParamVal[];
+-
+-    /**
+      * Whether an instant expand request is currently pending and we are just waiting for layout.
+      */
+     private boolean mInstantExpanding;
+@@ -194,14 +187,6 @@ public abstract class PanelView extends FrameLayout {
+         mFlingAnimationUtils = new FlingAnimationUtils(context, 0.6f);
+         mBounceInterpolator = new BounceInterpolator();
+         mFalsingManager = FalsingManager.getInstance(context);
+-
+-        boolean lIsPerfBoostEnabled = context.getResources().getBoolean(
+-                com.android.internal.R.bool.config_enableCpuBoostForPanelViewFling);
+-        if (lIsPerfBoostEnabled) {
+-            mBoostParamVal = context.getResources().getIntArray(
+-                    com.android.internal.R.array.panelview_flingboost_param_value);
+-            mPerf = new BoostFramework();
+-        }
+     }
+ 
+     protected void loadDimens() {
+@@ -682,25 +667,16 @@ public abstract class PanelView extends FrameLayout {
+                                 / collapseSpeedUpFactor));
+             }
+         }
+-        if (mPerf != null) {
+-            mPerf.perfLockAcquire(0, mBoostParamVal);
+-        }
+         animator.addListener(new AnimatorListenerAdapter() {
+             private boolean mCancelled;
+ 
+             @Override
+             public void onAnimationCancel(Animator animation) {
+-                if (mPerf != null) {
+-                    mPerf.perfLockRelease();
+-                }
+                 mCancelled = true;
+             }
+ 
+             @Override
+             public void onAnimationEnd(Animator animation) {
+-                if (mPerf != null) {
+-                    mPerf.perfLockRelease();
+-                }
+                 if (clearAllExpandHack && !mCancelled) {
+                     setExpandedHeightInternal(getMaxPanelHeight());
+                 }
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index 86806b9..52f008c 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -29,7 +29,6 @@ import com.android.internal.app.IVoiceInteractor;
+ import com.android.internal.app.ProcessMap;
+ import com.android.internal.app.SystemUserHomeActivity;
+ import com.android.internal.app.procstats.ProcessStats;
+-import com.android.internal.app.ActivityTrigger;
+ import com.android.internal.os.BackgroundThread;
+ import com.android.internal.os.BatteryStatsImpl;
+ import com.android.internal.os.IResultReceiver;
+@@ -150,8 +149,6 @@ import android.graphics.Bitmap;
+ import android.graphics.Point;
+ import android.graphics.Rect;
+ import android.location.LocationManager;
+-import android.net.ConnectivityManager;
+-import android.net.NetworkInfo;
+ import android.net.Proxy;
+ import android.net.ProxyInfo;
+ import android.net.Uri;
+@@ -216,7 +213,6 @@ import android.util.Slog;
+ import android.util.SparseArray;
+ import android.util.TimeUtils;
+ import android.util.Xml;
+-import android.util.BoostFramework;
+ import android.view.Display;
+ import android.view.Gravity;
+ import android.view.LayoutInflater;
+@@ -555,22 +551,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+     private boolean mIsBoosted = false;
+     private long mBoostStartTime = 0;
+ 
+-    /* Freq Aggr boost objects */
+-    public static BoostFramework sFreqAggr_init = null;
+-    public static BoostFramework sFreqAggr = null;
+-    public static boolean sIsFreqAggrBoostSet = false;
+-    private boolean mIsFreqAggrEnabled = false;
+-    private int lFreqAggr_TimeOut = 0;
+-    private int lFreqAggr_Init_ParamVal[];
+-    private int lFreqAggr_ParamVal[];
+-
+-    /* Launch boost v2 objects */
+-    public static BoostFramework sPerfBoost_v2 = null;
+-    public static boolean sIsLaunchBoostv2_set = false;
+-    private boolean mIsLaunchBoostv2_enabled = false;
+-    private int lBoost_v2_TimeOut = 0;
+-    private int lBoost_v2_ParamVal[];
+-
+     /** All system services */
+     SystemServiceManager mSystemServiceManager;
+ 
+@@ -1556,7 +1536,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+ 
+     static ServiceThread sKillThread = null;
+     static KillHandler sKillHandler = null;
+-    static final ActivityTrigger mActivityTrigger = new ActivityTrigger();
+ 
+     CompatModeDialog mCompatModeDialog;
+     UnsupportedDisplaySizeDialog mUnsupportedDisplaySizeDialog;
+@@ -1572,9 +1551,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+     boolean mEnableBServicePropagation =
+             SystemProperties.getBoolean("ro.sys.fw.bservice_enable", false);
+ 
+-    static final boolean mEnableNetOpts =
+-            SystemProperties.getBoolean("persist.netopts.enable",false);
+-
+     /**
+      * Flag whether the current user is a "monkey", i.e. whether
+      * the UI is driven by a UI automation tool.
+@@ -2729,28 +2705,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+ 
+         Watchdog.getInstance().addMonitor(this);
+         Watchdog.getInstance().addThread(mHandler);
+-
+-        mIsFreqAggrEnabled = mContext.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_enableFreqAggr);
+-
+-        if(mIsFreqAggrEnabled) {
+-           lFreqAggr_TimeOut = mContext.getResources().getInteger(
+-                   com.android.internal.R.integer.freqaggr_timeout_param);
+-           lFreqAggr_Init_ParamVal = mContext.getResources().getIntArray(
+-                   com.android.internal.R.array.freqaggr_init_param_value);
+-           lFreqAggr_ParamVal = mContext.getResources().getIntArray(
+-                   com.android.internal.R.array.freqaggr_param_value);
+-        }
+-
+-        mIsLaunchBoostv2_enabled = mContext.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_enableLaunchBoostv2);
+-
+-        if(mIsLaunchBoostv2_enabled) {
+-           lBoost_v2_TimeOut = mContext.getResources().getInteger(
+-                   com.android.internal.R.integer.lboostv2_timeout_param);
+-           lBoost_v2_ParamVal = mContext.getResources().getIntArray(
+-                   com.android.internal.R.array.lboostv2_param_value);
+-        }
+     }
+ 
+     public void setSystemServiceManager(SystemServiceManager mgr) {
+@@ -2976,25 +2930,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+         return mAppBindArgs;
+     }
+ 
+-    private final void networkOptsCheck(int flag, String packageName) {
+-        ConnectivityManager connectivityManager =
+-            (ConnectivityManager)mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+-        if (connectivityManager != null) {
+-            NetworkInfo netInfo = connectivityManager.getActiveNetworkInfo();
+-            if (netInfo != null) {
+-                /* netType: 0 for Mobile, 1 for WIFI*/
+-                int netType = netInfo.getType();
+-                if (mActivityTrigger != null) {
+-                    mActivityTrigger.networkOptsCheck(flag, netType, packageName);
+-                }
+-            } else {
+-                if (mActivityTrigger != null) {
+-                    mActivityTrigger.networkOptsCheck(flag, ConnectivityManager.TYPE_NONE, packageName);
+-                }
+-            }
+-        }
+-    }
+-
+     boolean setFocusedActivityLocked(ActivityRecord r, String reason) {
+         if (r == null || mFocusedActivity == r) {
+             return false;
+@@ -3014,10 +2949,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+ 
+         final ActivityRecord last = mFocusedActivity;
+         mFocusedActivity = r;
+-        if (mEnableNetOpts) {
+-                networkOptsCheck(0, r.processName);
+-        }
+-
+         if (r.task.isApplicationTask()) {
+             if (mCurAppTimeTracker != r.appTimeTracker) {
+                 // We are switching app tracking.  Complete the current one.
+@@ -3876,45 +3807,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 buf.append(hostingNameStr);
+             }
+             Slog.i(TAG, buf.toString());
+-
+-            if(hostingType.equals("activity")) {
+-                BoostFramework perf = new BoostFramework();
+-
+-                if (perf != null) {
+-                    perf.perfIOPrefetchStart(startResult.pid,app.processName);
+-                }
+-
+-                // Start Freq Aggregation boost
+-                if (mIsFreqAggrEnabled == true && sFreqAggr_init == null
+-                    && sFreqAggr == null) {
+-                   sFreqAggr_init = new BoostFramework();
+-                   sFreqAggr = new BoostFramework();
+-                }
+-                if (sFreqAggr_init != null && sFreqAggr != null) {
+-                   sFreqAggr_init.perfLockAcquire(lFreqAggr_TimeOut, lFreqAggr_Init_ParamVal);
+-                   sIsFreqAggrBoostSet = true;
+-                   // Frequency Aggr perflock can only be passed one opcode-pair
+-                   if (lFreqAggr_ParamVal.length == 2) {
+-                       lFreqAggr_ParamVal[1] = startResult.pid;
+-                       sFreqAggr.perfLockAcquire(lFreqAggr_TimeOut, lFreqAggr_ParamVal);
+-                   } else {
+-                       //Opcodes improperly defined. Disable Perflock FA support.
+-                       sFreqAggr = null;
+-                       sFreqAggr_init.perfLockRelease();
+-                       sIsFreqAggrBoostSet = false;
+-                   }
+-                }
+-
+-                // Start launch boost v2
+-                if (mIsLaunchBoostv2_enabled == true && sPerfBoost_v2 == null) {
+-                    sPerfBoost_v2 = new BoostFramework();
+-                }
+-                if (sPerfBoost_v2 != null) {
+-                   sPerfBoost_v2.perfLockAcquire(lBoost_v2_TimeOut, lBoost_v2_ParamVal);
+-                   sIsLaunchBoostv2_set = true;
+-                }
+-            }
+-
+             app.setPid(startResult.pid);
+             app.usingWrapper = startResult.usingWrapper;
+             app.removed = false;
+@@ -3931,9 +3823,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 }
+             }
+             checkTime(startTime, "startProcess: done updating pids map");
+-            if ("activity".equals(hostingType) || "service".equals(hostingType)) {
+-                mActivityTrigger.activityStartProcessTrigger(app.processName, startResult.pid);
+-            }
+         } catch (RuntimeException e) {
+             Slog.e(TAG, "Failure starting process " + app.processName, e);
+ 
+@@ -5307,9 +5196,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 Slog.i(TAG, "Process " + app.processName + " (pid " + pid
+                         + ") has died");
+                 mAllowLowerMemLevel = true;
+-                if (mEnableNetOpts) {
+-                    networkOptsCheck(1, app.processName);
+-                }
+             } else {
+                 // Note that we always want to do oom adj to update our state with the
+                 // new number of procs.
+@@ -6902,27 +6788,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+             }
+         }, dumpheapFilter);
+ 
+-        if (mEnableNetOpts) {
+-            IntentFilter netInfoFilter = new IntentFilter();
+-            netInfoFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+-            netInfoFilter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+-            mContext.registerReceiver(new BroadcastReceiver() {
+-                @Override
+-                public void onReceive(Context context, Intent intent) {
+-                    ActivityStack stack = mStackSupervisor.getLastStack();
+-                    if (stack != null) {
+-                        ActivityRecord r = stack.topRunningActivityLocked();
+-                        if (r != null) {
+-                            PowerManager powerManager =
+-                                (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
+-                            if (powerManager != null && powerManager.isInteractive())
+-                                    networkOptsCheck(0, r.processName);
+-                        }
+-                    }
+-                }
+-            }, netInfoFilter);
+-        }
+-
+         // Let system services know.
+         mSystemServiceManager.startBootPhase(SystemService.PHASE_BOOT_COMPLETED);
+ 
+@@ -21783,15 +21648,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+             synchronized (ActivityManagerService.this) {
+                 SleepTokenImpl token = new SleepTokenImpl(tag);
+                 mSleepTokens.add(token);
+-                if (mEnableNetOpts) {
+-                    ActivityStack stack = mStackSupervisor.getLastStack();
+-                    if (stack != null) {
+-                        ActivityRecord r = stack.topRunningActivityLocked();
+-                        if (r != null) {
+-                            networkOptsCheck(1, r.processName);
+-                        }
+-                    }
+-                }
+                 updateSleepIfNeededLocked();
+                 return token;
+             }
+@@ -21916,15 +21772,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+         public void release() {
+             synchronized (ActivityManagerService.this) {
+                 if (mSleepTokens.remove(this)) {
+-                    if (mEnableNetOpts) {
+-                        ActivityStack stack = mStackSupervisor.getLastStack();
+-                        if (stack != null) {
+-                            ActivityRecord r = stack.topRunningActivityLocked();
+-                            if (r != null) {
+-                                networkOptsCheck(0, r.processName);
+-                            }
+-                        }
+-                    }
+                     updateSleepIfNeededLocked();
+                 }
+             }
+diff --git a/services/core/java/com/android/server/am/ActivityStack.java b/services/core/java/com/android/server/am/ActivityStack.java
+index 58290e7..4ead64b 100644
+--- a/services/core/java/com/android/server/am/ActivityStack.java
++++ b/services/core/java/com/android/server/am/ActivityStack.java
+@@ -119,8 +119,6 @@ import android.util.EventLog;
+ import android.util.Log;
+ import android.util.Slog;
+ import android.view.Display;
+-import com.android.internal.app.ActivityTrigger;
+-import android.util.BoostFramework;
+ 
+ import com.android.internal.app.IVoiceInteractor;
+ import com.android.internal.content.ReferrerIntent;
+@@ -237,10 +235,6 @@ final class ActivityStack {
+     final WindowManagerService mWindowManager;
+     private final RecentTasks mRecentTasks;
+ 
+-    public BoostFramework mPerf = null;
+-    public boolean mIsAnimationBoostEnabled = false;
+-    public int aBoostTimeOut = 0;
+-    public int aBoostParamVal[];
+     /**
+      * The back history of all previous (and possibly still
+      * running) activities.  It contains #TaskRecord objects.
+@@ -360,8 +354,6 @@ final class ActivityStack {
+ 
+     final Handler mHandler;
+ 
+-    static final ActivityTrigger mActivityTrigger = new ActivityTrigger();
+-
+     final class ActivityStackHandler extends Handler {
+ 
+         ActivityStackHandler(Looper looper) {
+@@ -455,14 +447,6 @@ final class ActivityStack {
+         mRecentTasks = recentTasks;
+         mTaskPositioner = mStackId == FREEFORM_WORKSPACE_STACK_ID
+                 ? new LaunchingTaskPositioner() : null;
+-        mIsAnimationBoostEnabled = mService.mContext.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_enablePerfBoostForAnimation);
+-        if (mIsAnimationBoostEnabled) {
+-           aBoostTimeOut = mService.mContext.getResources().getInteger(
+-                   com.android.internal.R.integer.animationboost_timeout_param);
+-           aBoostParamVal = mService.mContext.getResources().getIntArray(
+-                   com.android.internal.R.array.animationboost_param_value);
+-        }
+     }
+ 
+     void attachDisplay(ActivityStackSupervisor.ActivityDisplay activityDisplay, boolean onTop) {
+@@ -1117,9 +1101,6 @@ final class ActivityStack {
+ 
+         if (DEBUG_STATES) Slog.v(TAG_STATES, "Moving to PAUSING: " + prev);
+         else if (DEBUG_PAUSE) Slog.v(TAG_PAUSE, "Start pausing: " + prev);
+-
+-        mActivityTrigger.activityPauseTrigger(prev.intent, prev.info, prev.appInfo);
+-
+         mResumedActivity = null;
+         mPausingActivity = prev;
+         mLastPausedActivity = prev;
+@@ -2252,10 +2233,7 @@ final class ActivityStack {
+ 
+         if (DEBUG_SWITCH) Slog.v(TAG_SWITCH, "Resuming " + next);
+ 
+-        mActivityTrigger.activityResumeTrigger(next.intent, next.info, next.appInfo);
+-
+-        // If we are currently pausing an activity, then don't do anything
+-        // until that is done.
++        // If we are currently pausing an activity, then don't do anything until that is done.
+         if (!mStackSupervisor.allPausedActivitiesComplete()) {
+             if (DEBUG_SWITCH || DEBUG_PAUSE || DEBUG_STATES) Slog.v(TAG_PAUSE,
+                     "resumeTopActivityLocked: Skip resume: some activity pausing.");
+@@ -2359,9 +2337,6 @@ final class ActivityStack {
+         // that the previous one will be hidden soon.  This way it can know
+         // to ignore it when computing the desired screen orientation.
+         boolean anim = true;
+-        if (mIsAnimationBoostEnabled == true && mPerf == null) {
+-            mPerf = new BoostFramework();
+-        }
+         if (prev != null) {
+             if (prev.finishing) {
+                 if (DEBUG_TRANSITION) Slog.v(TAG_TRANSITION,
+@@ -2373,9 +2348,6 @@ final class ActivityStack {
+                     mWindowManager.prepareAppTransition(prev.task == next.task
+                             ? TRANSIT_ACTIVITY_CLOSE
+                             : TRANSIT_TASK_CLOSE, false);
+-                    if(prev.task != next.task && mPerf != null) {
+-                       mPerf.perfLockAcquire(aBoostTimeOut, aBoostParamVal);
+-                    }
+                 }
+                 mWindowManager.setAppVisibility(prev.appToken, false);
+             } else {
+@@ -2390,9 +2362,6 @@ final class ActivityStack {
+                             : next.mLaunchTaskBehind
+                                     ? TRANSIT_TASK_OPEN_BEHIND
+                                     : TRANSIT_TASK_OPEN, false);
+-                    if(prev.task != next.task && mPerf != null) {
+-                        mPerf.perfLockAcquire(aBoostTimeOut, aBoostParamVal);
+-                    }
+                 }
+             }
+         } else {
+@@ -2730,7 +2699,6 @@ final class ActivityStack {
+         task.setFrontOfTask();
+ 
+         r.putInHistory();
+-        mActivityTrigger.activityStartTrigger(r.intent, r.info, r.appInfo);
+         if (!isHomeStack() || numActivities() > 0) {
+             // We want to show the starting preview window if we are
+             // switching to a new task, or the next activity's process is
+@@ -3270,15 +3238,11 @@ final class ActivityStack {
+             r.resumeKeyDispatchingLocked();
+             try {
+                 r.stopped = false;
+-
+                 if (DEBUG_STATES) Slog.v(TAG_STATES,
+                         "Moving to STOPPING: " + r + " (stop requested)");
+                 r.state = ActivityState.STOPPING;
+                 if (DEBUG_VISIBILITY) Slog.v(TAG_VISIBILITY,
+                         "Stopping visible=" + r.visible + " for " + r);
+-
+-                mActivityTrigger.activityStopTrigger(r.intent, r.info, r.appInfo);
+-
+                 if (!r.visible) {
+                     mWindowManager.setAppVisibility(r.appToken, false);
+                 }
+diff --git a/services/core/java/com/android/server/am/ActivityStackSupervisor.java b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
+index 30ea8df..36207c4 100644
+--- a/services/core/java/com/android/server/am/ActivityStackSupervisor.java
++++ b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
+@@ -84,7 +84,6 @@ import android.view.Display;
+ import android.view.DisplayInfo;
+ import android.view.InputEvent;
+ import android.view.Surface;
+-import android.util.BoostFramework;
+ 
+ import com.android.internal.content.ReferrerIntent;
+ import com.android.internal.os.TransferPipe;
+@@ -206,17 +205,6 @@ public final class ActivityStackSupervisor implements DisplayListener {
+     static final int RESUME_TOP_ACTIVITY_MSG = FIRST_SUPERVISOR_STACK_MSG + 2;
+     static final int SLEEP_TIMEOUT_MSG = FIRST_SUPERVISOR_STACK_MSG + 3;
+     static final int LAUNCH_TIMEOUT_MSG = FIRST_SUPERVISOR_STACK_MSG + 4;
+-
+-    public BoostFramework mPerfBoost = null;
+-    public BoostFramework mPerfPack = null;
+-    public BoostFramework mPerfIop = null;
+-    public boolean mIsPerfBoostEnabled = false;
+-    public boolean mIsperfDisablepackingEnable = false;
+-    public int lBoostTimeOut = 0;
+-    public int lDisPackTimeOut = 0;
+-    public int lBoostCpuParamVal[];
+-    public int lBoostPackParamVal[];
+-
+     static final int HANDLE_DISPLAY_ADDED = FIRST_SUPERVISOR_STACK_MSG + 5;
+     static final int HANDLE_DISPLAY_CHANGED = FIRST_SUPERVISOR_STACK_MSG + 6;
+     static final int HANDLE_DISPLAY_REMOVED = FIRST_SUPERVISOR_STACK_MSG + 7;
+@@ -499,25 +487,6 @@ public final class ActivityStackSupervisor implements DisplayListener {
+         mHandler = new ActivityStackSupervisorHandler(mService.mHandler.getLooper());
+         mActivityMetricsLogger = new ActivityMetricsLogger(this, mService.mContext);
+         mResizeDockedStackTimeout = new ResizeDockedStackTimeout(service, this, mHandler);
+-        /* Is perf lock for cpu-boost enabled during App 1st launch */
+-        mIsPerfBoostEnabled = mService.mContext.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_enableCpuBoostForAppLaunch);
+-        mIsperfDisablepackingEnable = mService.mContext.getResources().getBoolean(
+-                   com.android.internal.R.bool.config_disablePacking);
+-
+-        if(mIsPerfBoostEnabled) {
+-           lBoostTimeOut = mService.mContext.getResources().getInteger(
+-                   com.android.internal.R.integer.launchboost_timeout_param);
+-           lBoostCpuParamVal = mService.mContext.getResources().getIntArray(
+-                           com.android.internal.R.array.launchboost_param_value);
+-        }
+-
+-        if(mIsperfDisablepackingEnable) {
+-           lDisPackTimeOut = mService.mContext.getResources().getInteger(
+-                   com.android.internal.R.integer.disablepacking_timeout_param);
+-           lBoostPackParamVal = mService.mContext.getResources().getIntArray(
+-                        com.android.internal.R.array.launchboost_packing_param_value);
+-       }
+     }
+ 
+     void setRecentTasks(RecentTasks recentTasks) {
+@@ -1871,14 +1840,6 @@ public final class ActivityStackSupervisor implements DisplayListener {
+ 
+     void findTaskToMoveToFrontLocked(TaskRecord task, int flags, ActivityOptions options,
+             String reason, boolean forceNonResizeable) {
+-
+-        ActivityRecord top_activity;
+-        top_activity = task.stack.topRunningActivityLocked();
+-        /* App is launching from recent apps and it's a new process */
+-        if(top_activity != null && top_activity.state == ActivityState.DESTROYED) {
+-            acquireAppLaunchPerfLock(top_activity.packageName);
+-        }
+-
+         if ((flags & ActivityManager.MOVE_TASK_NO_USER_ACTION) == 0) {
+             mUserLeaving = true;
+         }
+@@ -2647,31 +2608,6 @@ public final class ActivityStackSupervisor implements DisplayListener {
+         resumeFocusedStackTopActivityLocked();
+     }
+ 
+-    void acquireAppLaunchPerfLock(String packageName) {
+-       /* Acquire perf lock during new app launch */
+-       if (mIsperfDisablepackingEnable == true && mPerfPack == null) {
+-           mPerfPack = new BoostFramework();
+-       }
+-       if (mPerfPack != null) {
+-           mPerfPack.perfLockAcquire(lDisPackTimeOut, lBoostPackParamVal);
+-       }
+-
+-       if (mIsPerfBoostEnabled == true && mPerfBoost == null) {
+-           mPerfBoost = new BoostFramework();
+-       }
+-       if (mPerfBoost != null) {
+-           mPerfBoost.perfLockAcquire(lBoostTimeOut, lBoostCpuParamVal);
+-       }
+-
+-       // Start IOP
+-       if (mPerfIop == null) {
+-           mPerfIop = new BoostFramework();
+-       }
+-       if (mPerfIop != null) {
+-           mPerfIop.perfIOPrefetchStart(-1,packageName);
+-       }
+-    }
+-
+     ActivityRecord findTaskLocked(ActivityRecord r) {
+         mTmpFindTaskResult.r = null;
+         mTmpFindTaskResult.matchedByRootAffinity = false;
+@@ -2695,20 +2631,10 @@ public final class ActivityStackSupervisor implements DisplayListener {
+                 // there is a better match in another stack. We eventually return the match based
+                 // on root affinity if we don't find a better match.
+                 if (mTmpFindTaskResult.r != null && !mTmpFindTaskResult.matchedByRootAffinity) {
+-                    if(mTmpFindTaskResult.r.state == ActivityState.DESTROYED ) {
+-                        /*It's a new app launch */
+-                        acquireAppLaunchPerfLock(r.packageName);
+-                    }
+                     return mTmpFindTaskResult.r;
+                 }
+             }
+         }
+-
+-        /* Acquire perf lock *only* during new app launch */
+-        if (mTmpFindTaskResult.r == null || mTmpFindTaskResult.r.state == ActivityState.DESTROYED) {
+-            acquireAppLaunchPerfLock(r.packageName);
+-        }
+-
+         if (DEBUG_TASKS && mTmpFindTaskResult.r == null) Slog.d(TAG_TASKS, "No task found");
+         return mTmpFindTaskResult.r;
+     }
+diff --git a/services/core/java/com/android/server/wm/TaskTapPointerEventListener.java b/services/core/java/com/android/server/wm/TaskTapPointerEventListener.java
+index 532891e..fb556d2 100644
+--- a/services/core/java/com/android/server/wm/TaskTapPointerEventListener.java
++++ b/services/core/java/com/android/server/wm/TaskTapPointerEventListener.java
+@@ -25,7 +25,6 @@ import android.view.MotionEvent;
+ import android.view.WindowManagerPolicy.PointerEventListener;
+ 
+ import com.android.server.wm.WindowManagerService.H;
+-import com.android.server.am.ActivityManagerService;
+ 
+ import static android.view.PointerIcon.TYPE_NOT_SPECIFIED;
+ import static android.view.PointerIcon.TYPE_DEFAULT;
+@@ -64,17 +63,6 @@ public class TaskTapPointerEventListener implements PointerEventListener {
+     public void onPointerEvent(MotionEvent motionEvent) {
+         doGestureDetection(motionEvent);
+ 
+-        if (ActivityManagerService.sIsFreqAggrBoostSet) {
+-            ActivityManagerService.sFreqAggr_init.perfLockRelease();
+-            ActivityManagerService.sFreqAggr.perfLockRelease();
+-            ActivityManagerService.sIsFreqAggrBoostSet = false;
+-        }
+-
+-        if (ActivityManagerService.sIsLaunchBoostv2_set) {
+-            ActivityManagerService.sPerfBoost_v2.perfLockRelease();
+-            ActivityManagerService.sIsLaunchBoostv2_set = false;
+-        }
+-
+         final int action = motionEvent.getAction();
+         switch (action & MotionEvent.ACTION_MASK) {
+             case MotionEvent.ACTION_DOWN: {
+diff --git a/services/core/java/com/android/server/wm/WindowManagerService.java b/services/core/java/com/android/server/wm/WindowManagerService.java
+index 9e0279d..3687512 100644
+--- a/services/core/java/com/android/server/wm/WindowManagerService.java
++++ b/services/core/java/com/android/server/wm/WindowManagerService.java
+@@ -122,7 +122,6 @@ import android.view.animation.Animation;
+ import android.view.inputmethod.InputMethodManagerInternal;
+ 
+ import com.android.internal.R;
+-import com.android.internal.app.ActivityTrigger;
+ import com.android.internal.app.IAssistScreenshotReceiver;
+ import com.android.internal.os.IResultReceiver;
+ import com.android.internal.policy.IShortcutService;
+@@ -257,10 +256,7 @@ public class WindowManagerService extends IWindowManager.Stub
+ 
+     static final boolean PROFILE_ORIENTATION = false;
+     static final boolean localLOGV = DEBUG;
+-    static final boolean mEnableAnimCheck = SystemProperties.getBoolean("persist.animcheck.enable", false);
+-    static ActivityTrigger mActivityTrigger = new ActivityTrigger();
+-    static WindowState mFocusingWindow;
+-    String mFocusingActivity;
++
+     /** How much to multiply the policy's type layer, to reserve room
+      * for multiple windows of the same type and Z-ordering adjustment
+      * with TYPE_LAYER_OFFSET. */
+@@ -1864,7 +1860,6 @@ public class WindowManagerService extends IWindowManager.Stub
+         WindowState attachedWindow = null;
+         long origId;
+         final int type = attrs.type;
+-        mFocusingActivity = attrs.getTitle().toString();
+ 
+         synchronized(mWindowMap) {
+             if (!mDisplayReady) {
+@@ -5554,38 +5549,12 @@ public class WindowManagerService extends IWindowManager.Stub
+         ValueAnimator.setDurationScale(scale);
+     }
+ 
+-    private float animationScalesCheck (int which) {
+-        float value = -1.0f;
+-        if (!mAnimationsDisabled) {
+-            if (mEnableAnimCheck) {
+-                if (mFocusingActivity != null) {
+-                    if (mActivityTrigger == null) {
+-                        mActivityTrigger = new ActivityTrigger();
+-                    }
+-                    if (mActivityTrigger != null) {
+-                        value = mActivityTrigger.animationScalesCheck(mFocusingActivity, which);
+-                    }
+-               }
+-            }
+-            if (value == -1.0f) {
+-                switch (which) {
+-                    case WINDOW_ANIMATION_SCALE: value = mWindowAnimationScaleSetting; break;
+-                    case TRANSITION_ANIMATION_SCALE: value = mTransitionAnimationScaleSetting; break;
+-                    case ANIMATION_DURATION_SCALE: value = mAnimatorDurationScaleSetting; break;
+-                }
+-            }
+-        } else {
+-            value = 0;
+-        }
+-        return value;
+-    }
+-
+     public float getWindowAnimationScaleLocked() {
+-        return animationScalesCheck(WINDOW_ANIMATION_SCALE);
++        return mAnimationsDisabled ? 0 : mWindowAnimationScaleSetting;
+     }
+ 
+     public float getTransitionAnimationScaleLocked() {
+-        return animationScalesCheck(TRANSITION_ANIMATION_SCALE);
++        return mAnimationsDisabled ? 0 : mTransitionAnimationScaleSetting;
+     }
+ 
+     @Override
+@@ -5607,7 +5576,7 @@ public class WindowManagerService extends IWindowManager.Stub
+     @Override
+     public float getCurrentAnimatorScale() {
+         synchronized(mWindowMap) {
+-            return animationScalesCheck(ANIMATION_DURATION_SCALE);
++            return mAnimationsDisabled ? 0 : mAnimatorDurationScaleSetting;
+         }
+     }
+ 
+@@ -9724,12 +9693,6 @@ public class WindowManagerService extends IWindowManager.Stub
+                             // No focus for you!!!
+                             if (localLOGV || DEBUG_FOCUS_LIGHT) Slog.v(TAG_WM,
+                                     "findFocusedWindow: Reached focused app=" + mFocusedApp);
+-                            if (mFocusedApp.hasWindowsAlive()) {
+-                                mFocusingWindow = mFocusedApp.findMainWindow();
+-                                if (mFocusingWindow != null) {
+-                                    mFocusingActivity = mFocusingWindow.mAttrs.getTitle().toString();
+-                                }
+-                            }
+                             return null;
+                         }
+                     }
+-- 
+2.10.0
+

@@ -1,7 +1,7 @@
-From 359b9c1503253632094dfce7cd2b57eb774af46c Mon Sep 17 00:00:00 2001
+From 29316d59b261e11f645bbe352249c6f993220d20 Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Tue, 6 Sep 2016 14:37:56 +0200
-Subject: [PATCH 2/5] Fix NPE while setting network name
+Subject: [PATCH 2/6] Fix NPE while setting network name
 
 Change-Id: I124f86493e013d0b30d520cf988c5804a39d8a0a
 ---
@@ -22,5 +22,5 @@ index 8e7205b..6295e3b 100644
                      getOperatorAlphaShort()) ? mCurrentState.networkNameData : mServiceState.
                      getOperatorAlphaShort() + " " + getNetworkClassString(mServiceState);
 -- 
-2.9.3
+2.10.0
 
