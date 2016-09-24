@@ -1,7 +1,7 @@
-From 37cc7b3ea486e40f9707d53bf8cbb4b17ee1e0d4 Mon Sep 17 00:00:00 2001
+From b2b7f981adb6967e2554a6547c825984ce8ac6a5 Mon Sep 17 00:00:00 2001
 From: Chirayu Desai <cdesai@cyanogenmod.org>
 Date: Wed, 5 Dec 2012 18:45:29 -0500
-Subject: [PATCH 2/2] Developer Options: launch the Development app
+Subject: [PATCH 2/3] Developer Options: launch the Development app
 
 Change-Id: I0f798d197888ef7f40688009536040e061c410f4
 ---
@@ -91,5 +91,5 @@ index 4daa881..f8168ff 100644
  
      private ListPreference addListPreference(String prefKey) {
 -- 
-2.9.3
+2.10.0
 

@@ -1,0 +1,71 @@
+From 05da1ce3a6a13c7cb728e8932e34c048a8e93e1b Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Sat, 24 Sep 2016 21:46:11 +0200
+Subject: [PATCH 6/6] Revert "UsbManager: Add the support of USB charging only
+ function"
+
+This reverts commit a694b103f43a3570fb18a92614d6d6585ac3c493.
+---
+ core/java/android/hardware/usb/UsbManager.java                 | 8 --------
+ services/usb/java/com/android/server/usb/UsbDeviceManager.java | 4 +---
+ services/usb/java/com/android/server/usb/UsbService.java       | 1 -
+ 3 files changed, 1 insertion(+), 12 deletions(-)
+ mode change 100755 => 100644 core/java/android/hardware/usb/UsbManager.java
+ mode change 100755 => 100644 services/usb/java/com/android/server/usb/UsbDeviceManager.java
+ mode change 100755 => 100644 services/usb/java/com/android/server/usb/UsbService.java
+
+diff --git a/core/java/android/hardware/usb/UsbManager.java b/core/java/android/hardware/usb/UsbManager.java
+old mode 100755
+new mode 100644
+index 9afae31..f9a7d19
+--- a/core/java/android/hardware/usb/UsbManager.java
++++ b/core/java/android/hardware/usb/UsbManager.java
+@@ -245,14 +245,6 @@ public class UsbManager {
+     public static final String USB_FUNCTION_ACCESSORY = "accessory";
+ 
+     /**
+-     * Name of the charging USB function.
+-     * Used in extras for the {@link #ACTION_USB_STATE} broadcast
+-     *
+-     * {@hide}
+-     */
+-    public static final String USB_FUNCTION_CHARGING = "charging";
+-
+-    /**
+      * Name of extra for {@link #ACTION_USB_PORT_CHANGED}
+      * containing the {@link UsbPort} object for the port.
+      *
+diff --git a/services/usb/java/com/android/server/usb/UsbDeviceManager.java b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
+old mode 100755
+new mode 100644
+index 8cada77..df9242d
+--- a/services/usb/java/com/android/server/usb/UsbDeviceManager.java
++++ b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
+@@ -528,9 +528,7 @@ public class UsbDeviceManager {
+         }
+ 
+         private String applyAdbFunction(String functions) {
+-            //Not enable adb when it s charging mode
+-            if (mAdbEnabled &&
+-                !UsbManager.containsFunction(functions, UsbManager.USB_FUNCTION_CHARGING)) {
++            if (mAdbEnabled) {
+                 functions = UsbManager.addFunction(functions, UsbManager.USB_FUNCTION_ADB);
+             } else {
+                 functions = UsbManager.removeFunction(functions, UsbManager.USB_FUNCTION_ADB);
+diff --git a/services/usb/java/com/android/server/usb/UsbService.java b/services/usb/java/com/android/server/usb/UsbService.java
+old mode 100755
+new mode 100644
+index d6f6b82..d6dbe90
+--- a/services/usb/java/com/android/server/usb/UsbService.java
++++ b/services/usb/java/com/android/server/usb/UsbService.java
+@@ -313,7 +313,6 @@ public class UsbService extends IUsbManager.Stub {
+             case UsbManager.USB_FUNCTION_MTP:
+             case UsbManager.USB_FUNCTION_PTP:
+             case UsbManager.USB_FUNCTION_RNDIS:
+-            case UsbManager.USB_FUNCTION_CHARGING:
+                 return true;
+         }
+ 
+-- 
+2.10.0
+

@@ -1,0 +1,58 @@
+From 58b66a5e8b979d24984c3e3a30d2872f0964f1a2 Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Sat, 24 Sep 2016 21:45:37 +0200
+Subject: [PATCH 3/3] Revert "Settings: Fix charging mode adb still enable
+ issue"
+
+This reverts commit 715ba29b1de351e4e7603a64d60dd453c4f9ee9a.
+
+Change-Id: Id5f1c7a20f7696c15a712db017fc9cd804730461
+---
+ src/com/android/settings/deviceinfo/UsbBackend.java | 14 +++-----------
+ 1 file changed, 3 insertions(+), 11 deletions(-)
+ mode change 100755 => 100644 src/com/android/settings/deviceinfo/UsbBackend.java
+
+diff --git a/src/com/android/settings/deviceinfo/UsbBackend.java b/src/com/android/settings/deviceinfo/UsbBackend.java
+old mode 100755
+new mode 100644
+index 1e605e6..d30004f
+--- a/src/com/android/settings/deviceinfo/UsbBackend.java
++++ b/src/com/android/settings/deviceinfo/UsbBackend.java
+@@ -100,13 +100,7 @@ public class UsbBackend {
+             return MODE_DATA_TETHERING;
+         }
+         if (!mIsUnlocked) {
+-            if (mUsbManager.isFunctionEnabled(UsbManager.USB_FUNCTION_CHARGING)) {
+-                //Take this as charging mode
+-                return MODE_DATA_NONE;
+-            } else {
+-                // select none if no found
+-                return -1;
+-            }
++            return MODE_DATA_NONE;
+         } else if (mUsbManager.isFunctionEnabled(UsbManager.USB_FUNCTION_MTP)) {
+             return MODE_DATA_MTP;
+         } else if (mUsbManager.isFunctionEnabled(UsbManager.USB_FUNCTION_PTP)) {
+@@ -114,8 +108,7 @@ public class UsbBackend {
+         } else if (mUsbManager.isFunctionEnabled(UsbManager.USB_FUNCTION_MIDI)) {
+             return MODE_DATA_MIDI;
+         }
+-        // select none if no found
+-        return -1; // ...
++        return MODE_DATA_NONE; // ...
+     }
+ 
+     private void setUsbFunction(int mode) {
+@@ -138,8 +131,7 @@ public class UsbBackend {
+                 mContext.startActivity(intent);
+                 break;
+             default:
+-                //default mode is "charging"
+-                mUsbManager.setCurrentFunction(UsbManager.USB_FUNCTION_CHARGING);
++                mUsbManager.setCurrentFunction(null);
+                 mUsbManager.setUsbDataUnlocked(false);
+                 break;
+         }
+-- 
+2.10.0
+

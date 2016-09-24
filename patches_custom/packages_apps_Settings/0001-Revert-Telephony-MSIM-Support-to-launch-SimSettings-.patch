@@ -1,7 +1,7 @@
-From 15be26b9a6ab4a6a9b96a94df646d94a5bc7450b Mon Sep 17 00:00:00 2001
+From da28f12dddac9211158cc7592f701f792e82ae93 Mon Sep 17 00:00:00 2001
 From: thecrazyskull <anaskarbila@aospa.co>
 Date: Sat, 3 Sep 2016 18:38:20 +0200
-Subject: [PATCH 1/2] Revert "Telephony(MSIM): Support to launch SimSettings
+Subject: [PATCH 1/3] Revert "Telephony(MSIM): Support to launch SimSettings
  from vendor space"
 
 This reverts commit 188be8eef8f3bd3235798fb8a864ee3b29439e10.
@@ -13,10 +13,10 @@ Change-Id: I80cb50fd11a6ac79f74b74750b2a363528d9430d
  2 files changed, 4 insertions(+), 9 deletions(-)
 
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
-index 9bccc44..771304e 100755
+index fe1f856..15ba773 100755
 --- a/AndroidManifest.xml
 +++ b/AndroidManifest.xml
-@@ -2907,6 +2907,10 @@
+@@ -2906,6 +2906,10 @@
                  android:label="@string/sim_settings_title"
                  android:icon="@drawable/ic_settings_sim"
                  android:taskAffinity="">
@@ -48,5 +48,5 @@ index 05b1a76..280d5e7 100755
              Intent newIntent = new Intent("android.settings.SETTINGS");
              newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 -- 
-2.9.3
+2.10.0
 
