@@ -1,7 +1,7 @@
-From a7df77e563b7736b85967a9aa081b1aa24400428 Mon Sep 17 00:00:00 2001
+From bfeae37d447976d5ea0deb4091f2d3936efc332b Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sat, 24 Sep 2016 21:46:11 +0200
-Subject: [PATCH 6/7] Revert "UsbManager: Add the support of USB charging only
+Subject: [PATCH 6/6] Revert "UsbManager: Add the support of USB charging only
  function"
 
 This reverts commit a694b103f43a3570fb18a92614d6d6585ac3c493.
