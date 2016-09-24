@@ -1,7 +1,7 @@
-From cfb29c2dff9e51f08ad3e447d7a4d3eb5a6bbbe3 Mon Sep 17 00:00:00 2001
+From 2b0ecc5ed5dab17fe8719c970c048e436c2dda99 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Fri, 2 Sep 2016 19:13:20 +0200
-Subject: [PATCH] display: liblights and venus color
+Subject: [PATCH 1/2] display: liblights and venus color
 
 Change-Id: I18d09dd98a67f51bed58f0cc09f7d0ba1dbb5c82
 ---
@@ -43,5 +43,5 @@ index 02885fc..777319f 100644
  ifeq ($(call is-board-platform-in-list, msm8974 msm8226 msm8610 apq8084 \
          mpq8092 msm_bronze msm8916 msm8994), true)
 -- 
-2.9.3
+2.10.0
 

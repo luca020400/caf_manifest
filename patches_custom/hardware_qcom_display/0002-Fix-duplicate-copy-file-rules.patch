@@ -1,0 +1,39 @@
+From b65a466521cbabed49b39be80116d33000fe38b3 Mon Sep 17 00:00:00 2001
+From: Dan Willemsen <dwillemsen@google.com>
+Date: Tue, 23 Feb 2016 14:19:52 -0800
+Subject: [PATCH 2/2] Fix duplicate copy file rules
+
+If these libraries are built, both BUILD_COPY_FILES and
+BUILD_SHARED_LIBRARY would copy the headers. This would create a warning
+because multiple rules would define the same target header file.
+
+Bug: 27302058
+Change-Id: If91bd70d2320aaaee9679642ff9ea48b99739cbd
+(cherry picked from commit b360857e924f57588e29e47b047519ce097beed6)
+---
+ libcopybit/Android.mk | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libcopybit/Android.mk b/libcopybit/Android.mk
+index f6f7ed5..dc6bbfd 100644
+--- a/libcopybit/Android.mk
++++ b/libcopybit/Android.mk
+@@ -14,13 +14,13 @@
+ 
+ LOCAL_PATH:= $(call my-dir)
+ include $(LOCAL_PATH)/../common.mk
+-include $(CLEAR_VARS)
+ 
++include $(CLEAR_VARS)
+ LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
+ LOCAL_COPY_HEADERS            := copybit.h copybit_priv.h c2d2.h
+-#Copy the headers regardless of whether copybit is built
+ include $(BUILD_COPY_HEADERS)
+ 
++include $(CLEAR_VARS)
+ LOCAL_MODULE                  := copybit.$(TARGET_BOARD_PLATFORM)
+ LOCAL_MODULE_RELATIVE_PATH    := hw
+ LOCAL_MODULE_TAGS             := optional
+-- 
+2.10.0
+
