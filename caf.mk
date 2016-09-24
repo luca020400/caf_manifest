@@ -9,6 +9,7 @@ PRODUCT_PACKAGES += \
     LatinIME \
     Launcher3 \
     messaging \
+    SoundRecorder \
     SnapdragonCamera \
     SnapdragonGallery \
     SnapdragonMusic
