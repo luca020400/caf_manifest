@@ -11,6 +11,6 @@ done
 
 sh caf_manifest/patches_custom/apply.sh
 
-if [ -d "caf_manifest/patches_$USER" ]; then
-    sh "caf_manifest/patches_$USER/apply.sh"
-fi
+for folder in $@; do
+    sh "caf_manifest/patches_$folder/apply.sh"
+done
