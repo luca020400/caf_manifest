@@ -1,0 +1,42 @@
+From 1cb66ff4fd0494411d6d4b2874cefb880efa18a5 Mon Sep 17 00:00:00 2001
+From: 0xD34D <clark@scheffsblend.com>
+Date: Mon, 20 Jun 2016 22:59:48 +0300
+Subject: [PATCH 18/31] N-Extras: Add dynamic theme BootAnimation support
+
+Extracted from "Themes: Port to CM13 [1/3]"
+http://review.cyanogenmod.org/#/c/113273/14
+
+Change-Id: I4a71548d4ed6560be2bb80926023b275a1ea4e9c
+---
+ cmds/bootanimation/BootAnimation.cpp | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/cmds/bootanimation/BootAnimation.cpp b/cmds/bootanimation/BootAnimation.cpp
+index c5a3239..a5cf27c 100644
+--- a/cmds/bootanimation/BootAnimation.cpp
++++ b/cmds/bootanimation/BootAnimation.cpp
+@@ -62,7 +62,11 @@
+ #define OEM_BOOTANIMATION_FILE "/oem/media/bootanimation.zip"
+ #define SYSTEM_BOOTANIMATION_FILE "/system/media/bootanimation.zip"
+ #define SYSTEM_ENCRYPTED_BOOTANIMATION_FILE "/system/media/bootanimation-encrypted.zip"
++<<<<<<< HEAD
+ 
++=======
++#define THEME_BOOTANIMATION_FILE "/data/system/theme/bootanimation.zip"
++>>>>>>> N-Extras: Add dynamic theme BootAnimation support
+ #define EXIT_PROP_NAME "service.bootanim.exit"
+ 
+ namespace android {
+@@ -320,6 +324,9 @@ status_t BootAnimation::readyToRun() {
+     if (encryptedAnimation && (access(getAnimationFileName(IMG_ENC), R_OK) == 0)) {
+         mZipFileName = getAnimationFileName(IMG_ENC);
+     }
++    else if (access(THEME_BOOTANIMATION_FILE, R_OK) == 0) {
++        mZipFileName = THEME_BOOTANIMATION_FILE;
++    }
+     else if (access(getAnimationFileName(IMG_OEM), R_OK) == 0) {
+         mZipFileName = getAnimationFileName(IMG_OEM);
+     }
+-- 
+2.10.0
+

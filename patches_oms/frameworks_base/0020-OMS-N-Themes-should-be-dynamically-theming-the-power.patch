@@ -1,0 +1,227 @@
+From 0b66b09d2ba4b205474f1ff0031cae6ba21eece3 Mon Sep 17 00:00:00 2001
+From: 0xD34D <clark@scheffsblend.com>
+Date: Sun, 5 Jun 2016 04:25:44 +0300
+Subject: [PATCH 20/31] OMS-N: Themes should be dynamically theming the power
+ menu
+
+OMS introduced a different way of loading resources into apps, and this new behavior is still buggy. Power menu wasn't getting themed with
+our working oms code.
+
+This commit:
+ - Picks the following commits from CM
+ - Introduces a new helper class: ThemeUtils
+ - A lot of name refactoring, mainly uiContext --> mUiContext
+ - We can't check (yet) for theme change as CMTE, so I had to drop some if (mContext != null) guards. I didn't notice any performance difference.
+ - Both stock and themes should work
+
+Reworked for OMS by @KreAch3R and @camcory
+Updated to Android N by @nicholaschum
+
+This is a combination of the following commits:
+
+Show reboot dialog using themed resources: https://github.com/CyanogenMod/android_frameworks_base/commit/d8e138b06abf4147a37d2c3e8f1e95a7e9b52e5c
+by 0xD34D
+
+Themes: Theme power off and reboot dialog: https://github.com/CyanogenMod/android_frameworks_base/commit/f7fc9ceefa1e9cad133d694d93f43e3abf18406e
+by Altaf-Mahdi
+This patch allows theming of the dialog which
+comes after the power menu
+
+Distilled changes from these:
+https://github.com/CyanogenMod/android_frameworks_base/commit/a4e229c7c09f39ee54df4a150826cab9e435f890
+and
+https://github.com/CyanogenMod/cm_platform_sdk/blame/cm-13.0/sdk/src/java/org/cyanogenmod/internal/util/ThemeUtils.java
+
+Conflicts:
+	services/core/java/com/android/server/power/ShutdownThread.java
+
+Change-Id: I87e217d49d41df892409dd00142b964efbe45b71
+---
+ .../java/com/android/internal/util/ThemeUtils.java | 59 ++++++++++++++++++++++
+ .../com/android/server/policy/GlobalActions.java   | 15 ++++--
+ .../com/android/server/power/ShutdownThread.java   | 16 ++++--
+ 3 files changed, 84 insertions(+), 6 deletions(-)
+ create mode 100644 core/java/com/android/internal/util/ThemeUtils.java
+
+diff --git a/core/java/com/android/internal/util/ThemeUtils.java b/core/java/com/android/internal/util/ThemeUtils.java
+new file mode 100644
+index 0000000..07d07e1
+--- /dev/null
++++ b/core/java/com/android/internal/util/ThemeUtils.java
+@@ -0,0 +1,59 @@
++/*
++ * Copyright (C) 2016 The CyanogenMod Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ * http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.internal.util;
++
++import android.content.Context;
++import android.content.ContextWrapper;
++import android.content.pm.PackageManager;
++
++public class ThemeUtils {
++
++    /**
++     * Creates a themed context using the overlay applied to SystemUI
++     * @param context Base context
++     * @return Themed context
++     */
++    public static Context createUiContext(final Context context) {
++        try {
++            Context uiContext = context.createPackageContext("com.android.systemui",
++                    Context.CONTEXT_RESTRICTED);
++            return new ThemedUiContext(uiContext, context.getApplicationContext());
++        } catch (PackageManager.NameNotFoundException e) {
++        }
++
++        return null;
++    }
++
++    private static class ThemedUiContext extends ContextWrapper {
++        private Context mAppContext;
++
++        public ThemedUiContext(Context context, Context appContext) {
++            super(context);
++            mAppContext = appContext;
++        }
++
++        @Override
++        public Context getApplicationContext() {
++            return mAppContext;
++        }
++
++        @Override
++        public String getPackageName() {
++            return mAppContext.getPackageName();
++        }
++    }
++}
+diff --git a/services/core/java/com/android/server/policy/GlobalActions.java b/services/core/java/com/android/server/policy/GlobalActions.java
+index 457d3d5..a72ed5d 100644
+--- a/services/core/java/com/android/server/policy/GlobalActions.java
++++ b/services/core/java/com/android/server/policy/GlobalActions.java
+@@ -23,6 +23,7 @@ import com.android.internal.logging.MetricsProto.MetricsEvent;
+ import com.android.internal.telephony.TelephonyIntents;
+ import com.android.internal.telephony.TelephonyProperties;
+ import com.android.internal.R;
++import com.android.internal.util.ThemeUtils;
+ import com.android.internal.widget.LockPatternUtils;
+ 
+ import android.app.ActivityManager;
+@@ -108,6 +109,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
+ 
+     private final Context mContext;
+     private final WindowManagerFuncs mWindowManagerFuncs;
++    private Context mUiContext;
+     private final AudioManager mAudioManager;
+     private final IDreamManager mDreamManager;
+ 
+@@ -210,6 +212,12 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
+         }
+     }
+ 
++    private Context getUiContext() {
++        mUiContext = ThemeUtils.createUiContext(mContext);
++        mUiContext.setTheme(android.R.style.Theme_DeviceDefault_Light_DarkActionBar);
++        return mUiContext != null ? mUiContext : mContext;
++    }
++
+     /**
+      * Create the global actions dialog.
+      * @return A new dialog.
+@@ -311,12 +319,12 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
+ 
+         mAdapter = new MyAdapter();
+ 
+-        AlertParams params = new AlertParams(mContext);
++        AlertParams params = new AlertParams(getUiContext());
+         params.mAdapter = mAdapter;
+         params.mOnClickListener = this;
+         params.mForceInverseBackground = true;
+ 
+-        GlobalActionsDialog dialog = new GlobalActionsDialog(mContext, params);
++        GlobalActionsDialog dialog = new GlobalActionsDialog(getUiContext(), params);
+         dialog.setCanceledOnTouchOutside(false); // Handled by the custom class.
+ 
+         dialog.getListView().setItemsCanFocus(true);
+@@ -717,7 +725,8 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
+ 
+         public View getView(int position, View convertView, ViewGroup parent) {
+             Action action = getItem(position);
+-            return action.create(mContext, convertView, parent, LayoutInflater.from(mContext));
++            final Context context = getUiContext();
++            return action.create(context, convertView, parent, LayoutInflater.from(context));
+         }
+     }
+ 
+diff --git a/services/core/java/com/android/server/power/ShutdownThread.java b/services/core/java/com/android/server/power/ShutdownThread.java
+index 00c7ce9..0acda12 100644
+--- a/services/core/java/com/android/server/power/ShutdownThread.java
++++ b/services/core/java/com/android/server/power/ShutdownThread.java
+@@ -50,6 +50,7 @@ import android.os.storage.IMountShutdownObserver;
+ import android.system.ErrnoException;
+ import android.system.Os;
+ 
++import com.android.internal.util.ThemeUtils;
+ import com.android.internal.telephony.ITelephony;
+ import com.android.server.pm.PackageManagerService;
+ 
+@@ -134,7 +135,7 @@ public final class ShutdownThread extends Thread {
+         mReboot = false;
+         mRebootSafeMode = false;
+         mReason = reason;
+-        shutdownInner(context, confirm);
++        shutdownInner(getUiContext(context), confirm);
+     }
+ 
+     static void shutdownInner(final Context context, boolean confirm) {
+@@ -171,10 +172,12 @@ public final class ShutdownThread extends Thread {
+ 
+         if (confirm) {
+             final CloseDialogReceiver closer = new CloseDialogReceiver(context);
++            final Context mUiContext = getUiContext(context);
++
+             if (sConfirmDialog != null) {
+                 sConfirmDialog.dismiss();
+             }
+-            sConfirmDialog = new AlertDialog.Builder(context)
++            sConfirmDialog = new AlertDialog.Builder(mUiContext)
+                     .setTitle(mRebootSafeMode
+                             ? com.android.internal.R.string.reboot_safemode_title
+                             : showRebootOption
+@@ -232,7 +235,7 @@ public final class ShutdownThread extends Thread {
+         mRebootSafeMode = false;
+         mRebootHasProgressBar = false;
+         mReason = reason;
+-        shutdownInner(context, confirm);
++        shutdownInner(getUiContext(context), confirm);
+     }
+ 
+     /**
+@@ -746,4 +749,11 @@ public final class ShutdownThread extends Thread {
+             Log.w(TAG, "Timed out waiting for uncrypt.");
+         }
+     }
++
++    private static Context getUiContext(Context context) {
++        Context mUiContext = null;
++        mUiContext = ThemeUtils.createUiContext(context);
++        mUiContext.setTheme(android.R.style.Theme_DeviceDefault_Light_DarkActionBar);
++        return mUiContext != null ? mUiContext : context;
++    }
+ }
+-- 
+2.10.0
+

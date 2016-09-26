@@ -1,0 +1,490 @@
+From 2c39950d19ff47e425fc1e26945fca43f0b72804 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
+Date: Tue, 15 Dec 2015 15:45:23 +0100
+Subject: [PATCH 03/31] OMS-N: Make asset manager cookies opaque [3/14]
+
+Make asset manager cookies true first-class opaque handles.
+
+When adding resources to an asset manager a handle (cookie) is returned
+to the caller. The value of this handle used to have a one-to-one
+correlation with an underlying array. This implementation detail had
+leaked outside the asset manager boundaries and callers were relying on
+it as an undocumented invariant, which prevented any modifications of
+the asset manager except for the addition of more resources.
+
+Change how cookies are treated by callers in order to unlock the
+possibility to modify resources within an asset manager.
+
+Known caveat: this commit will introduce some recurrent overhead. It
+would probably make more sense to cache the retrieved information as
+part of makeStringBlocks.
+
+Bug: 31052947
+
+AOSP Change-Id: I87b342a385dedeaa8b4a31cfe207cd33e31c7630
+
+Change-Id: If7c4ad89d36dae932a6222f0ff5fc957af670d0b
+---
+ core/java/android/content/res/AssetManager.java |   6 +-
+ core/jni/android_util_AssetManager.cpp          |  16 ++++
+ include/androidfw/AssetManager.h                |  47 ++++++++++-
+ include/androidfw/ResourceTypes.h               |   7 +-
+ libs/androidfw/AssetManager.cpp                 | 104 ++++++++++++++++--------
+ libs/androidfw/ResourceTypes.cpp                |  25 ++++++
+ 6 files changed, 165 insertions(+), 40 deletions(-)
+
+diff --git a/core/java/android/content/res/AssetManager.java b/core/java/android/content/res/AssetManager.java
+index 4ad86f7..7ef5cfe 100644
+--- a/core/java/android/content/res/AssetManager.java
++++ b/core/java/android/content/res/AssetManager.java
+@@ -302,8 +302,8 @@ public final class AssetManager implements AutoCloseable {
+     }
+ 
+     /*package*/ final CharSequence getPooledStringForCookie(int cookie, int id) {
+-        // Cookies map to string blocks starting at 1.
+-        return mStringBlocks[cookie - 1].get(id);
++        final int index = cookieToIndex(cookie);
++        return mStringBlocks[index].get(id);
+     }
+ 
+     /**
+@@ -861,6 +861,8 @@ public final class AssetManager implements AutoCloseable {
+     private native final void init(boolean isSystem);
+     private native final void destroy();
+ 
++    private native final int cookieToIndex(int cookie);
++
+     private final void incRefsLocked(long id) {
+         if (DEBUG_REFS) {
+             if (mRefStacks == null) {
+diff --git a/core/jni/android_util_AssetManager.cpp b/core/jni/android_util_AssetManager.cpp
+index 1a7294f..1840b81 100644
+--- a/core/jni/android_util_AssetManager.cpp
++++ b/core/jni/android_util_AssetManager.cpp
+@@ -1031,6 +1031,20 @@ static jobject android_content_AssetManager_getAssignedPackageIdentifiers(JNIEnv
+     return sparseArray;
+ }
+ 
++static jint android_content_AssetManager_cookieToIndex(JNIEnv* env, jobject clazz, jint cookie)
++{
++    AssetManager* am = assetManagerForJavaObject(env, clazz);
++    if (am == NULL) {
++        return -1;
++    }
++    const ResTable& res = am->getResources();
++    ssize_t index = res.cookieToHeaderIndex(static_cast<int32_t>(cookie));
++    if (index < 0) {
++        jniThrowException(env, "java/lang/IllegalArgumentException", "Unknown cookie");
++    }
++    return index;
++}
++
+ static jlong android_content_AssetManager_newTheme(JNIEnv* env, jobject clazz)
+ {
+     AssetManager* am = assetManagerForJavaObject(env, clazz);
+@@ -2207,6 +2221,8 @@ static const JNINativeMethod gAssetManagerMethods[] = {
+         (void*) android_content_AssetManager_getCookieName },
+     { "getAssignedPackageIdentifiers","()Landroid/util/SparseArray;",
+         (void*) android_content_AssetManager_getAssignedPackageIdentifiers },
++    { "cookieToIndex","(I)I",
++        (void*) android_content_AssetManager_cookieToIndex },
+ 
+     // Themes.
+     { "newTheme", "()J",
+diff --git a/include/androidfw/AssetManager.h b/include/androidfw/AssetManager.h
+index 914ac3d..116e28a 100644
+--- a/include/androidfw/AssetManager.h
++++ b/include/androidfw/AssetManager.h
+@@ -30,6 +30,11 @@
+ #include <utils/threads.h>
+ #include <utils/Vector.h>
+ 
++#include <stdint.h> // INT32_MAX
++#ifndef INT32_MAX
++#define INT32_MAX ((int32_t)(0x7FFFFFFF))
++#endif
++
+ /*
+  * Native-app access is via the opaque typedef struct AAssetManager in the C namespace.
+  */
+@@ -238,13 +243,16 @@ public:
+ private:
+     struct asset_path
+     {
+-        asset_path() : path(""), type(kFileTypeRegular), idmap(""),
+-                       isSystemOverlay(false), isSystemAsset(false) {}
++        asset_path() :
++            path(""), type(kFileTypeRegular), targetPath(""), idmap(""),
++            isSystemOverlay(false), isSystemAsset(false), cookie(-1) {}
+         String8 path;
+         FileType type;
++        String8 targetPath;
+         String8 idmap;
+         bool isSystemOverlay;
+         bool isSystemAsset;
++        int32_t cookie;
+     };
+ 
+     Asset* openInPathLocked(const char* fileName, AccessMode mode,
+@@ -289,7 +297,7 @@ private:
+     Asset* openIdmapLocked(const struct asset_path& ap) const;
+ 
+     void addSystemOverlays(const char* pathOverlaysList, const String8& targetPackagePath,
+-            ResTable* sharedRes, size_t offset) const;
++            ResTable* sharedRes) const;
+ 
+     class SharedZip : public RefBase {
+     public:
+@@ -368,12 +376,43 @@ private:
+         mutable Vector<sp<SharedZip> > mZipFile;
+     };
+ 
++    class AssetPaths {
++        public:
++            enum {
++                // The old index-based implementation used cookie values close to zero.
++                // Switch to a completely different range of expected values to
++                // smoke out any uses of the old implementation.
++                FIRST_VALID_COOKIE = 1234,
++                NO_SUCH_COOKIE = INT32_MAX
++            };
++
++            AssetPaths() : mNextCookie(FIRST_VALID_COOKIE) {}
++
++            inline size_t size() const
++            {
++                return mAssetPaths.size();
++            }
++
++            inline const asset_path& itemAt(size_t index) const
++            {
++                return mAssetPaths.itemAt(index);
++            }
++
++            ssize_t add(const asset_path& ap, int32_t *cookie);
++            int32_t nextCookie(const int32_t cookie) const;
++            ssize_t cookieToIndex(const int32_t cookie) const;
++
++        private:
++            int32_t mNextCookie;
++            Vector<asset_path> mAssetPaths;
++    };
++
+     // Protect all internal state.
+     mutable Mutex   mLock;
+ 
+     ZipSet          mZipSet;
+ 
+-    Vector<asset_path> mAssetPaths;
++    AssetPaths      mAssetPaths;
+     char*           mLocale;
+     char*           mVendor;
+ 
+diff --git a/include/androidfw/ResourceTypes.h b/include/androidfw/ResourceTypes.h
+index 12a6b0f..50c2344 100644
+--- a/include/androidfw/ResourceTypes.h
++++ b/include/androidfw/ResourceTypes.h
+@@ -1567,7 +1567,7 @@ class ResTable
+ {
+ public:
+     ResTable();
+-    ResTable(const void* data, size_t size, const int32_t cookie,
++    ResTable(const void* data, size_t size, const int32_t cookie=-1,
+              bool copyData=false);
+     ~ResTable();
+ 
+@@ -1580,7 +1580,7 @@ public:
+             bool appAsLib=false, bool isSystemAsset=false);
+ 
+     status_t add(ResTable* src, bool isSystemAsset=false);
+-    status_t addEmpty(const int32_t cookie);
++    status_t addEmpty(const int32_t cookie=-1);
+ 
+     status_t getError() const;
+ 
+@@ -1845,6 +1845,9 @@ public:
+ 
+     const DynamicRefTable* getDynamicRefTableForCookie(int32_t cookie) const;
+ 
++    // Return the index in mHeader corresponding to the asset with cookie 'cookie'
++    ssize_t cookieToHeaderIndex(int32_t cookie) const;
++
+     // Return the configurations (ResTable_config) that we know about
+     void getConfigurations(Vector<ResTable_config>* configs, bool ignoreMipmap=false,
+             bool ignoreAndroidPackage=false, bool includeSystemConfigs=true) const;
+diff --git a/libs/androidfw/AssetManager.cpp b/libs/androidfw/AssetManager.cpp
+index 1ebdc65..556647e 100644
+--- a/libs/androidfw/AssetManager.cpp
++++ b/libs/androidfw/AssetManager.cpp
+@@ -191,9 +191,9 @@ bool AssetManager::addAssetPath(
+ 
+     // Skip if we have it already.
+     for (size_t i=0; i<mAssetPaths.size(); i++) {
+-        if (mAssetPaths[i].path == ap.path) {
++        if (mAssetPaths.itemAt(i).path == ap.path) {
+             if (cookie) {
+-                *cookie = static_cast<int32_t>(i+1);
++                *cookie = mAssetPaths.itemAt(i).cookie;
+             }
+             return true;
+         }
+@@ -203,19 +203,15 @@ bool AssetManager::addAssetPath(
+          ap.type == kFileTypeDirectory ? "dir" : "zip", ap.path.string());
+ 
+     ap.isSystemAsset = isSystemAsset;
+-    mAssetPaths.add(ap);
+-
+-    // new paths are always added at the end
+-    if (cookie) {
+-        *cookie = static_cast<int32_t>(mAssetPaths.size());
+-    }
++    const ssize_t index = mAssetPaths.add(ap, cookie);
++    ap = mAssetPaths.itemAt(index); // get updated version of asset_path
+ 
+ #ifdef __ANDROID__
+     // Load overlays, if any
+     asset_path oap;
+     for (size_t idx = 0; mZipSet.getOverlay(ap.path, idx, &oap); idx++) {
+         oap.isSystemAsset = isSystemAsset;
+-        mAssetPaths.add(oap);
++        mAssetPaths.add(oap, NULL);
+     }
+ #endif
+ 
+@@ -233,8 +229,8 @@ bool AssetManager::addOverlayPath(const String8& packagePath, int32_t* cookie)
+     AutoMutex _l(mLock);
+ 
+     for (size_t i = 0; i < mAssetPaths.size(); ++i) {
+-        if (mAssetPaths[i].idmap == idmapPath) {
+-           *cookie = static_cast<int32_t>(i + 1);
++        if (mAssetPaths.itemAt(i).idmap == idmapPath) {
++           *cookie = mAssetPaths.itemAt(i).cookie;
+             return true;
+          }
+      }
+@@ -281,8 +277,8 @@ bool AssetManager::addOverlayPath(const String8& packagePath, int32_t* cookie)
+     ALOGD("Overlay added: targetPath=%s overlayPath=%s idmapPath=%s\n",
+             targetPath.string(), overlayPath.string(), idmapPath.string());
+ #endif
+-    mAssetPaths.add(oap);
+-    *cookie = static_cast<int32_t>(mAssetPaths.size());
++    const ssize_t index = mAssetPaths.add(oap, cookie);
++    oap = mAssetPaths.itemAt(index); // get updated version of asset_path
+ 
+     if (mResources != NULL) {
+         appendPathToResTable(oap);
+@@ -337,18 +333,18 @@ bool AssetManager::addDefaultAssets()
+ int32_t AssetManager::nextAssetPath(const int32_t cookie) const
+ {
+     AutoMutex _l(mLock);
+-    const size_t next = static_cast<size_t>(cookie) + 1;
+-    return next > mAssetPaths.size() ? -1 : next;
++    const int32_t nextCookie = mAssetPaths.nextCookie(cookie);
++    return nextCookie == AssetPaths::NO_SUCH_COOKIE ? -1 : nextCookie;
+ }
+ 
+ String8 AssetManager::getAssetPath(const int32_t cookie) const
+ {
+     AutoMutex _l(mLock);
+-    const size_t which = static_cast<size_t>(cookie) - 1;
+-    if (which < mAssetPaths.size()) {
+-        return mAssetPaths[which].path;
++    const ssize_t index = mAssetPaths.cookieToIndex(cookie);
++    if (index < 0) {
++        return String8();
+     }
+-    return String8();
++    return mAssetPaths.itemAt(index).path;
+ }
+ 
+ /*
+@@ -545,7 +541,7 @@ Asset* AssetManager::openNonAsset(const char* fileName, AccessMode mode, int32_t
+         Asset* pAsset = openNonAssetInPathLocked(
+             fileName, mode, mAssetPaths.itemAt(i));
+         if (pAsset != NULL) {
+-            if (outCookie != NULL) *outCookie = static_cast<int32_t>(i + 1);
++            if (outCookie != NULL) *outCookie = mAssetPaths.itemAt(i).cookie;
+             return pAsset != kExcludedAsset ? pAsset : NULL;
+         }
+     }
+@@ -555,9 +551,8 @@ Asset* AssetManager::openNonAsset(const char* fileName, AccessMode mode, int32_t
+ 
+ Asset* AssetManager::openNonAsset(const int32_t cookie, const char* fileName, AccessMode mode)
+ {
+-    const size_t which = static_cast<size_t>(cookie) - 1;
+-
+     AutoMutex _l(mLock);
++    const size_t which = mAssetPaths.cookieToIndex(cookie);
+ 
+     LOG_FATAL_IF(mAssetPaths.size() == 0, "No assets added to AssetManager");
+ 
+@@ -647,14 +642,14 @@ bool AssetManager::appendPathToResTable(const asset_path& ap, bool appAsLib) con
+                 // can quickly copy it out for others.
+                 ALOGV("Creating shared resources for %s", ap.path.string());
+                 sharedRes = new ResTable();
+-                sharedRes->add(ass, idmap, nextEntryIdx + 1, false);
+-#ifdef __ANDROID__
++                sharedRes->add(ass, idmap, ap.cookie, false);
++#ifdef HAVE_ANDROID_OS
+                 const char* data = getenv("ANDROID_DATA");
+                 LOG_ALWAYS_FATAL_IF(data == NULL, "ANDROID_DATA not set");
+                 String8 overlaysListPath(data);
+                 overlaysListPath.appendPath(kResourceCache);
+                 overlaysListPath.appendPath("overlays.list");
+-                addSystemOverlays(overlaysListPath.string(), ap.path, sharedRes, nextEntryIdx);
++                addSystemOverlays(overlaysListPath.string(), ap.path, sharedRes);
+ #endif
+                 sharedRes = const_cast<AssetManager*>(this)->
+                     mZipSet.setZipResourceTable(ap.path, sharedRes);
+@@ -676,7 +671,7 @@ bool AssetManager::appendPathToResTable(const asset_path& ap, bool appAsLib) con
+             mResources->add(sharedRes, ap.isSystemAsset);
+         } else {
+             ALOGV("Parsing resources for %s", ap.path.string());
+-            mResources->add(ass, idmap, nextEntryIdx + 1, !shared, appAsLib, ap.isSystemAsset);
++            mResources->add(ass, idmap, ap.cookie, !shared, appAsLib, ap.isSystemAsset);
+         }
+         onlyEmptyResources = false;
+ 
+@@ -685,7 +680,7 @@ bool AssetManager::appendPathToResTable(const asset_path& ap, bool appAsLib) con
+         }
+     } else {
+         ALOGV("Installing empty resources in to table %p\n", mResources);
+-        mResources->addEmpty(nextEntryIdx + 1);
++        mResources->addEmpty(ap.cookie);
+     }
+ 
+     if (idmap != NULL) {
+@@ -769,7 +764,7 @@ Asset* AssetManager::openIdmapLocked(const struct asset_path& ap) const
+ }
+ 
+ void AssetManager::addSystemOverlays(const char* pathOverlaysList,
+-        const String8& targetPackagePath, ResTable* sharedRes, size_t offset) const
++        const String8& targetPackagePath, ResTable* sharedRes) const
+ {
+     FILE* fin = fopen(pathOverlaysList, "r");
+     if (fin == NULL) {
+@@ -800,10 +795,9 @@ void AssetManager::addSystemOverlays(const char* pathOverlaysList,
+ 
+         if (oass != NULL) {
+             Asset* oidmap = openIdmapLocked(oap);
+-            offset++;
+-            sharedRes->add(oass, oidmap, offset + 1, false);
+-            const_cast<AssetManager*>(this)->mAssetPaths.add(oap);
++            const ssize_t index = const_cast<AssetManager*>(this)->mAssetPaths.add(oap, NULL);
+             const_cast<AssetManager*>(this)->mZipSet.addOverlay(targetPackagePath, oap);
++            sharedRes->add(oass, oidmap, mAssetPaths.itemAt(index).cookie, false);
+         }
+     }
+     fclose(fin);
+@@ -1275,7 +1269,7 @@ AssetDir* AssetManager::openNonAssetDir(const int32_t cookie, const char* dirNam
+ 
+     pMergedInfo = new SortedVector<AssetDir::FileInfo>;
+ 
+-    const size_t which = static_cast<size_t>(cookie) - 1;
++    const size_t which = mAssetPaths.cookieToIndex(cookie);
+ 
+     if (which < mAssetPaths.size()) {
+         const asset_path& ap = mAssetPaths.itemAt(which);
+@@ -2121,3 +2115,49 @@ int AssetManager::ZipSet::getIndex(const String8& zip) const
+ 
+     return mZipPath.size()-1;
+ }
++
++ssize_t AssetManager::AssetPaths::add(const asset_path& ap, int32_t *cookie)
++{
++    asset_path copy(ap);
++    copy.cookie = mNextCookie++;
++    if (cookie) {
++        *cookie = copy.cookie;
++    }
++    if (ap.targetPath == "") {
++        // regular package -> just append it
++        return mAssetPaths.add(copy);
++    }
++
++    const size_t N = mAssetPaths.size();
++    for (ssize_t index = N - 1; index >= 0; index--) {
++        const asset_path& current = mAssetPaths[index];
++        if ((current.targetPath == "" && ap.targetPath == current.path) ||
++                (current.targetPath != "" && ap.targetPath == current.targetPath)) {
++            return mAssetPaths.insertAt(copy, index + 1);
++        }
++    }
++    return -1;
++}
++
++int32_t AssetManager::AssetPaths::nextCookie(const int32_t cookie) const
++{
++    int32_t next = NO_SUCH_COOKIE;
++    for (size_t i = 0; i < mAssetPaths.size(); i++) {
++        const asset_path& ap = mAssetPaths.itemAt(i);
++        if (ap.cookie > cookie && ap.cookie < next) {
++            next = ap.cookie;
++        }
++    }
++    return next;
++}
++
++ssize_t AssetManager::AssetPaths::cookieToIndex(const int32_t cookie) const
++{
++    for (size_t i = 0; i < mAssetPaths.size(); i++) {
++        const asset_path& ap = mAssetPaths.itemAt(i);
++        if (ap.cookie == cookie) {
++            return i;
++        }
++    }
++    return NO_SUCH_COOKIE;
++}
+diff --git a/libs/androidfw/ResourceTypes.cpp b/libs/androidfw/ResourceTypes.cpp
+index ceeb12b..c8c2da9 100644
+--- a/libs/androidfw/ResourceTypes.cpp
++++ b/libs/androidfw/ResourceTypes.cpp
+@@ -3744,6 +3744,11 @@ status_t ResTable::add(ResTable* src, bool isSystemAsset)
+ }
+ 
+ status_t ResTable::addEmpty(const int32_t cookie) {
++    if (cookie >= 0 && cookieToHeaderIndex(cookie) >= 0) {
++        ALOGE("cookie %d already added to table", cookie);
++        return BAD_VALUE;
++    }
++
+     Header* header = new Header(this);
+     header->index = mHeaders.size();
+     header->cookie = cookie;
+@@ -3773,6 +3778,11 @@ status_t ResTable::addInternal(const void* data, size_t dataSize, const void* id
+         return UNKNOWN_ERROR;
+     }
+ 
++    if (cookie >= 0 && cookieToHeaderIndex(cookie) >= 0) {
++        ALOGE("cookie %d already added to table", cookie);
++        return BAD_VALUE;
++    }
++
+     Header* header = new Header(this);
+     header->index = mHeaders.size();
+     header->cookie = cookie;
+@@ -5875,6 +5885,21 @@ void ResTable::getConfigurations(Vector<ResTable_config>* configs, bool ignoreMi
+     forEachConfiguration(ignoreMipmap, ignoreAndroidPackage, includeSystemConfigs, func);
+ }
+ 
++ssize_t ResTable::cookieToHeaderIndex(int32_t cookie) const
++{
++    if (cookie < 0) {
++        return -1;
++    }
++
++    const size_t N = mHeaders.size();
++    for (size_t i = 0; i < N; i++) {
++        if (mHeaders[i]->cookie == cookie) {
++            return mHeaders[i]->index;
++        }
++    }
++    return -1;
++}
++
+ static bool compareString8AndCString(const String8& str, const char* cStr) {
+     return strcmp(str.string(), cStr) < 0;
+ }
+-- 
+2.10.0
+

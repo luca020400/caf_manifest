@@ -1,0 +1,110 @@
+From d71c0114a900c03aac328416a0942be92988e39f Mon Sep 17 00:00:00 2001
+From: Dave Kover <dkover@cyngn.com>
+Date: Wed, 18 Feb 2015 16:11:14 -0800
+Subject: [PATCH 23/31] Themes: Expose resolver hardcoded colors
+
+Expose background colors of the resolver list.
+
+Change-Id: I3a0a460c5ffe0f5057b3b9ec92faa7a3e09c9e01
+---
+ .../res/layout/resolver_different_item_header.xml    |  2 +-
+ core/res/res/layout/resolver_list.xml                |  8 ++++----
+ core/res/res/layout/resolver_list_with_default.xml   |  2 +-
+ core/res/res/values/projekt_colors.xml               | 20 ++++++++++++++++++++
+ 4 files changed, 26 insertions(+), 6 deletions(-)
+ create mode 100644 core/res/res/values/projekt_colors.xml
+
+diff --git a/core/res/res/layout/resolver_different_item_header.xml b/core/res/res/layout/resolver_different_item_header.xml
+index 5889136..201c8c6 100644
+--- a/core/res/res/layout/resolver_different_item_header.xml
++++ b/core/res/res/layout/resolver_different_item_header.xml
+@@ -29,6 +29,6 @@
+     android:paddingEnd="16dp"
+     android:paddingTop="8dp"
+     android:paddingBottom="8dp"
+-    android:background="@color/white"
++    android:background="@color/resolver_list_bg"
+     android:elevation="8dp"
+     />
+diff --git a/core/res/res/layout/resolver_list.xml b/core/res/res/layout/resolver_list.xml
+index ae94503..c86d1e3 100644
+--- a/core/res/res/layout/resolver_list.xml
++++ b/core/res/res/layout/resolver_list.xml
+@@ -30,7 +30,7 @@
+         android:layout_height="wrap_content"
+         android:layout_alwaysShow="true"
+         android:elevation="8dp"
+-        android:background="@color/white">
++        android:background="@color/resolver_list_bg">
+ 
+         <TextView
+             android:id="@+id/profile_button"
+@@ -69,7 +69,7 @@
+         android:id="@+id/resolver_list"
+         android:clipToPadding="false"
+         android:scrollbarStyle="outsideOverlay"
+-        android:background="@color/white"
++        android:background="@color/resolver_list_bg"
+         android:elevation="8dp"
+         android:nestedScrollingEnabled="true"
+         android:scrollIndicators="top|bottom"
+@@ -78,7 +78,7 @@
+     <TextView android:id="@+id/empty"
+               android:layout_width="match_parent"
+               android:layout_height="wrap_content"
+-              android:background="@color/white"
++              android:background="@color/resolver_list_bg"
+               android:elevation="8dp"
+               android:layout_alwaysShow="true"
+               android:text="@string/noApplications"
+@@ -99,7 +99,7 @@
+         android:orientation="horizontal"
+         android:layoutDirection="locale"
+         android:measureWithLargestChild="true"
+-        android:background="@color/white"
++        android:background="@color/resolver_list_bg"
+         android:paddingTop="8dp"
+         android:paddingBottom="8dp"
+         android:paddingStart="12dp"
+diff --git a/core/res/res/layout/resolver_list_with_default.xml b/core/res/res/layout/resolver_list_with_default.xml
+index 02dc2ed..a0b03a0 100644
+--- a/core/res/res/layout/resolver_list_with_default.xml
++++ b/core/res/res/layout/resolver_list_with_default.xml
+@@ -29,7 +29,7 @@
+         android:layout_height="wrap_content"
+         android:layout_alwaysShow="true"
+         android:orientation="vertical"
+-        android:background="@color/white"
++        android:background="@color/resolver_list_bg"
+         android:elevation="8dp">
+ 
+         <LinearLayout
+diff --git a/core/res/res/values/projekt_colors.xml b/core/res/res/values/projekt_colors.xml
+new file mode 100644
+index 0000000..c77eb01
+--- /dev/null
++++ b/core/res/res/values/projekt_colors.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++    Copyright (c) 2016 Project Substratum
++
++    Licensed under the Apache License, Version 2.0 (the "License");
++    you may not use this file except in compliance with the License.
++    You may obtain a copy of the License at
++
++        http://www.apache.org/licenses/LICENSE-2.0
++
++    Unless required by applicable law or agreed to in writing, software
++    distributed under the License is distributed on an "AS IS" BASIS,
++    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++    See the License for the specific language governing permissions and
++    limitations under the License.
++-->
++
++<resources>
++    <color name="resolver_list_bg">@color/white</color>
++</resources>
+-- 
+2.10.0
+

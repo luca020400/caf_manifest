@@ -1,0 +1,113 @@
+From 533b2e907d275b29a38db5931f97b68c758c4eda Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
+Date: Tue, 23 Feb 2016 13:51:50 +0100
+Subject: [PATCH 09/31] OMS-N: Check invariants after ResTable is modified
+ [9/14]
+
+Add a debug flag to ResTable that, if set, checks a set of invariants
+after an asset has been added or removed from the table.
+
+By default, the checks are disabled.
+
+Bug: 31052947
+
+AOSP Change-Id: I8c86c00a792681c8ea45adef946d425b31bddb24
+
+Change-Id: If92d4076d4c9bde9622e2c0f2d61252a5e8ca3db
+---
+ include/androidfw/ResourceTypes.h |  2 ++
+ libs/androidfw/ResourceTypes.cpp  | 46 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 48 insertions(+)
+
+diff --git a/include/androidfw/ResourceTypes.h b/include/androidfw/ResourceTypes.h
+index 72cea2e..6d15331 100644
+--- a/include/androidfw/ResourceTypes.h
++++ b/include/androidfw/ResourceTypes.h
+@@ -1933,6 +1933,8 @@ private:
+     void forEachConfiguration(bool ignoreMipmap, bool ignoreAndroidPackage,
+                               bool includeSystemConfigs, const Func& f) const;
+ 
++    void verifyInvariants() const;
++
+     mutable Mutex               mLock;
+ 
+     // Mutex that controls access to the list of pre-filtered configurations
+diff --git a/libs/androidfw/ResourceTypes.cpp b/libs/androidfw/ResourceTypes.cpp
+index 207b842..75a760d 100644
+--- a/libs/androidfw/ResourceTypes.cpp
++++ b/libs/androidfw/ResourceTypes.cpp
+@@ -74,6 +74,7 @@ static const bool kDebugLoadTableSuperNoisy = false;
+ static const bool kDebugTableTheme = false;
+ static const bool kDebugResXMLTree = false;
+ static const bool kDebugLibNoisy = false;
++static const bool kDebugTableInvariants = false;
+ 
+ // TODO: This code uses 0xFFFFFFFF converted to bag_set* as a sentinel value. This is bad practice.
+ 
+@@ -3901,6 +3902,9 @@ status_t ResTable::addInternal(const void* data, size_t dataSize, const void* id
+     if (kDebugTableNoisy) {
+         ALOGV("Returning from add with mError=%d\n", mError);
+     }
++    if (kDebugTableInvariants) {
++        verifyInvariants();
++    }
+     return mError;
+ }
+ 
+@@ -3977,6 +3981,10 @@ status_t ResTable::remove(const int32_t cookie)
+ 
+     delete header;
+ 
++    if (kDebugTableInvariants) {
++        verifyInvariants();
++    }
++
+     return mError;
+ }
+ 
+@@ -7217,4 +7225,42 @@ void ResTable::print(bool inclValues) const
+     }
+ }
+ 
++void ResTable::verifyInvariants() const
++{
++    size_t numberOfPackages = 0;
++    for (size_t i = 0; i < mPackageGroups.size(); i++) {
++        const PackageGroup* pg = mPackageGroups[i];
++        numberOfPackages += pg->packages.size();
++    }
++    size_t numberOfHeaders = 0;
++    for (size_t i = 0; i < mHeaders.size(); i++) {
++        const ResTable_header* resHeader = mHeaders.itemAt(i)->header;
++        // Empty headers have no corresponding package, so ignore those for now.
++        // Note: for now, assume each header corresponds to a single package.
++        if (resHeader->header.size > sizeof(ResTable_header)) {
++            numberOfHeaders++;
++        }
++    }
++    LOG_ALWAYS_FATAL_IF(numberOfPackages != numberOfHeaders,
++            "packages and headers must map one-to-one");
++
++    size_t numberOfPackageGroupMappings = 0;
++    for (size_t i = 0; i < 256; i++) {
++        if (mPackageMap[i] != 0) {
++            numberOfPackageGroupMappings++;
++        }
++    }
++    LOG_ALWAYS_FATAL_IF(numberOfPackageGroupMappings != mPackageGroups.size(),
++            "package groups and mPackageMap must map one-to-one");
++
++    for (size_t i = 0; i < mPackageGroups.size(); i++) {
++        const PackageGroup* pg = mPackageGroups[i];
++        for (size_t j = 0; j < pg->types.size(); j++) {
++            const TypeList& tl = pg->types[j];
++            LOG_ALWAYS_FATAL_IF(tl.size() > pg->packages.size(),
++                    "number of types must not exceed number of packages");
++        }
++    }
++}
++
+ }   // namespace android
+-- 
+2.10.0
+

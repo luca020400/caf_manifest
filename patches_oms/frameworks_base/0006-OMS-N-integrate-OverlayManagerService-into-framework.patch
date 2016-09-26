@@ -1,0 +1,2064 @@
+From f6611f7cfcad0f233c5e36f4774146df0bd2b08b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
+Date: Thu, 2 Jun 2016 09:35:31 +0200
+Subject: [PATCH 06/31] OMS-N: integrate OverlayManagerService into framework
+ [6/14]
+
+Hand over ownership of overlays to OverlayManagerService.
+
+Changes to a package's overlays are propagated using the activity life
+cycle. Affected activities will be recreated as needed. This provides a
+well-defined point to modify an application's assets while the
+application is paused.
+
+Consolidate how overlays targeting the system and overlays targeting
+regular applications are handled. Previously, system overlays were
+handled as a special case. Now, everything is handled identically. As a
+side effect, the call to idmap --scan during Zygote boot has become
+obsolete and is removed.
+
+Deprecate and remove use of SCAN_TRUSTED_OVERLAY from
+PackageManagerService. Previously, the flag was used to restrict what
+paths overlays were allowed to be installed in. Now, overlay packages
+are first class packages and it is up to the OverlayManagerService to
+decide whether to use the overlay or not.
+
+Deprecate ApplicationInfo.resourcesDirs. The old constant value is
+obsolete now that the set of overlays can change dynamically. Query the
+OverlayManagerService instead.
+
+Bug: 31052947
+
+Co-authored-by: Martin Wallgren <martin.wallgren@sonymobile.com>
+Signed-off-by: Zoran Jovanovic <zoran.jovanovic@sonymobile.com>
+AOSP Change-Id: Idc96dae6fc075d5373aa055bbf50e919136d7353
+
+Conflicts:
+	core/java/android/content/pm/PackageParser.java
+	services/core/java/com/android/server/pm/PackageManagerService.java
+
+Change-Id: I175c0af62a59aed9ac94147683e90c5a77cd40d9
+---
+ cmds/idmap/Android.mk                              |   2 +-
+ cmds/idmap/idmap.cpp                               |  55 --------
+ cmds/idmap/idmap.h                                 |   6 -
+ core/java/android/app/ActivityManagerNative.java   |  22 +++
+ core/java/android/app/ActivityThread.java          |  65 ++++++++-
+ .../android/app/ApplicationPackageManager.java     |   2 +-
+ core/java/android/app/ApplicationThreadNative.java |  26 +++-
+ core/java/android/app/ContextImpl.java             |   3 -
+ core/java/android/app/IActivityManager.java        |   3 +
+ core/java/android/app/IApplicationThread.java      |   4 +-
+ core/java/android/app/LoadedApk.java               |  12 +-
+ core/java/android/app/ResourcesManager.java        |  71 ++++++++--
+ core/java/android/content/pm/ApplicationInfo.java  |  15 --
+ core/java/android/content/pm/PackageParser.java    |  24 +---
+ core/java/android/content/res/AssetManager.java    |   8 ++
+ core/java/android/content/res/Resources.java       |  16 +++
+ core/java/android/content/res/ResourcesImpl.java   |  71 ++++++++--
+ core/java/android/content/res/ResourcesKey.java    |  17 +--
+ core/jni/android_util_AssetManager.cpp             | 120 ++++------------
+ .../android/content/res/ResourcesManagerTest.java  |  28 ++--
+ include/androidfw/AssetManager.h                   |  18 +--
+ libs/androidfw/AssetManager.cpp                    | 102 +-------------
+ .../com/android/server/SystemServiceManager.java   |  23 +--
+ .../android/server/am/ActivityManagerService.java  |  53 ++++++-
+ .../android/server/om/OverlayManagerService.java   |  37 +++--
+ .../android/server/pm/PackageManagerService.java   | 156 +++------------------
+ services/java/com/android/server/SystemServer.java |   4 +
+ 27 files changed, 416 insertions(+), 547 deletions(-)
+
+diff --git a/cmds/idmap/Android.mk b/cmds/idmap/Android.mk
+index 50ccb07..eb6da18 100644
+--- a/cmds/idmap/Android.mk
++++ b/cmds/idmap/Android.mk
+@@ -15,7 +15,7 @@
+ LOCAL_PATH:= $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+-LOCAL_SRC_FILES := idmap.cpp create.cpp scan.cpp inspect.cpp
++LOCAL_SRC_FILES := idmap.cpp create.cpp inspect.cpp
+ 
+ LOCAL_SHARED_LIBRARIES := liblog libutils libandroidfw
+ 
+diff --git a/cmds/idmap/idmap.cpp b/cmds/idmap/idmap.cpp
+index 3ab1915..d388977 100644
+--- a/cmds/idmap/idmap.cpp
++++ b/cmds/idmap/idmap.cpp
+@@ -13,8 +13,6 @@ SYNOPSIS \n\
+       idmap --help \n\
+       idmap --fd target overlay fd \n\
+       idmap --path target overlay idmap \n\
+-      idmap --scan target-package-name-to-look-for path-to-target-apk dir-to-hold-idmaps \\\
+-                   dir-to-scan [additional-dir-to-scan [additional-dir-to-scan [...]]]\n\
+       idmap --inspect idmap \n\
+ \n\
+ DESCRIPTION \n\
+@@ -49,11 +47,6 @@ OPTIONS \n\
+       --path: create idmap for target package 'target' (path to apk) and overlay package \n\
+               'overlay' (path to apk); write results to 'idmap' (path). \n\
+ \n\
+-      --scan: non-recursively search directory 'dir-to-scan' (path) for overlay packages with \n\
+-              target package 'target-package-name-to-look-for' (package name) present at\n\
+-              'path-to-target-apk' (path to apk). For each overlay package found, create an\n\
+-              idmap file in 'dir-to-hold-idmaps' (path). \n\
+-\n\
+       --inspect: decode the binary format of 'idmap' (path) and display the contents in a \n\
+                  debug-friendly format. \n\
+ \n\
+@@ -97,16 +90,6 @@ EXAMPLES \n\
+ NOTES \n\
+       This tool and its expected invocation from installd is modelled on dexopt.";
+ 
+-    bool verify_directory_readable(const char *path)
+-    {
+-        return access(path, R_OK | X_OK) == 0;
+-    }
+-
+-    bool verify_directory_writable(const char *path)
+-    {
+-        return access(path, W_OK) == 0;
+-    }
+-
+     bool verify_file_readable(const char *path)
+     {
+         return access(path, R_OK) == 0;
+@@ -167,36 +150,6 @@ NOTES \n\
+         return idmap_create_path(target_apk_path, overlay_apk_path, idmap_path);
+     }
+ 
+-    int maybe_scan(const char *target_package_name, const char *target_apk_path,
+-            const char *idmap_dir, const android::Vector<const char *> *overlay_dirs)
+-    {
+-        if (!verify_root_or_system()) {
+-            fprintf(stderr, "error: permission denied: not user root or user system\n");
+-            return -1;
+-        }
+-
+-        if (!verify_file_readable(target_apk_path)) {
+-            ALOGD("error: failed to read apk %s: %s\n", target_apk_path, strerror(errno));
+-            return -1;
+-        }
+-
+-        if (!verify_directory_writable(idmap_dir)) {
+-            ALOGD("error: no write access to %s: %s\n", idmap_dir, strerror(errno));
+-            return -1;
+-        }
+-
+-        const size_t N = overlay_dirs->size();
+-        for (size_t i = 0; i < N; i++) {
+-            const char *dir = overlay_dirs->itemAt(i);
+-            if (!verify_directory_readable(dir)) {
+-                ALOGD("error: no read access to %s: %s\n", dir, strerror(errno));
+-                return -1;
+-            }
+-        }
+-
+-        return idmap_scan(target_package_name, target_apk_path, idmap_dir, overlay_dirs);
+-    }
+-
+     int maybe_inspect(const char *idmap_path)
+     {
+         // anyone (not just root or system) may do --inspect
+@@ -235,14 +188,6 @@ int main(int argc, char **argv)
+         return maybe_create_path(argv[2], argv[3], argv[4]);
+     }
+ 
+-    if (argc >= 6 && !strcmp(argv[1], "--scan")) {
+-        android::Vector<const char *> v;
+-        for (int i = 5; i < argc; i++) {
+-            v.push(argv[i]);
+-        }
+-        return maybe_scan(argv[2], argv[3], argv[4], &v);
+-    }
+-
+     if (argc == 3 && !strcmp(argv[1], "--inspect")) {
+         return maybe_inspect(argv[2]);
+     }
+diff --git a/cmds/idmap/idmap.h b/cmds/idmap/idmap.h
+index 8d4210b..5914de9 100644
+--- a/cmds/idmap/idmap.h
++++ b/cmds/idmap/idmap.h
+@@ -25,12 +25,6 @@ int idmap_create_path(const char *target_apk_path, const char *overlay_apk_path,
+ 
+ int idmap_create_fd(const char *target_apk_path, const char *overlay_apk_path, int fd);
+ 
+-// Regarding target_package_name: the idmap_scan implementation should
+-// be able to extract this from the manifest in target_apk_path,
+-// simplifying the external API.
+-int idmap_scan(const char *target_package_name, const char *target_apk_path,
+-        const char *idmap_dir, const android::Vector<const char *> *overlay_dirs);
+-
+ int idmap_inspect(const char *idmap_path);
+ 
+ #endif // _IDMAP_H_
+diff --git a/core/java/android/app/ActivityManagerNative.java b/core/java/android/app/ActivityManagerNative.java
+index dcac633..f53fd4a 100644
+--- a/core/java/android/app/ActivityManagerNative.java
++++ b/core/java/android/app/ActivityManagerNative.java
+@@ -58,6 +58,7 @@ import com.android.internal.os.IResultReceiver;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.Map;
+ 
+ /** {@hide} */
+ public abstract class ActivityManagerNative extends Binder implements IActivityManager
+@@ -1226,6 +1227,14 @@ public abstract class ActivityManagerNative extends Binder implements IActivityM
+             return true;
+         }
+ 
++        case UPDATE_ASSETS_TRANSACTION: {
++            data.enforceInterface(IActivityManager.descriptor);
++            int userId = data.readInt();
++            updateAssets(userId, data.readHashMap(null));
++            reply.writeNoException();
++            return true;
++        }
++
+         case SET_REQUESTED_ORIENTATION_TRANSACTION: {
+             data.enforceInterface(IActivityManager.descriptor);
+             IBinder token = data.readStrongBinder();
+@@ -4556,6 +4565,19 @@ class ActivityManagerProxy implements IActivityManager
+         data.recycle();
+         reply.recycle();
+     }
++    public void updateAssets(int userId, Map<String, String[]> overlays)
++        throws RemoteException
++    {
++        Parcel data = Parcel.obtain();
++        Parcel reply = Parcel.obtain();
++        data.writeInterfaceToken(IActivityManager.descriptor);
++        data.writeInt(userId);
++        data.writeMap(overlays);
++        mRemote.transact(UPDATE_ASSETS_TRANSACTION, data, reply, 0);
++        reply.readException();
++        data.recycle();
++        reply.recycle();
++    }
+     public void setRequestedOrientation(IBinder token, int requestedOrientation)
+             throws RemoteException {
+         Parcel data = Parcel.obtain();
+diff --git a/core/java/android/app/ActivityThread.java b/core/java/android/app/ActivityThread.java
+index 0728bdf..3655036 100644
+--- a/core/java/android/app/ActivityThread.java
++++ b/core/java/android/app/ActivityThread.java
+@@ -516,6 +516,7 @@ public final class ActivityThread {
+         boolean persistent;
+         Configuration config;
+         CompatibilityInfo compatInfo;
++        List<String[]> assetPaths;
+ 
+         /** Initial values for {@link Profiler}. */
+         ProfilerInfo initProfilerInfo;
+@@ -645,6 +646,8 @@ public final class ActivityThread {
+ 
+         private int mLastProcessState = -1;
+ 
++        private ArrayMap<String, Object> mAssetKeys = new ArrayMap<>(2);
++
+         private void updatePendingConfiguration(Configuration config) {
+             synchronized (mResourcesManager) {
+                 if (mPendingConfiguration == null ||
+@@ -850,7 +853,8 @@ public final class ActivityThread {
+                 IUiAutomationConnection instrumentationUiConnection, int debugMode,
+                 boolean enableBinderTracking, boolean trackAllocation,
+                 boolean isRestrictedBackupMode, boolean persistent, Configuration config,
+-                CompatibilityInfo compatInfo, Map<String, IBinder> services, Bundle coreSettings) {
++                CompatibilityInfo compatInfo, Map<String, IBinder> services, Bundle coreSettings,
++                List <String[]> assetPaths) {
+ 
+             if (services != null) {
+                 // Setup the service cache in the ServiceManager
+@@ -874,6 +878,7 @@ public final class ActivityThread {
+             data.persistent = persistent;
+             data.config = config;
+             data.compatInfo = compatInfo;
++            data.assetPaths = assetPaths;
+             data.initProfilerInfo = profilerInfo;
+             sendMessage(H.BIND_APPLICATION, data);
+         }
+@@ -891,6 +896,31 @@ public final class ActivityThread {
+             sendMessage(H.CONFIGURATION_CHANGED, config);
+         }
+ 
++        public void scheduleAssetsChanged(String[] assetPaths) {
++            if (assetPaths == null || assetPaths.length == 0) {
++                Slog.w(TAG, "Cannot update assets: array is " +
++                        assetPaths == null ? "null" : "empty");
++                return;
++            }
++            String targetPath = assetPaths[0];
++            if (!mAssetKeys.containsKey(targetPath)) {
++                mAssetKeys.put(targetPath, new Object());
++            }
++            Object key = mAssetKeys.get(targetPath);
++
++            Bundle b = new Bundle(1);
++            b.putStringArray("assetPaths", assetPaths);
++
++            Message m = Message.obtain();
++            m.what = H.ASSETS_CHANGED;
++            m.obj = key;
++            m.setData(b);
++
++            // remove any pending updates to the same asset path before posting this update
++            mH.removeMessages(H.ASSETS_CHANGED, key);
++            mH.sendMessage(m);
++        }
++
+         public void updateTimeZone() {
+             TimeZone.setDefault(null);
+         }
+@@ -1388,6 +1418,7 @@ public final class ActivityThread {
+         public static final int MULTI_WINDOW_MODE_CHANGED = 152;
+         public static final int PICTURE_IN_PICTURE_MODE_CHANGED = 153;
+         public static final int LOCAL_VOICE_INTERACTION_STARTED = 154;
++        public static final int ASSETS_CHANGED = 155;
+ 
+         String codeToString(int code) {
+             if (DEBUG_MESSAGES) {
+@@ -1444,6 +1475,7 @@ public final class ActivityThread {
+                     case MULTI_WINDOW_MODE_CHANGED: return "MULTI_WINDOW_MODE_CHANGED";
+                     case PICTURE_IN_PICTURE_MODE_CHANGED: return "PICTURE_IN_PICTURE_MODE_CHANGED";
+                     case LOCAL_VOICE_INTERACTION_STARTED: return "LOCAL_VOICE_INTERACTION_STARTED";
++                    case ASSETS_CHANGED: return "ASSETS_CHANGED";
+                 }
+             }
+             return Integer.toString(code);
+@@ -1697,6 +1729,10 @@ public final class ActivityThread {
+                     handleLocalVoiceInteractionStarted((IBinder) ((SomeArgs) msg.obj).arg1,
+                             (IVoiceInteractor) ((SomeArgs) msg.obj).arg2);
+                     break;
++                case ASSETS_CHANGED:
++                    Bundle b = msg.getData();
++                    handleAssetsChanged(b.getStringArray("assetPaths"));
++                    break;
+             }
+             Object obj = msg.obj;
+             if (obj instanceof SomeArgs) {
+@@ -1841,10 +1877,10 @@ public final class ActivityThread {
+      * Creates the top level resources for the given package. Will return an existing
+      * Resources if one has already been created.
+      */
+-    Resources getTopLevelResources(String resDir, String[] splitResDirs, String[] overlayDirs,
+-            String[] libDirs, int displayId, LoadedApk pkgInfo) {
+-        return mResourcesManager.getResources(null, resDir, splitResDirs, overlayDirs, libDirs,
+-                displayId, null, pkgInfo.getCompatibilityInfo(), pkgInfo.getClassLoader());
++    Resources getTopLevelResources(String resDir, String[] splitResDirs, String[] libDirs,
++            int displayId, LoadedApk pkgInfo) {
++        return mResourcesManager.getResources(null, resDir, splitResDirs, libDirs, displayId,
++                null, pkgInfo.getCompatibilityInfo(), pkgInfo.getClassLoader());
+     }
+ 
+     final Handler getHandler() {
+@@ -4697,6 +4733,10 @@ public final class ActivityThread {
+         return config;
+     }
+ 
++    public final void applyAssetsChangedToResources(String[] assetPaths) {
++        handleAssetsChanged(assetPaths);
++    }
++
+     final void handleConfigurationChanged(Configuration config, CompatibilityInfo compat) {
+ 
+         int configDiff = 0;
+@@ -4759,6 +4799,16 @@ public final class ActivityThread {
+         }
+     }
+ 
++    final void handleAssetsChanged(String[] assetPaths) {
++        synchronized (mResourcesManager) {
++            mResourcesManager.applyAssetsChangedLocked(assetPaths);
++        }
++
++        for (Map.Entry<IBinder, ActivityClientRecord> entry : mActivities.entrySet()) {
++            requestRelaunchActivity(entry.getKey(), null, null, 0, false, null, null, false, false);
++        }
++    }
++
+     static void freeTextLayoutCachesIfNeeded(int configDiff) {
+         if (configDiff != 0) {
+             // Ask text layout engine to free its caches if there is a locale change
+@@ -5121,6 +5171,11 @@ public final class ActivityThread {
+ 
+             // This calls mResourcesManager so keep it within the synchronized block.
+             applyCompatConfiguration(mCurDefaultDisplayDpi);
++
++            // Prepare the asset manager for any overlay packages to load
++            for (String[] paths : data.assetPaths) {
++                mResourcesManager.applyAssetsChangedLocked(paths);
++            }
+         }
+ 
+         data.info = getPackageInfoNoCheck(data.appInfo, data.compatInfo);
+diff --git a/core/java/android/app/ApplicationPackageManager.java b/core/java/android/app/ApplicationPackageManager.java
+index 8cc1bc4..d38e1c7 100644
+--- a/core/java/android/app/ApplicationPackageManager.java
++++ b/core/java/android/app/ApplicationPackageManager.java
+@@ -1249,7 +1249,7 @@ public class ApplicationPackageManager extends PackageManager {
+             return mContext.mMainThread.getTopLevelResources(
+                     sameUid ? app.sourceDir : app.publicSourceDir,
+                     sameUid ? app.splitSourceDirs : app.splitPublicSourceDirs,
+-                    app.resourceDirs, app.sharedLibraryFiles, Display.DEFAULT_DISPLAY,
++                    app.sharedLibraryFiles, Display.DEFAULT_DISPLAY,
+                     mContext.mPackageInfo);
+         } catch (Resources.NotFoundException cause) {
+             final NameNotFoundException ex =
+diff --git a/core/java/android/app/ApplicationThreadNative.java b/core/java/android/app/ApplicationThreadNative.java
+index d6da3f4..8e2b7be 100644
+--- a/core/java/android/app/ApplicationThreadNative.java
++++ b/core/java/android/app/ApplicationThreadNative.java
+@@ -43,6 +43,7 @@ import com.android.internal.content.ReferrerIntent;
+ 
+ import java.io.FileDescriptor;
+ import java.io.IOException;
++import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+@@ -301,10 +302,11 @@ public abstract class ApplicationThreadNative extends Binder
+             CompatibilityInfo compatInfo = CompatibilityInfo.CREATOR.createFromParcel(data);
+             HashMap<String, IBinder> services = data.readHashMap(null);
+             Bundle coreSettings = data.readBundle();
++            ArrayList<String[]> assetPaths = data.readArrayList(null);
+             bindApplication(packageName, info, providers, testName, profilerInfo, testArgs,
+                     testWatcher, uiAutomationConnection, testMode, enableBinderTracking,
+                     trackAllocation, restrictedBackupMode, persistent, config, compatInfo, services,
+-                    coreSettings);
++                    coreSettings, assetPaths);
+             return true;
+         }
+ 
+@@ -330,6 +332,14 @@ public abstract class ApplicationThreadNative extends Binder
+             return true;
+         }
+ 
++        case SCHEDULE_ASSETS_CHANGED_TRANSACTION:
++        {
++            data.enforceInterface(IApplicationThread.descriptor);
++            String[] assetPaths = data.readStringArray();
++            scheduleAssetsChanged(assetPaths);
++            return true;
++        }
++
+         case UPDATE_TIME_ZONE_TRANSACTION: {
+             data.enforceInterface(IApplicationThread.descriptor);
+             updateTimeZone();
+@@ -1052,7 +1062,8 @@ class ApplicationThreadProxy implements IApplicationThread {
+             IUiAutomationConnection uiAutomationConnection, int debugMode,
+             boolean enableBinderTracking, boolean trackAllocation, boolean restrictedBackupMode,
+             boolean persistent, Configuration config, CompatibilityInfo compatInfo,
+-            Map<String, IBinder> services, Bundle coreSettings) throws RemoteException {
++            Map<String, IBinder> services, Bundle coreSettings, List<String[]> assetPaths)
++            throws RemoteException {
+         Parcel data = Parcel.obtain();
+         data.writeInterfaceToken(IApplicationThread.descriptor);
+         data.writeString(packageName);
+@@ -1082,6 +1093,7 @@ class ApplicationThreadProxy implements IApplicationThread {
+         compatInfo.writeToParcel(data, 0);
+         data.writeMap(services);
+         data.writeBundle(coreSettings);
++        data.writeList(assetPaths);
+         mRemote.transact(BIND_APPLICATION_TRANSACTION, data, null,
+                 IBinder.FLAG_ONEWAY);
+         data.recycle();
+@@ -1124,6 +1136,16 @@ class ApplicationThreadProxy implements IApplicationThread {
+         data.recycle();
+     }
+ 
++    public final void scheduleAssetsChanged(String[] assetPaths)
++            throws RemoteException {
++        Parcel data = Parcel.obtain();
++        data.writeInterfaceToken(IApplicationThread.descriptor);
++        data.writeStringArray(assetPaths);
++        mRemote.transact(SCHEDULE_ASSETS_CHANGED_TRANSACTION, data, null,
++                IBinder.FLAG_ONEWAY);
++        data.recycle();
++    }
++
+     public void updateTimeZone() throws RemoteException {
+         Parcel data = Parcel.obtain();
+         data.writeInterfaceToken(IApplicationThread.descriptor);
+diff --git a/core/java/android/app/ContextImpl.java b/core/java/android/app/ContextImpl.java
+index e6ca520..f1e9b12 100644
+--- a/core/java/android/app/ContextImpl.java
++++ b/core/java/android/app/ContextImpl.java
+@@ -2069,7 +2069,6 @@ class ContextImpl extends Context {
+                     || overrideConfiguration != null
+                     || (compatInfo != null && compatInfo.applicationScale
+                             != resources.getCompatibilityInfo().applicationScale)) {
+-
+                 if (container != null) {
+                     // This is a nested Context, so it can't be a base Activity context.
+                     // Just create a regular Resources object associated with the Activity.
+@@ -2077,7 +2076,6 @@ class ContextImpl extends Context {
+                             activityToken,
+                             packageInfo.getResDir(),
+                             packageInfo.getSplitResDirs(),
+-                            packageInfo.getOverlayDirs(),
+                             packageInfo.getApplicationInfo().sharedLibraryFiles,
+                             displayId,
+                             overrideConfiguration,
+@@ -2090,7 +2088,6 @@ class ContextImpl extends Context {
+                             activityToken,
+                             packageInfo.getResDir(),
+                             packageInfo.getSplitResDirs(),
+-                            packageInfo.getOverlayDirs(),
+                             packageInfo.getApplicationInfo().sharedLibraryFiles,
+                             displayId,
+                             overrideConfiguration,
+diff --git a/core/java/android/app/IActivityManager.java b/core/java/android/app/IActivityManager.java
+index 80ba3eb..2b2f744 100644
+--- a/core/java/android/app/IActivityManager.java
++++ b/core/java/android/app/IActivityManager.java
+@@ -59,6 +59,7 @@ import com.android.internal.app.IVoiceInteractor;
+ import com.android.internal.os.IResultReceiver;
+ 
+ import java.util.List;
++import java.util.Map;
+ 
+ /**
+  * System private API for talking with the activity manager service.  This
+@@ -266,6 +267,7 @@ public interface IActivityManager extends IInterface {
+ 
+     public Configuration getConfiguration() throws RemoteException;
+     public void updateConfiguration(Configuration values) throws RemoteException;
++    public void updateAssets(int userId, Map<String, String[]> overlays) throws RemoteException;
+     public void setRequestedOrientation(IBinder token,
+             int requestedOrientation) throws RemoteException;
+     public int getRequestedOrientation(IBinder token) throws RemoteException;
+@@ -1043,4 +1045,5 @@ public interface IActivityManager extends IInterface {
+     int START_CONFIRM_DEVICE_CREDENTIAL_INTENT = IBinder.FIRST_CALL_TRANSACTION + 374;
+     int SEND_IDLE_JOB_TRIGGER_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 375;
+     int SEND_INTENT_SENDER_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 376;
++    int UPDATE_ASSETS_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 377;
+ }
+diff --git a/core/java/android/app/IApplicationThread.java b/core/java/android/app/IApplicationThread.java
+index 559f69f..0a6b2f7 100644
+--- a/core/java/android/app/IApplicationThread.java
++++ b/core/java/android/app/IApplicationThread.java
+@@ -98,11 +98,12 @@ public interface IApplicationThread extends IInterface {
+             IInstrumentationWatcher testWatcher, IUiAutomationConnection uiAutomationConnection,
+             int debugMode, boolean enableBinderTracking, boolean trackAllocation,
+             boolean restrictedBackupMode, boolean persistent, Configuration config,
+-            CompatibilityInfo compatInfo, Map<String, IBinder> services, Bundle coreSettings)
++            CompatibilityInfo compatInfo, Map<String, IBinder> services, Bundle coreSettings, List<String[]> assetPaths)
+             throws RemoteException;
+     void scheduleExit() throws RemoteException;
+     void scheduleSuicide() throws RemoteException;
+     void scheduleConfigurationChanged(Configuration config) throws RemoteException;
++    void scheduleAssetsChanged(String[] assetPaths) throws RemoteException;
+     void updateTimeZone() throws RemoteException;
+     void clearDnsCache() throws RemoteException;
+     void setHttpProxy(String proxy, String port, String exclList,
+@@ -224,4 +225,5 @@ public interface IApplicationThread extends IInterface {
+     int SCHEDULE_MULTI_WINDOW_CHANGED_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+58;
+     int SCHEDULE_PICTURE_IN_PICTURE_CHANGED_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+59;
+     int SCHEDULE_LOCAL_VOICE_INTERACTION_STARTED_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+60;
++    int SCHEDULE_ASSETS_CHANGED_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+61;
+ }
+diff --git a/core/java/android/app/LoadedApk.java b/core/java/android/app/LoadedApk.java
+index b889c8f..2c3ee84 100644
+--- a/core/java/android/app/LoadedApk.java
++++ b/core/java/android/app/LoadedApk.java
+@@ -96,7 +96,6 @@ public final class LoadedApk {
+     private String mResDir;
+     private String[] mSplitAppDirs;
+     private String[] mSplitResDirs;
+-    private String[] mOverlayDirs;
+     private String[] mSharedLibraries;
+     private String mDataDir;
+     private String mLibDir;
+@@ -188,7 +187,6 @@ public final class LoadedApk {
+         mResDir = null;
+         mSplitAppDirs = null;
+         mSplitResDirs = null;
+-        mOverlayDirs = null;
+         mSharedLibraries = null;
+         mDataDir = null;
+         mDataDirFile = null;
+@@ -290,8 +288,7 @@ public final class LoadedApk {
+             createOrUpdateClassLoaderLocked(addedPaths);
+             if (mResources != null) {
+                 mResources = mActivityThread.getTopLevelResources(mResDir, mSplitResDirs,
+-                        mOverlayDirs, mApplicationInfo.sharedLibraryFiles, Display.DEFAULT_DISPLAY,
+-                        this);
++                        mApplicationInfo.sharedLibraryFiles, Display.DEFAULT_DISPLAY, this);
+             }
+         }
+     }
+@@ -304,7 +301,6 @@ public final class LoadedApk {
+         mResDir = aInfo.uid == myUid ? aInfo.sourceDir : aInfo.publicSourceDir;
+         mSplitAppDirs = aInfo.splitSourceDirs;
+         mSplitResDirs = aInfo.uid == myUid ? aInfo.splitSourceDirs : aInfo.splitPublicSourceDirs;
+-        mOverlayDirs = aInfo.resourceDirs;
+         mSharedLibraries = aInfo.sharedLibraryFiles;
+         mDataDir = aInfo.dataDir;
+         mLibDir = aInfo.nativeLibraryDir;
+@@ -737,10 +733,6 @@ public final class LoadedApk {
+         return mSplitResDirs;
+     }
+ 
+-    public String[] getOverlayDirs() {
+-        return mOverlayDirs;
+-    }
+-
+     public String getDataDir() {
+         return mDataDir;
+     }
+@@ -763,7 +755,7 @@ public final class LoadedApk {
+ 
+     public Resources getResources(ActivityThread mainThread) {
+         if (mResources == null) {
+-            mResources = mainThread.getTopLevelResources(mResDir, mSplitResDirs, mOverlayDirs,
++            mResources = mainThread.getTopLevelResources(mResDir, mSplitResDirs,
+                     mApplicationInfo.sharedLibraryFiles, Display.DEFAULT_DISPLAY, this);
+         }
+         return mResources;
+diff --git a/core/java/android/app/ResourcesManager.java b/core/java/android/app/ResourcesManager.java
+index c4673a3..675e5b1 100644
+--- a/core/java/android/app/ResourcesManager.java
++++ b/core/java/android/app/ResourcesManager.java
+@@ -109,6 +109,17 @@ public class ResourcesManager {
+     private final ArrayMap<Pair<Integer, DisplayAdjustments>, WeakReference<Display>> mDisplays =
+             new ArrayMap<>();
+ 
++    /**
++     * A mapping of asset paths and overlay paths targeting those paths.
++     *
++     * Example of an app with one overlay package loaded:
++     *
++     *     mAssetPaths["/system/framework/framework-res.apk"] = ["/system/framework/framework-res.apk"]
++     *     mAssetPaths["/data/app/SomeApp/base.apk"] = \
++     *             ["/data/app/foo/base.apk", "/data/app/SomeOverlay/base.apk"]
++     */
++    private final ArrayMap<String, String[]> mAssetPaths = new ArrayMap<>(2);
++
+     public static ResourcesManager getInstance() {
+         synchronized (ResourcesManager.class) {
+             if (sResourcesManager == null) {
+@@ -263,12 +274,6 @@ public class ResourcesManager {
+             }
+         }
+ 
+-        if (key.mOverlayDirs != null) {
+-            for (final String idmapPath : key.mOverlayDirs) {
+-                assets.addOverlayPath(idmapPath);
+-            }
+-        }
+-
+         if (key.mLibDirs != null) {
+             for (final String libDir : key.mLibDirs) {
+                 if (libDir.endsWith(".apk")) {
+@@ -375,6 +380,22 @@ public class ResourcesManager {
+     }
+ 
+     /**
++     * Make a Resources object load the current set of enabled overlay packages.
++     */
++    private void updateAllAssets(Resources resources) {
++        try {
++            Trace.traceBegin(Trace.TRACE_TAG_RESOURCES, "ResourcesManager#updateAllAssets");
++            int N = mAssetPaths.size();
++            for (int i = 0; i < N; i++) {
++                String[] assetPaths = mAssetPaths.valueAt(i);
++                resources.updateAssets(assetPaths);
++            }
++        } finally {
++            Trace.traceEnd(Trace.TRACE_TAG_RESOURCES);
++        }
++    }
++
++    /**
+      * Gets an existing Resources object tied to this Activity, or creates one if it doesn't exist
+      * or the class loader is different.
+      */
+@@ -405,6 +426,7 @@ public class ResourcesManager {
+             Slog.d(TAG, "- creating new ref=" + resources);
+             Slog.d(TAG, "- setting ref=" + resources + " with impl=" + impl);
+         }
++        updateAllAssets(resources);
+         return resources;
+     }
+ 
+@@ -432,6 +454,7 @@ public class ResourcesManager {
+         // Create a new Resources reference and use the existing ResourcesImpl object.
+         Resources resources = new Resources(classLoader);
+         resources.setImpl(impl);
++        updateAllAssets(resources);
+         mResourceReferences.add(new WeakReference<>(resources));
+         if (DEBUG) {
+             Slog.d(TAG, "- creating new ref=" + resources);
+@@ -449,7 +472,6 @@ public class ResourcesManager {
+      * @param activityToken Represents an Activity.
+      * @param resDir The base resource path. Can be null (only framework resources will be loaded).
+      * @param splitResDirs An array of split resource paths. Can be null.
+-     * @param overlayDirs An array of overlay paths. Can be null.
+      * @param libDirs An array of resource library paths. Can be null.
+      * @param displayId The ID of the display for which to create the resources.
+      * @param overrideConfig The configuration to apply on top of the base configuration. Can be
+@@ -463,7 +485,6 @@ public class ResourcesManager {
+     public @NonNull Resources createBaseActivityResources(@NonNull IBinder activityToken,
+             @Nullable String resDir,
+             @Nullable String[] splitResDirs,
+-            @Nullable String[] overlayDirs,
+             @Nullable String[] libDirs,
+             int displayId,
+             @Nullable Configuration overrideConfig,
+@@ -475,7 +496,6 @@ public class ResourcesManager {
+             final ResourcesKey key = new ResourcesKey(
+                     resDir,
+                     splitResDirs,
+-                    overlayDirs,
+                     libDirs,
+                     displayId,
+                     overrideConfig != null ? new Configuration(overrideConfig) : null, // Copy
+@@ -610,7 +630,6 @@ public class ResourcesManager {
+      * @param activityToken Represents an Activity. If null, global resources are assumed.
+      * @param resDir The base resource path. Can be null (only framework resources will be loaded).
+      * @param splitResDirs An array of split resource paths. Can be null.
+-     * @param overlayDirs An array of overlay paths. Can be null.
+      * @param libDirs An array of resource library paths. Can be null.
+      * @param displayId The ID of the display for which to create the resources.
+      * @param overrideConfig The configuration to apply on top of the base configuration. Can be
+@@ -625,7 +644,6 @@ public class ResourcesManager {
+     public @NonNull Resources getResources(@Nullable IBinder activityToken,
+             @Nullable String resDir,
+             @Nullable String[] splitResDirs,
+-            @Nullable String[] overlayDirs,
+             @Nullable String[] libDirs,
+             int displayId,
+             @Nullable Configuration overrideConfig,
+@@ -636,7 +654,6 @@ public class ResourcesManager {
+             final ResourcesKey key = new ResourcesKey(
+                     resDir,
+                     splitResDirs,
+-                    overlayDirs,
+                     libDirs,
+                     displayId,
+                     overrideConfig != null ? new Configuration(overrideConfig) : null, // Copy
+@@ -733,8 +750,7 @@ public class ResourcesManager {
+ 
+                     // Create the new ResourcesKey with the rebased override config.
+                     final ResourcesKey newKey = new ResourcesKey(oldKey.mResDir,
+-                            oldKey.mSplitResDirs,
+-                            oldKey.mOverlayDirs, oldKey.mLibDirs, oldKey.mDisplayId,
++                            oldKey.mSplitResDirs, oldKey.mLibDirs, oldKey.mDisplayId,
+                             rebasedOverrideConfig, oldKey.mCompatInfo);
+ 
+                     if (DEBUG) {
+@@ -869,7 +885,6 @@ public class ResourcesManager {
+                         updatedResourceKeys.put(impl, new ResourcesKey(
+                                 key.mResDir,
+                                 key.mSplitResDirs,
+-                                key.mOverlayDirs,
+                                 newLibAssets,
+                                 key.mDisplayId,
+                                 key.mOverrideConfiguration,
+@@ -910,4 +925,30 @@ public class ResourcesManager {
+             }
+         }
+     }
++
++    final void applyAssetsChangedLocked(String[] assetPaths) {
++        if (assetPaths.length == 0) {
++            throw new IllegalArgumentException(
++                    "at least the path to the target apk must be specified");
++        }
++        try {
++            Trace.traceBegin(Trace.TRACE_TAG_RESOURCES,
++                    "ResourcesManager#applyAssetsChangedLocked");
++            mAssetPaths.put(assetPaths[0], assetPaths);
++
++            ApplicationPackageManager.configurationChanged();
++            Resources.updateSystemAssets(assetPaths);
++
++            final int refCount = mResourceReferences.size();
++            for (int i = 0; i < refCount; i++) {
++                WeakReference<Resources> weakResourceRef = mResourceReferences.get(i);
++                Resources resources = weakResourceRef != null ? weakResourceRef.get() : null;
++                if (resources != null) {
++                    resources.updateAssets(assetPaths);
++                }
++            }
++        } finally {
++            Trace.traceEnd(Trace.TRACE_TAG_RESOURCES);
++        }
++    }
+ }
+diff --git a/core/java/android/content/pm/ApplicationInfo.java b/core/java/android/content/pm/ApplicationInfo.java
+index b7364e2..86d96ad 100644
+--- a/core/java/android/content/pm/ApplicationInfo.java
++++ b/core/java/android/content/pm/ApplicationInfo.java
+@@ -598,15 +598,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+     public String[] splitPublicSourceDirs;
+ 
+     /**
+-     * Full paths to the locations of extra resource packages this application
+-     * uses. This field is only used if there are extra resource packages,
+-     * otherwise it is null.
+-     * 
+-     * {@hide}
+-     */
+-    public String[] resourceDirs;
+-
+-    /**
+      * String retrieved from the seinfo tag found in selinux policy. This value
+      * can be overridden with a value set through the mac_permissions.xml policy
+      * construct. This value is useful in setting an SELinux security context on
+@@ -806,9 +797,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+                 && !Arrays.equals(splitSourceDirs, splitPublicSourceDirs)) {
+             pw.println(prefix + "splitPublicSourceDirs=" + Arrays.toString(splitPublicSourceDirs));
+         }
+-        if (resourceDirs != null) {
+-            pw.println(prefix + "resourceDirs=" + Arrays.toString(resourceDirs));
+-        }
+         if ((flags&DUMP_FLAG_DETAILS) != 0 && seinfo != null) {
+             pw.println(prefix + "seinfo=" + seinfo);
+         }
+@@ -913,7 +901,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         nativeLibraryRootRequiresIsa = orig.nativeLibraryRootRequiresIsa;
+         primaryCpuAbi = orig.primaryCpuAbi;
+         secondaryCpuAbi = orig.secondaryCpuAbi;
+-        resourceDirs = orig.resourceDirs;
+         seinfo = orig.seinfo;
+         sharedLibraryFiles = orig.sharedLibraryFiles;
+         dataDir = orig.dataDir;
+@@ -969,7 +956,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         dest.writeInt(nativeLibraryRootRequiresIsa ? 1 : 0);
+         dest.writeString(primaryCpuAbi);
+         dest.writeString(secondaryCpuAbi);
+-        dest.writeStringArray(resourceDirs);
+         dest.writeString(seinfo);
+         dest.writeStringArray(sharedLibraryFiles);
+         dest.writeString(dataDir);
+@@ -1025,7 +1011,6 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
+         nativeLibraryRootRequiresIsa = source.readInt() != 0;
+         primaryCpuAbi = source.readString();
+         secondaryCpuAbi = source.readString();
+-        resourceDirs = source.readStringArray();
+         seinfo = source.readString();
+         sharedLibraryFiles = source.readStringArray();
+         dataDir = source.readString();
+diff --git a/core/java/android/content/pm/PackageParser.java b/core/java/android/content/pm/PackageParser.java
+index 5ffe004..b88bf54 100644
+--- a/core/java/android/content/pm/PackageParser.java
++++ b/core/java/android/content/pm/PackageParser.java
+@@ -663,10 +663,9 @@ public class PackageParser {
+     public final static int PARSE_IS_SYSTEM_DIR = 1<<6;
+     public final static int PARSE_IS_PRIVILEGED = 1<<7;
+     public final static int PARSE_COLLECT_CERTIFICATES = 1<<8;
+-    public final static int PARSE_TRUSTED_OVERLAY = 1<<9;
+-    public final static int PARSE_ENFORCE_CODE = 1<<10;
+-    public final static int PARSE_IS_EPHEMERAL = 1<<11;
+-    public final static int PARSE_FORCE_SDK = 1<<12;
++    public final static int PARSE_ENFORCE_CODE = 1<<9;
++    public final static int PARSE_IS_EPHEMERAL = 1<<10;
++    public final static int PARSE_FORCE_SDK = 1<<11;
+ 
+     private static final Comparator<String> sSplitNameComparator = new SplitNameComparator();
+ 
+@@ -1801,9 +1800,6 @@ public class PackageParser {
+                         com.android.internal.R.styleable.AndroidManifestResourceOverlay);
+                 pkg.mOverlayTarget = sa.getString(
+                         com.android.internal.R.styleable.AndroidManifestResourceOverlay_targetPackage);
+-                pkg.mOverlayPriority = sa.getInt(
+-                        com.android.internal.R.styleable.AndroidManifestResourceOverlay_priority,
+-                        -1);
+                 sa.recycle();
+ 
+                 if (pkg.mOverlayTarget == null) {
+@@ -1811,19 +1807,7 @@ public class PackageParser {
+                     mParseError = PackageManager.INSTALL_PARSE_FAILED_MANIFEST_MALFORMED;
+                     return null;
+                 }
+-
+-                if (pkg.mOverlayPriority != -1 && !trustedOverlay) {
+-                    Slog.w(TAG, "overlay package " + pkg.packageName + " installed in " +
+-                            "unreliable location, priority will be ignored");
+-                    pkg.mOverlayPriority = -1;
+-                } else if (pkg.mOverlayPriority == -1 && trustedOverlay) {
+-                    outError[0] = "Trusted overlay requires a priority attribute";
+-                    mParseError = PackageManager.INSTALL_PARSE_FAILED_MANIFEST_MALFORMED;
+-                    return null;
+-                }
+-
+                 XmlUtils.skipCurrentTag(parser);
+-
+             } else if (tagName.equals(TAG_KEY_SETS)) {
+                 if (!parseKeySets(pkg, res, parser, outError)) {
+                     return null;
+@@ -4887,8 +4871,6 @@ public class PackageParser {
+         public String mRequiredAccountType;
+ 
+         public String mOverlayTarget;
+-        public int mOverlayPriority;
+-        public boolean mTrustedOverlay;
+ 
+         /**
+          * Data used to feed the KeySetManagerService
+diff --git a/core/java/android/content/res/AssetManager.java b/core/java/android/content/res/AssetManager.java
+index 6f18707..1444a63 100644
+--- a/core/java/android/content/res/AssetManager.java
++++ b/core/java/android/content/res/AssetManager.java
+@@ -286,6 +286,12 @@ public final class AssetManager implements AutoCloseable {
+         }
+     }
+ 
++    /*package*/ final void recreateStringBlocks() {
++        synchronized (this) {
++            makeStringBlocks(null);
++        }
++    }
++
+     /*package*/ final void makeStringBlocks(StringBlock[] seed) {
+         final int seedNum = (seed != null) ? seed.length : 0;
+         final int num = getStringBlockCount();
+@@ -877,6 +883,8 @@ public final class AssetManager implements AutoCloseable {
+     private native final void init(boolean isSystem);
+     private native final void destroy();
+ 
++    /*package*/ native final int nextCookie(int cookie);
++    /*package*/ native final int nextOverlayCookie(String targetPath, int cookie);
+     private native final int cookieToIndex(int cookie);
+ 
+     private final void incRefsLocked(long id) {
+diff --git a/core/java/android/content/res/Resources.java b/core/java/android/content/res/Resources.java
+index 8d3940c..621a874 100644
+--- a/core/java/android/content/res/Resources.java
++++ b/core/java/android/content/res/Resources.java
+@@ -1791,6 +1791,22 @@ public class Resources {
+     }
+ 
+     /**
++     * @hide
++     */
++    public static void updateSystemAssets(String[] assetPaths) {
++        if (mSystem != null) {
++            mSystem.updateAssets(assetPaths);
++        }
++    }
++
++    /**
++     * @hide
++     */
++    public void updateAssets(String[] assetPaths) {
++        mResourcesImpl.updateAssets(assetPaths);
++    }
++
++    /**
+      * Return the current display metrics that are in effect for this resource 
+      * object.  The returned object should be treated as read-only.
+      * 
+diff --git a/core/java/android/content/res/ResourcesImpl.java b/core/java/android/content/res/ResourcesImpl.java
+index aa80390..c91cb5c 100644
+--- a/core/java/android/content/res/ResourcesImpl.java
++++ b/core/java/android/content/res/ResourcesImpl.java
+@@ -49,6 +49,8 @@ import android.view.DisplayAdjustments;
+ 
+ import java.io.InputStream;
+ import java.util.Arrays;
++import java.util.LinkedList;
++import java.util.List;
+ import java.util.Locale;
+ 
+ /**
+@@ -422,17 +424,13 @@ public class ResourcesImpl {
+                             + mDisplayAdjustments.getCompatibilityInfo());
+                 }
+ 
+-                mDrawableCache.onConfigurationChange(configChanges);
+-                mColorDrawableCache.onConfigurationChange(configChanges);
+-                mComplexColorCache.onConfigurationChange(configChanges);
+-                mAnimatorCache.onConfigurationChange(configChanges);
+-                mStateListAnimatorCache.onConfigurationChange(configChanges);
+-
++                flushThemedResourceCache(configChanges);
+                 flushLayoutCache();
+-            }
+-            synchronized (sSync) {
+-                if (mPluralRule != null) {
+-                    mPluralRule = PluralRules.forLocale(mConfiguration.getLocales().get(0));
++
++                synchronized (sSync) {
++                    if (mPluralRule != null) {
++                        mPluralRule = PluralRules.forLocale(mConfiguration.getLocales().get(0));
++                    }
+                 }
+             }
+         } finally {
+@@ -441,6 +439,51 @@ public class ResourcesImpl {
+     }
+ 
+     /**
++     * @hide
++     */
++    void updateAssets(String[] assetPaths) {
++        if (assetPaths.length == 0) {
++            throw new IllegalArgumentException("at least the path to the target apk must be specified");
++        }
++        synchronized (mAccessLock) {
++            String targetPath = assetPaths[0];
++            boolean found = false;
++            int cookie = mAssets.nextCookie(0);
++            while (cookie > 0) {
++                String path = mAssets.getCookieName(cookie);
++                if (targetPath.equals(path)) {
++                    found = true;
++                    break;
++                }
++                cookie = mAssets.nextCookie(cookie);
++            }
++            if (!found) {
++                return;
++            }
++
++            cookie = mAssets.nextOverlayCookie(targetPath, 0);
++            List<Integer> cookiesToRemove = new LinkedList<Integer>();
++            while (cookie > 0) {
++                cookiesToRemove.add(cookie);
++                cookie = mAssets.nextOverlayCookie(targetPath, cookie);
++            }
++            for (int c : cookiesToRemove) {
++                mAssets.removeAsset(c);
++            }
++            for (int i = 1; i < assetPaths.length; i++) {
++                mAssets.addOverlayPath(assetPaths[i]);
++            }
++
++            // We can't know how the resource table changed, so we need to clear _everything_.
++            flushThemedResourceCache(0xffffffff);
++
++            flushLayoutCache();
++
++            mAssets.recreateStringBlocks();
++        }
++    }
++
++    /**
+      * Applies the new configuration, returning a bitmask of the changes
+      * between the old and new configurations.
+      *
+@@ -515,6 +558,14 @@ public class ResourcesImpl {
+         }
+     }
+ 
++    private void flushThemedResourceCache(int configChanges) {
++        mDrawableCache.onConfigurationChange(configChanges);
++        mColorDrawableCache.onConfigurationChange(configChanges);
++        mComplexColorCache.onConfigurationChange(configChanges);
++        mAnimatorCache.onConfigurationChange(configChanges);
++        mStateListAnimatorCache.onConfigurationChange(configChanges);
++    }
++
+     @Nullable
+     Drawable loadDrawable(Resources wrapper, TypedValue value, int id, Resources.Theme theme,
+             boolean useCache) throws NotFoundException {
+diff --git a/core/java/android/content/res/ResourcesKey.java b/core/java/android/content/res/ResourcesKey.java
+index 64b6bf1..2704f5a 100644
+--- a/core/java/android/content/res/ResourcesKey.java
++++ b/core/java/android/content/res/ResourcesKey.java
+@@ -32,9 +32,6 @@ public final class ResourcesKey {
+     public final String[] mSplitResDirs;
+ 
+     @Nullable
+-    public final String[] mOverlayDirs;
+-
+-    @Nullable
+     public final String[] mLibDirs;
+ 
+     public final int mDisplayId;
+@@ -49,14 +46,12 @@ public final class ResourcesKey {
+ 
+     public ResourcesKey(@Nullable String resDir,
+                         @Nullable String[] splitResDirs,
+-                        @Nullable String[] overlayDirs,
+                         @Nullable String[] libDirs,
+                         int displayId,
+                         @Nullable Configuration overrideConfig,
+                         @Nullable CompatibilityInfo compatInfo) {
+         mResDir = resDir;
+         mSplitResDirs = splitResDirs;
+-        mOverlayDirs = overlayDirs;
+         mLibDirs = libDirs;
+         mDisplayId = displayId;
+         mOverrideConfiguration = overrideConfig != null ? overrideConfig : Configuration.EMPTY;
+@@ -65,7 +60,6 @@ public final class ResourcesKey {
+         int hash = 17;
+         hash = 31 * hash + Objects.hashCode(mResDir);
+         hash = 31 * hash + Arrays.hashCode(mSplitResDirs);
+-        hash = 31 * hash + Arrays.hashCode(mOverlayDirs);
+         hash = 31 * hash + Arrays.hashCode(mLibDirs);
+         hash = 31 * hash + mDisplayId;
+         hash = 31 * hash + Objects.hashCode(mOverrideConfiguration);
+@@ -81,8 +75,7 @@ public final class ResourcesKey {
+         if (mResDir != null && mResDir.startsWith(path)) {
+             return true;
+         } else {
+-            return anyStartsWith(mSplitResDirs, path) || anyStartsWith(mOverlayDirs, path)
+-                    || anyStartsWith(mLibDirs, path);
++            return anyStartsWith(mSplitResDirs, path) || anyStartsWith(mLibDirs, path);
+         }
+     }
+ 
+@@ -120,9 +113,6 @@ public final class ResourcesKey {
+         if (!Arrays.equals(mSplitResDirs, peer.mSplitResDirs)) {
+             return false;
+         }
+-        if (!Arrays.equals(mOverlayDirs, peer.mOverlayDirs)) {
+-            return false;
+-        }
+         if (!Arrays.equals(mLibDirs, peer.mLibDirs)) {
+             return false;
+         }
+@@ -148,11 +138,6 @@ public final class ResourcesKey {
+             builder.append(TextUtils.join(",", mSplitResDirs));
+         }
+         builder.append("]");
+-        builder.append(" mOverlayDirs=[");
+-        if (mOverlayDirs != null) {
+-            builder.append(TextUtils.join(",", mOverlayDirs));
+-        }
+-        builder.append("]");
+         builder.append(" mLibDirs=[");
+         if (mLibDirs != null) {
+             builder.append(TextUtils.join(",", mLibDirs));
+diff --git a/core/jni/android_util_AssetManager.cpp b/core/jni/android_util_AssetManager.cpp
+index 97fbeb9..1de5ed1 100644
+--- a/core/jni/android_util_AssetManager.cpp
++++ b/core/jni/android_util_AssetManager.cpp
+@@ -129,85 +129,6 @@ jint copyValue(JNIEnv* env, jobject outValue, const ResTable* table,
+     return block;
+ }
+ 
+-// This is called by zygote (running as user root) as part of preloadResources.
+-static void verifySystemIdmaps(const char* overlay_dir)
+-{
+-    pid_t pid;
+-    char system_id[10];
+-
+-    snprintf(system_id, sizeof(system_id), "%d", AID_SYSTEM);
+-
+-    switch (pid = fork()) {
+-        case -1:
+-            ALOGE("failed to fork for idmap: %s", strerror(errno));
+-            break;
+-        case 0: // child
+-            {
+-                struct __user_cap_header_struct capheader;
+-                struct __user_cap_data_struct capdata;
+-
+-                memset(&capheader, 0, sizeof(capheader));
+-                memset(&capdata, 0, sizeof(capdata));
+-
+-                capheader.version = _LINUX_CAPABILITY_VERSION;
+-                capheader.pid = 0;
+-
+-                if (capget(&capheader, &capdata) != 0) {
+-                    ALOGE("capget: %s\n", strerror(errno));
+-                    exit(1);
+-                }
+-
+-                capdata.effective = capdata.permitted;
+-                if (capset(&capheader, &capdata) != 0) {
+-                    ALOGE("capset: %s\n", strerror(errno));
+-                    exit(1);
+-                }
+-
+-                if (setgid(AID_SYSTEM) != 0) {
+-                    ALOGE("setgid: %s\n", strerror(errno));
+-                    exit(1);
+-                }
+-
+-                if (setuid(AID_SYSTEM) != 0) {
+-                    ALOGE("setuid: %s\n", strerror(errno));
+-                    exit(1);
+-                }
+-
+-                // Generic idmap parameters
+-                const char* argv[7];
+-                int argc = 0;
+-                struct stat st;
+-
+-                memset(argv, NULL, sizeof(argv));
+-                argv[argc++] = AssetManager::IDMAP_BIN;
+-                argv[argc++] = "--scan";
+-                argv[argc++] = AssetManager::TARGET_PACKAGE_NAME;
+-                argv[argc++] = AssetManager::TARGET_APK_PATH;
+-                argv[argc++] = AssetManager::IDMAP_DIR;
+-
+-                // Directories to scan for overlays
+-                // /vendor/overlay
+-
+-               if (stat(overlay_dir, &st) == 0) {
+-                   argv[argc++] = overlay_dir;
+-                }
+-
+-                // Finally, invoke idmap (if any overlay directory exists)
+-                if (argc > 5) {
+-                    execv(AssetManager::IDMAP_BIN, (char* const*)argv);
+-                    ALOGE("failed to execl for idmap: %s", strerror(errno));
+-                    exit(1); // should never get here
+-                } else {
+-                    exit(0);
+-                }
+-            }
+-            break;
+-        default: // parent
+-            waitpid(pid, NULL, 0);
+-            break;
+-    }
+-}
+-
+ // ----------------------------------------------------------------------------
+ 
+ // this guy is exported to other jni routines
+@@ -1041,6 +962,27 @@ static jobject android_content_AssetManager_getAssignedPackageIdentifiers(JNIEnv
+     return sparseArray;
+ }
+ 
++static jint android_content_AssetManager_nextCookie(JNIEnv* env, jobject clazz, jint cookie)
++{
++    AssetManager* am = assetManagerForJavaObject(env, clazz);
++    if (am == NULL) {
++        return -1;
++    }
++    return am->nextAssetPath(static_cast<int32_t>(cookie));
++}
++
++static jint android_content_AssetManager_nextOverlayCookie(JNIEnv* env, jobject clazz,
++        jstring targetPath, jint cookie)
++{
++    AssetManager* am = assetManagerForJavaObject(env, clazz);
++    if (am == NULL) {
++        return -1;
++    }
++    ScopedUtfChars scoped(env, targetPath);
++    String8 path8(scoped.c_str());
++    return am->nextAssetPath(static_cast<int32_t>(cookie), &path8);
++}
++
+ static jint android_content_AssetManager_cookieToIndex(JNIEnv* env, jobject clazz, jint cookie)
+ {
+     AssetManager* am = assetManagerForJavaObject(env, clazz);
+@@ -2102,22 +2044,6 @@ static jintArray android_content_AssetManager_getStyleAttributes(JNIEnv* env, jo
+ 
+ static void android_content_AssetManager_init(JNIEnv* env, jobject clazz, jboolean isSystem)
+ {
+-    if (isSystem) {
+-        // Load frameworks-res.apk's overlay through regionalization environment
+-        if (Environment::isSupported()) {
+-            Environment* environment = new Environment();
+-            if (environment != NULL) {
+-                const char* overlay_dir = environment->getOverlayDir();
+-                if (overlay_dir != NULL && strcmp(overlay_dir, "") != 0) {
+-                    ALOGD("Regionalization - getOverlayDir:%s", overlay_dir);
+-                    verifySystemIdmaps(overlay_dir);
+-                }
+-                delete environment;
+-            }
+-        }
+-
+-        verifySystemIdmaps(AssetManager::OVERLAY_DIR);
+-    }
+     AssetManager* am = new AssetManager();
+     if (am == NULL) {
+         jniThrowException(env, "java/lang/OutOfMemoryError", "");
+@@ -2233,6 +2159,10 @@ static const JNINativeMethod gAssetManagerMethods[] = {
+         (void*) android_content_AssetManager_getCookieName },
+     { "getAssignedPackageIdentifiers","()Landroid/util/SparseArray;",
+         (void*) android_content_AssetManager_getAssignedPackageIdentifiers },
++    { "nextCookie","(I)I",
++        (void*) android_content_AssetManager_nextCookie },
++    { "nextOverlayCookie","(Ljava/lang/String;I)I",
++        (void*) android_content_AssetManager_nextOverlayCookie },
+     { "cookieToIndex","(I)I",
+         (void*) android_content_AssetManager_cookieToIndex },
+ 
+diff --git a/core/tests/coretests/src/android/content/res/ResourcesManagerTest.java b/core/tests/coretests/src/android/content/res/ResourcesManagerTest.java
+index f088197..1801c74 100644
+--- a/core/tests/coretests/src/android/content/res/ResourcesManagerTest.java
++++ b/core/tests/coretests/src/android/content/res/ResourcesManagerTest.java
+@@ -69,12 +69,12 @@ public class ResourcesManagerTest extends TestCase {
+     @SmallTest
+     public void testMultipleCallsWithIdenticalParametersCacheReference() {
+         Resources resources = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources);
+ 
+         Resources newResources = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(newResources);
+         assertSame(resources, newResources);
+@@ -83,14 +83,14 @@ public class ResourcesManagerTest extends TestCase {
+     @SmallTest
+     public void testMultipleCallsWithDifferentParametersReturnDifferentReferences() {
+         Resources resources = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources);
+ 
+         Configuration overrideConfig = new Configuration();
+         overrideConfig.smallestScreenWidthDp = 200;
+         Resources newResources = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, overrideConfig,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, overrideConfig,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(newResources);
+         assertNotSame(resources, newResources);
+@@ -99,12 +99,12 @@ public class ResourcesManagerTest extends TestCase {
+     @SmallTest
+     public void testAddingASplitCreatesANewImpl() {
+         Resources resources1 = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+         Resources resources2 = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, new String[] { APP_ONE_RES_SPLIT_DIR }, null, null,
++                null, APP_ONE_RES_DIR, new String[] { APP_ONE_RES_SPLIT_DIR }, null,
+                 Display.DEFAULT_DISPLAY, null, CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources2);
+ 
+@@ -115,12 +115,12 @@ public class ResourcesManagerTest extends TestCase {
+     @SmallTest
+     public void testUpdateConfigurationUpdatesAllAssetManagers() {
+         Resources resources1 = mResourcesManager.getResources(
+-                null, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+         Resources resources2 = mResourcesManager.getResources(
+-                null, APP_TWO_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                null, APP_TWO_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources2);
+ 
+@@ -128,7 +128,7 @@ public class ResourcesManagerTest extends TestCase {
+         final Configuration overrideConfig = new Configuration();
+         overrideConfig.orientation = Configuration.ORIENTATION_LANDSCAPE;
+         Resources resources3 = mResourcesManager.getResources(
+-                activity, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY,
++                activity, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY,
+                 overrideConfig, CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources3);
+ 
+@@ -160,13 +160,13 @@ public class ResourcesManagerTest extends TestCase {
+     public void testTwoActivitiesWithIdenticalParametersShareImpl() {
+         Binder activity1 = new Binder();
+         Resources resources1 = mResourcesManager.getResources(
+-                activity1, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                activity1, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+         Binder activity2 = new Binder();
+         Resources resources2 = mResourcesManager.getResources(
+-                activity2, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                activity2, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+@@ -181,7 +181,7 @@ public class ResourcesManagerTest extends TestCase {
+     public void testThemesGetUpdatedWithNewImpl() {
+         Binder activity1 = new Binder();
+         Resources resources1 = mResourcesManager.createBaseActivityResources(
+-                activity1, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, null,
++                activity1, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, null,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+@@ -213,7 +213,7 @@ public class ResourcesManagerTest extends TestCase {
+         Configuration config1 = new Configuration();
+         config1.densityDpi = 280;
+         Resources resources1 = mResourcesManager.createBaseActivityResources(
+-                activity1, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, config1,
++                activity1, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, config1,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources1);
+ 
+@@ -221,7 +221,7 @@ public class ResourcesManagerTest extends TestCase {
+         Configuration config2 = new Configuration();
+         config2.screenLayout |= Configuration.SCREENLAYOUT_ROUND_YES;
+         Resources resources2 = mResourcesManager.getResources(
+-                activity1, APP_ONE_RES_DIR, null, null, null, Display.DEFAULT_DISPLAY, config2,
++                activity1, APP_ONE_RES_DIR, null, null, Display.DEFAULT_DISPLAY, config2,
+                 CompatibilityInfo.DEFAULT_COMPATIBILITY_INFO, null);
+         assertNotNull(resources2);
+ 
+diff --git a/include/androidfw/AssetManager.h b/include/androidfw/AssetManager.h
+index d41da3b..5dd8e32 100644
+--- a/include/androidfw/AssetManager.h
++++ b/include/androidfw/AssetManager.h
+@@ -122,7 +122,7 @@ public:
+      * Each next cookie will be returned there-after, until -1 indicating
+      * the end has been reached.
+      */
+-    int32_t nextAssetPath(const int32_t cookie) const;
++    int32_t nextAssetPath(const int32_t cookie, const String8* targetPath = NULL) const;
+ 
+     /*
+      * Return an asset path in the manager.  'which' must be between 0 and
+@@ -247,12 +247,11 @@ private:
+     {
+         asset_path() :
+             path(""), type(kFileTypeRegular), targetPath(""), idmap(""),
+-            isSystemOverlay(false), isSystemAsset(false), cookie(-1) {}
++            isSystemAsset(false), cookie(-1) {}
+         String8 path;
+         FileType type;
+         String8 targetPath;
+         String8 idmap;
+-        bool isSystemOverlay;
+         bool isSystemAsset;
+         int32_t cookie;
+     };
+@@ -298,9 +297,6 @@ private:
+ 
+     Asset* openIdmapLocked(const struct asset_path& ap) const;
+ 
+-    void addSystemOverlays(const char* pathOverlaysList, const String8& targetPackagePath,
+-            ResTable* sharedRes) const;
+-
+     class SharedZip : public RefBase {
+     public:
+         static sp<SharedZip> get(const String8& path, bool createIfNotPresent = true);
+@@ -315,9 +311,6 @@ private:
+         
+         bool isUpToDate();
+ 
+-        void addOverlay(const asset_path& ap);
+-        bool getOverlay(size_t idx, asset_path* out) const;
+-        
+     protected:
+         ~SharedZip();
+ 
+@@ -332,8 +325,6 @@ private:
+         Asset* mResourceTableAsset;
+         ResTable* mResourceTable;
+ 
+-        Vector<asset_path> mOverlays;
+-
+         static Mutex gLock;
+         static DefaultKeyedVector<String8, wp<SharedZip> > gOpen;
+     };
+@@ -366,9 +357,6 @@ private:
+         static String8 getPathName(const char* path);
+ 
+         bool isUpToDate();
+-
+-        void addOverlay(const String8& path, const asset_path& overlay);
+-        bool getOverlay(const String8& path, size_t idx, asset_path* out) const;
+         
+     private:
+         void closeZip(int idx);
+@@ -406,7 +394,7 @@ private:
+             }
+ 
+             ssize_t add(const asset_path& ap, int32_t *cookie);
+-            int32_t nextCookie(const int32_t cookie) const;
++            int32_t nextCookie(const int32_t cookie, const String8* targetPath) const;
+             ssize_t cookieToIndex(const int32_t cookie) const;
+ 
+         private:
+diff --git a/libs/androidfw/AssetManager.cpp b/libs/androidfw/AssetManager.cpp
+index b57927d..4097089 100644
+--- a/libs/androidfw/AssetManager.cpp
++++ b/libs/androidfw/AssetManager.cpp
+@@ -206,15 +206,6 @@ bool AssetManager::addAssetPath(
+     const ssize_t index = mAssetPaths.add(ap, cookie);
+     ap = mAssetPaths.itemAt(index); // get updated version of asset_path
+ 
+-#ifdef __ANDROID__
+-    // Load overlays, if any
+-    asset_path oap;
+-    for (size_t idx = 0; mZipSet.getOverlay(ap.path, idx, &oap); idx++) {
+-        oap.isSystemAsset = isSystemAsset;
+-        mAssetPaths.add(oap, NULL);
+-    }
+-#endif
+-
+     if (mResources != NULL) {
+         appendPathToResTable(ap, appAsLib);
+     }
+@@ -272,6 +263,7 @@ bool AssetManager::addOverlayPath(const String8& packagePath, int32_t* cookie)
+     asset_path oap;
+     oap.path = overlayPath;
+     oap.type = ::getFileType(overlayPath.string());
++    oap.targetPath = targetPath;
+     oap.idmap = idmapPath;
+ #if 0
+     ALOGD("Overlay added: targetPath=%s overlayPath=%s idmapPath=%s\n",
+@@ -330,10 +322,10 @@ bool AssetManager::addDefaultAssets()
+     return addAssetPath(path, NULL, false /* appAsLib */, true /* isSystemAsset */);
+ }
+ 
+-int32_t AssetManager::nextAssetPath(const int32_t cookie) const
++int32_t AssetManager::nextAssetPath(const int32_t cookie, const String8* targetPath) const
+ {
+     AutoMutex _l(mLock);
+-    const int32_t nextCookie = mAssetPaths.nextCookie(cookie);
++    const int32_t nextCookie = mAssetPaths.nextCookie(cookie, targetPath);
+     return nextCookie == AssetPaths::NO_SUCH_COOKIE ? -1 : nextCookie;
+ }
+ 
+@@ -617,11 +609,6 @@ FileType AssetManager::getFileType(const char* fileName)
+ }
+ 
+ bool AssetManager::appendPathToResTable(const asset_path& ap, bool appAsLib) const {
+-    // skip those ap's that correspond to system overlays
+-    if (ap.isSystemOverlay) {
+-        return true;
+-    }
+-
+     Asset* ass = NULL;
+     ResTable* sharedRes = NULL;
+     bool shared = true;
+@@ -663,14 +650,6 @@ bool AssetManager::appendPathToResTable(const asset_path& ap, bool appAsLib) con
+                 ALOGV("Creating shared resources for %s", ap.path.string());
+                 sharedRes = new ResTable();
+                 sharedRes->add(ass, idmap, ap.cookie, false);
+-#ifdef HAVE_ANDROID_OS
+-                const char* data = getenv("ANDROID_DATA");
+-                LOG_ALWAYS_FATAL_IF(data == NULL, "ANDROID_DATA not set");
+-                String8 overlaysListPath(data);
+-                overlaysListPath.appendPath(kResourceCache);
+-                overlaysListPath.appendPath("overlays.list");
+-                addSystemOverlays(overlaysListPath.string(), ap.path, sharedRes);
+-#endif
+                 sharedRes = const_cast<AssetManager*>(this)->
+                     mZipSet.setZipResourceTable(ap.path, sharedRes);
+             }
+@@ -783,46 +762,6 @@ Asset* AssetManager::openIdmapLocked(const struct asset_path& ap) const
+     return ass;
+ }
+ 
+-void AssetManager::addSystemOverlays(const char* pathOverlaysList,
+-        const String8& targetPackagePath, ResTable* sharedRes) const
+-{
+-    FILE* fin = fopen(pathOverlaysList, "r");
+-    if (fin == NULL) {
+-        return;
+-    }
+-
+-    char buf[1024];
+-    while (fgets(buf, sizeof(buf), fin)) {
+-        // format of each line:
+-        //   <path to apk><space><path to idmap><newline>
+-        char* space = strchr(buf, ' ');
+-        char* newline = strchr(buf, '\n');
+-        asset_path oap;
+-
+-        if (space == NULL || newline == NULL || newline < space) {
+-            continue;
+-        }
+-
+-        oap.path = String8(buf, space - buf);
+-        oap.type = kFileTypeRegular;
+-        oap.idmap = String8(space + 1, newline - space - 1);
+-        oap.isSystemOverlay = true;
+-
+-        Asset* oass = const_cast<AssetManager*>(this)->
+-            openNonAssetInPathLocked("resources.arsc",
+-                    Asset::ACCESS_BUFFER,
+-                    oap);
+-
+-        if (oass != NULL) {
+-            Asset* oidmap = openIdmapLocked(oap);
+-            const ssize_t index = const_cast<AssetManager*>(this)->mAssetPaths.add(oap, NULL);
+-            const_cast<AssetManager*>(this)->mZipSet.addOverlay(targetPackagePath, oap);
+-            sharedRes->add(oass, oidmap, mAssetPaths.itemAt(index).cookie, false);
+-        }
+-    }
+-    fclose(fin);
+-}
+-
+ const ResTable& AssetManager::getResources(bool required) const
+ {
+     const ResTable* rt = getResTable(required);
+@@ -1960,20 +1899,6 @@ bool AssetManager::SharedZip::isUpToDate()
+     return mModWhen == modWhen;
+ }
+ 
+-void AssetManager::SharedZip::addOverlay(const asset_path& ap)
+-{
+-    mOverlays.add(ap);
+-}
+-
+-bool AssetManager::SharedZip::getOverlay(size_t idx, asset_path* out) const
+-{
+-    if (idx >= mOverlays.size()) {
+-        return false;
+-    }
+-    *out = mOverlays[idx];
+-    return true;
+-}
+-
+ AssetManager::SharedZip::~SharedZip()
+ {
+     if (kIsDebug) {
+@@ -2099,22 +2024,6 @@ bool AssetManager::ZipSet::isUpToDate()
+     return true;
+ }
+ 
+-void AssetManager::ZipSet::addOverlay(const String8& path, const asset_path& overlay)
+-{
+-    int idx = getIndex(path);
+-    sp<SharedZip> zip = mZipFile[idx];
+-    zip->addOverlay(overlay);
+-}
+-
+-bool AssetManager::ZipSet::getOverlay(const String8& path, size_t idx, asset_path* out) const
+-{
+-    sp<SharedZip> zip = SharedZip::get(path, false);
+-    if (zip == NULL) {
+-        return false;
+-    }
+-    return zip->getOverlay(idx, out);
+-}
+-
+ /*
+  * Compute the zip file's index.
+  *
+@@ -2159,12 +2068,13 @@ ssize_t AssetManager::AssetPaths::add(const asset_path& ap, int32_t *cookie)
+     return -1;
+ }
+ 
+-int32_t AssetManager::AssetPaths::nextCookie(const int32_t cookie) const
++int32_t AssetManager::AssetPaths::nextCookie(const int32_t cookie, const String8* targetPath) const
+ {
+     int32_t next = NO_SUCH_COOKIE;
+     for (size_t i = 0; i < mAssetPaths.size(); i++) {
+         const asset_path& ap = mAssetPaths.itemAt(i);
+-        if (ap.cookie > cookie && ap.cookie < next) {
++        if (ap.cookie > cookie && ap.cookie < next &&
++                (!targetPath || ap.targetPath == *targetPath)) {
+             next = ap.cookie;
+         }
+     }
+diff --git a/services/core/java/com/android/server/SystemServiceManager.java b/services/core/java/com/android/server/SystemServiceManager.java
+index ecc69e9..f10f93d 100644
+--- a/services/core/java/com/android/server/SystemServiceManager.java
++++ b/services/core/java/com/android/server/SystemServiceManager.java
+@@ -104,22 +104,25 @@ public class SystemServiceManager {
+                         + ": service constructor threw an exception", ex);
+             }
+ 
+-            // Register it.
+-            mServices.add(service);
+-
+-            // Start it.
+-            try {
+-                service.onStart();
+-            } catch (RuntimeException ex) {
+-                throw new RuntimeException("Failed to start service " + name
+-                        + ": onStart threw an exception", ex);
+-            }
++            startService(service);
+             return service;
+         } finally {
+             Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
+         }
+     }
+ 
++    public void startService(SystemService service) {
++        // Register it.
++        mServices.add(service);
++        // Start it.
++        try {
++            service.onStart();
++        } catch (RuntimeException ex) {
++            throw new RuntimeException("Failed to start service " + service.getClass().getName()
++                    + ": onStart threw an exception", ex);
++        }
++    }
++
+     /**
+      * Starts the specified boot phase for all system services that have been started up to
+      * this point.
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index 52f008c..21419112 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -53,6 +53,7 @@ import com.android.server.SystemServiceManager;
+ import com.android.server.Watchdog;
+ import com.android.server.am.ActivityStack.ActivityState;
+ import com.android.server.firewall.IntentFirewall;
++import com.android.server.om.OverlayManagerService;
+ import com.android.server.pm.Installer;
+ import com.android.server.statusbar.StatusBarManagerInternal;
+ import com.android.server.vr.VrManagerInternal;
+@@ -6548,7 +6549,8 @@ public final class ActivityManagerService extends ActivityManagerNative
+                     isRestrictedBackupMode || !normalMode, app.persistent,
+                     new Configuration(mConfiguration), app.compat,
+                     getCommonServicesLocked(app.isolated),
+-                    mCoreSettingsObserver.getCoreSettingsLocked());
++                    mCoreSettingsObserver.getCoreSettingsLocked(),
++                    getAssetPaths(appInfo.packageName, app.userId));
+             updateLruProcessLocked(app, false, null);
+             app.lastRequestedGc = app.lastLowMemory = SystemClock.uptimeMillis();
+         } catch (Exception e) {
+@@ -6634,6 +6636,13 @@ public final class ActivityManagerService extends ActivityManagerNative
+         return true;
+     }
+ 
++    private List<String[]> getAssetPaths(String packageName, int userId)
++        throws NameNotFoundException {
++
++        OverlayManagerService oms = LocalServices.getService(OverlayManagerService.class);
++        return oms.getAllAssetPaths(packageName, userId);
++    }
++
+     @Override
+     public final void attachApplication(IApplicationThread thread) {
+         synchronized (this) {
+@@ -18879,6 +18888,48 @@ public final class ActivityManagerService extends ActivityManagerNative
+     }
+ 
+     /**
++     * @hide
++     */
++    public void updateAssets(int userId, Map<String,String[]> overlays) {
++        enforceCallingPermission(android.Manifest.permission.CHANGE_CONFIGURATION, "updateAssets()");
++
++        synchronized(this) {
++            final long origId = Binder.clearCallingIdentity();
++            try {
++                updateAssetsLocked(userId, overlays);
++            } finally {
++                Binder.restoreCallingIdentity(origId);
++            }
++        }
++    }
++
++    void updateAssetsLocked(int userId, Map<String, String[]> overlays) {
++        String[] systemOverlayPaths = null;
++        if (overlays.keySet().contains("android")) {
++            systemOverlayPaths = overlays.get("android");
++            mSystemThread.applyAssetsChangedToResources(systemOverlayPaths);
++        }
++        for (int i = mLruProcesses.size() - 1; i >= 0; i--) {
++            ProcessRecord app = mLruProcesses.get(i);
++            try {
++                if (app.userId != userId || app.thread == null) {
++                    continue;
++                }
++                String packageName = app.info.packageName;
++                if ("android".equals(packageName)) {
++                    continue;
++                }
++                if (systemOverlayPaths != null) {
++                    app.thread.scheduleAssetsChanged(systemOverlayPaths);
++                }
++                if (overlays.keySet().contains(packageName)) {
++                    app.thread.scheduleAssetsChanged(overlays.get(packageName));
++                }
++            } catch (Exception e) {}
++        }
++    }
++
++    /**
+      * Decide based on the configuration whether we should shouw the ANR,
+      * crash, etc dialogs.  The idea is that if there is no affordnace to
+      * press the on-screen buttons, we shouldn't show the dialog.
+diff --git a/services/core/java/com/android/server/om/OverlayManagerService.java b/services/core/java/com/android/server/om/OverlayManagerService.java
+index 5da36f1..aa5b0f6 100644
+--- a/services/core/java/com/android/server/om/OverlayManagerService.java
++++ b/services/core/java/com/android/server/om/OverlayManagerService.java
+@@ -660,25 +660,24 @@ public class OverlayManagerService extends SystemService {
+     }
+ 
+     private void updateAssets(int userId, String... targetPackageNames) {
+-        // TODO: uncomment when we integrate OMS properly
+-        // final IActivityManager am = ActivityManagerNative.getDefault();
+-        // try {
+-        //     Map<String, String[]> assetPaths = new ArrayMap<>();
+-        //     synchronized (mLock) {
+-        //         for (String targetPackageName : targetPackageNames) {
+-        //             String[] paths = mImpl.onGetAssetPaths(targetPackageName, userId);
+-        //             if (paths != null) {
+-        //                 assetPaths.put(targetPackageName, paths);
+-        //             } else {
+-        //                 Slog.w(TAG, String.format("Cannot update assets for package %s for user %d",
+-        //                             targetPackageName, userId));
+-        //             }
+-        //         }
+-        //     }
+-        //     am.updateAssets(userId, assetPaths);
+-        // } catch (RemoteException e) {
+-        //     // Intentionally left empty.
+-        // }
++        final IActivityManager am = ActivityManagerNative.getDefault();
++        try {
++            Map<String, String[]> assetPaths = new ArrayMap<>();
++            synchronized (mLock) {
++                for (String targetPackageName : targetPackageNames) {
++                    String[] paths = mImpl.onGetAssetPaths(targetPackageName, userId);
++                    if (paths != null) {
++                        assetPaths.put(targetPackageName, paths);
++                    } else {
++                        Slog.w(TAG, String.format("Cannot update assets for package %s for user %d",
++                                    targetPackageName, userId));
++                    }
++                }
++            }
++            am.updateAssets(userId, assetPaths);
++        } catch (RemoteException e) {
++            // Intentionally left empty.
++        }
+     }
+ 
+     private void schedulePersistSettings() {
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index c02ce57..782a18a 100755
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -389,25 +389,24 @@ public class PackageManagerService extends IPackageManager.Stub {
+     // package apks to install directory.
+     private static final String INSTALL_PACKAGE_SUFFIX = "-";
+ 
+-    static final int SCAN_NO_DEX = 1<<1;
+-    static final int SCAN_FORCE_DEX = 1<<2;
+-    static final int SCAN_UPDATE_SIGNATURE = 1<<3;
+-    static final int SCAN_NEW_INSTALL = 1<<4;
+-    static final int SCAN_NO_PATHS = 1<<5;
+-    static final int SCAN_UPDATE_TIME = 1<<6;
+-    static final int SCAN_DEFER_DEX = 1<<7;
+-    static final int SCAN_BOOTING = 1<<8;
+-    static final int SCAN_TRUSTED_OVERLAY = 1<<9;
+-    static final int SCAN_DELETE_DATA_ON_FAILURES = 1<<10;
+-    static final int SCAN_REPLACING = 1<<11;
+-    static final int SCAN_REQUIRE_KNOWN = 1<<12;
+-    static final int SCAN_MOVE = 1<<13;
+-    static final int SCAN_INITIAL = 1<<14;
+-    static final int SCAN_CHECK_ONLY = 1<<15;
+-    static final int SCAN_DONT_KILL_APP = 1<<17;
+-    static final int SCAN_IGNORE_FROZEN = 1<<18;
+-
+-    static final int REMOVE_CHATTY = 1<<16;
++    private static final int SCAN_NO_DEX = 1<<1;
++    private static final int SCAN_FORCE_DEX = 1<<2;
++    private static final int SCAN_UPDATE_SIGNATURE = 1<<3;
++    private static final int SCAN_NEW_INSTALL = 1<<4;
++    private static final int SCAN_NO_PATHS = 1<<5;
++    private static final int SCAN_UPDATE_TIME = 1<<6;
++    private static final int SCAN_DEFER_DEX = 1<<7;
++    private static final int SCAN_BOOTING = 1<<8;
++    private static final int SCAN_DELETE_DATA_ON_FAILURES = 1<<9;
++    private static final int SCAN_REPLACING = 1<<10;
++    private static final int SCAN_REQUIRE_KNOWN = 1<<11;
++    private static final int SCAN_MOVE = 1<<12;
++    private static final int SCAN_INITIAL = 1<<13;
++    private static final int SCAN_CHECK_ONLY = 1<<14;
++    private static final int SCAN_DONT_KILL_APP = 1<<15;
++    private static final int SCAN_IGNORE_FROZEN = 1<<16;
++
++    private static final int REMOVE_CHATTY = 1<<17;
+ 
+     private static final int[] EMPTY_INT_ARRAY = new int[0];
+ 
+@@ -585,10 +584,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+     final ArrayMap<String, Set<String>> mKnownCodebase =
+             new ArrayMap<String, Set<String>>();
+ 
+-    // Tracks available target package names -> overlay package paths.
+-    final ArrayMap<String, ArrayMap<String, PackageParser.Package>> mOverlays =
+-        new ArrayMap<String, ArrayMap<String, PackageParser.Package>>();
+-
+     /**
+      * Tracks new system packages [received in an OTA] that we expect to
+      * find updated user-installed versions. Keys are package name, values
+@@ -2470,8 +2465,8 @@ public class PackageManagerService extends IPackageManager.Stub {
+             File vendorOverlayDir = new File(VENDOR_OVERLAY_DIR);
+             scanDirTracedLI(vendorOverlayDir, mDefParseFlags
+                     | PackageParser.PARSE_IS_SYSTEM
+-                    | PackageParser.PARSE_IS_SYSTEM_DIR
+-                    | PackageParser.PARSE_TRUSTED_OVERLAY, scanFlags | SCAN_TRUSTED_OVERLAY, 0);
++                    | PackageParser.PARSE_IS_SYSTEM_DIR,
++                    scanFlags, 0);
+ 
+             // Find base frameworks (resource packages without code).
+             scanDirTracedLI(frameworkDir, mDefParseFlags
+@@ -6705,80 +6700,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+         return finalList;
+     }
+ 
+-    private void createIdmapsForPackageLI(PackageParser.Package pkg) {
+-        ArrayMap<String, PackageParser.Package> overlays = mOverlays.get(pkg.packageName);
+-        if (overlays == null) {
+-            Slog.w(TAG, "Unable to create idmap for " + pkg.packageName + ": no overlay packages");
+-            return;
+-        }
+-        for (PackageParser.Package opkg : overlays.values()) {
+-            // Not much to do if idmap fails: we already logged the error
+-            // and we certainly don't want to abort installation of pkg simply
+-            // because an overlay didn't fit properly. For these reasons,
+-            // ignore the return value of createIdmapForPackagePairLI.
+-            createIdmapForPackagePairLI(pkg, opkg);
+-        }
+-    }
+-
+-    private boolean createIdmapForPackagePairLI(PackageParser.Package pkg,
+-            PackageParser.Package opkg) {
+-        if (!opkg.mTrustedOverlay && compareSignatures(pkg.mSignatures, opkg.mSignatures) !=
+-                PackageManager.SIGNATURE_MATCH) {
+-            Slog.w(TAG, "Skipping target and overlay pair " + pkg.baseCodePath + " and " +
+-                    opkg.baseCodePath + ": signatures do not match");
+-            return false;
+-        }
+-        ArrayMap<String, PackageParser.Package> overlaySet = mOverlays.get(pkg.packageName);
+-        if (overlaySet == null) {
+-            Slog.e(TAG, "was about to create idmap for " + pkg.baseCodePath + " and " +
+-                    opkg.baseCodePath + " but target package has no known overlays");
+-            return false;
+-        }
+-        final int sharedGid = UserHandle.getSharedAppGid(pkg.applicationInfo.uid);
+-        // TODO: generate idmap for split APKs
+-        try {
+-            mInstaller.idmap(pkg.baseCodePath, opkg.baseCodePath, sharedGid);
+-        } catch (InstallerException e) {
+-            Slog.e(TAG, "Failed to generate idmap for " + pkg.baseCodePath + " and "
+-                    + opkg.baseCodePath);
+-            return false;
+-        }
+-        PackageParser.Package[] overlayArray =
+-            overlaySet.values().toArray(new PackageParser.Package[0]);
+-        Comparator<PackageParser.Package> cmp = new Comparator<PackageParser.Package>() {
+-            public int compare(PackageParser.Package p1, PackageParser.Package p2) {
+-                if (!p1.mTrustedOverlay && !p2.mTrustedOverlay) {
+-                    PackageSetting ps1;
+-                    PackageSetting ps2;
+-                    synchronized (mPackages) {
+-                        ps1 = mSettings.peekPackageLPr(p1.packageName);
+-                        if (ps1 == null) {
+-                            return 0;
+-                        }
+-                        ps2 = mSettings.peekPackageLPr(p2.packageName);
+-                        if (ps2 == null) {
+-                            return 0;
+-                        }
+-                    }
+-                    long diff = ps1.lastUpdateTime - ps2.lastUpdateTime;
+-                    return diff == 0 ? 0 : (diff < 0 ? -1 : 1); // long to int, no loss of precision
+-                }
+-                if (p1.mTrustedOverlay && p2.mTrustedOverlay) {
+-                    return p1.mOverlayPriority - p2.mOverlayPriority;
+-                }
+-                return p1.mTrustedOverlay ? -1 : 1;
+-            }
+-        };
+-        Arrays.sort(overlayArray, cmp);
+-
+-        pkg.applicationInfo.resourceDirs = new String[overlayArray.length];
+-        int i = 0;
+-        for (PackageParser.Package p : overlayArray) {
+-            pkg.applicationInfo.resourceDirs[i++] = p.baseCodePath;
+-        }
+-        return true;
+-    }
+-
+     private void scanDirTracedLI(File dir, final int parseFlags, int scanFlags, long currentTime) {
+         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "scanDir");
+         try {
+@@ -6947,10 +6868,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+         pp.setOnlyPowerOffAlarmApps(mOnlyPowerOffAlarm);
+         pp.setDisplayMetrics(mMetrics);
+ 
+-        if ((scanFlags & SCAN_TRUSTED_OVERLAY) != 0) {
+-            parseFlags |= PackageParser.PARSE_TRUSTED_OVERLAY;
+-        }
+-
+         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "parsePackage");
+         final PackageParser.Package pkg;
+         try {
+@@ -8164,7 +8081,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+             pkg.applicationInfo.privateFlags &=
+                     ~ApplicationInfo.PRIVATE_FLAG_DIRECT_BOOT_AWARE;
+         }
+-        pkg.mTrustedOverlay = (policyFlags&PackageParser.PARSE_TRUSTED_OVERLAY) != 0;
+ 
+         if ((policyFlags&PackageParser.PARSE_IS_PRIVILEGED) != 0) {
+             pkg.applicationInfo.privateFlags |= ApplicationInfo.PRIVATE_FLAG_PRIVILEGED;
+@@ -8741,7 +8657,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+         // writer
+         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "updateSettings");
+ 
+-        boolean createIdmapFailed = false;
+         synchronized (mPackages) {
+             // We don't expect installation to fail beyond this point
+ 
+@@ -9079,41 +8994,10 @@ public class PackageManagerService extends IPackageManager.Stub {
+             }
+ 
+             pkgSetting.setTimeStamp(scanFileTime);
+-
+-            // Create idmap files for pairs of (packages, overlay packages).
+-            // Note: "android", ie framework-res.apk, is handled by native layers.
+-            if (pkg.mOverlayTarget != null) {
+-                // This is an overlay package.
+-                if (pkg.mOverlayTarget != null && !pkg.mOverlayTarget.equals("android")) {
+-                    if (!mOverlays.containsKey(pkg.mOverlayTarget)) {
+-                        mOverlays.put(pkg.mOverlayTarget,
+-                                new ArrayMap<String, PackageParser.Package>());
+-                    }
+-                    ArrayMap<String, PackageParser.Package> map = mOverlays.get(pkg.mOverlayTarget);
+-                    map.put(pkg.packageName, pkg);
+-                    PackageParser.Package orig = mPackages.get(pkg.mOverlayTarget);
+-                    if (orig != null && !createIdmapForPackagePairLI(orig, pkg)) {
+-                        createIdmapFailed = true;
+-                    }
+-                }
+-                PackageParser.Package targetPkg = mPackages.get(pkg.mOverlayTarget);
+-                if (targetPkg != null) {
+-                    killApplication(pkg.mOverlayTarget, targetPkg.applicationInfo.uid,
+-                            "overlay package installed");
+-                }
+-            } else if (mOverlays.containsKey(pkg.packageName) &&
+-                    !pkg.packageName.equals("android")) {
+-                // This is a regular package, with one or more known overlay packages.
+-                createIdmapsForPackageLI(pkg);
+-            }
+         }
+ 
+         Trace.traceEnd(TRACE_TAG_PACKAGE_MANAGER);
+ 
+-        if (createIdmapFailed) {
+-            throw new PackageManagerException(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+-                    "scanPackageLI failed to createIdmap");
+-        }
+         return pkg;
+     }
+ 
+diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
+index ce1dcbc..677214b 100644
+--- a/services/java/com/android/server/SystemServer.java
++++ b/services/java/com/android/server/SystemServer.java
+@@ -76,6 +76,7 @@ import com.android.server.media.projection.MediaProjectionManagerService;
+ import com.android.server.net.NetworkPolicyManagerService;
+ import com.android.server.net.NetworkStatsService;
+ import com.android.server.notification.NotificationManagerService;
++import com.android.server.om.OverlayManagerService;
+ import com.android.server.os.RegionalizationService;
+ import com.android.server.os.SchedulingPolicyService;
+ import com.android.server.pm.BackgroundDexOptService;
+@@ -491,6 +492,9 @@ public final class SystemServer {
+         mSystemServiceManager.startService(UserManagerService.LifeCycle.class);
+         Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
+ 
++        // Manages Overlay packages
++        mSystemServiceManager.startService(new OverlayManagerService(mSystemContext, installer));
++
+         // Initialize attribute cache used to cache resources from packages.
+         AttributeCache.init(mSystemContext);
+ 
+-- 
+2.10.0
+

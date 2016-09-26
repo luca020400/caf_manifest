@@ -1,0 +1,35 @@
+From 617b1f7005530888457d14a557b323154070895c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
+Date: Mon, 29 Feb 2016 14:12:35 +0100
+Subject: [PATCH 08/31] OMS-N: idmap: suppress print for padded resources
+ [8/14]
+
+Bug: 31052947
+
+AOSP Change-Id: I13723bf8b1cdeecfd71750123eb1f949f96b7c3e
+
+Change-Id: If4fc83bb016da2b781c7684bf4f6d840d8ce61e7
+---
+ cmds/idmap/inspect.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/cmds/idmap/inspect.cpp b/cmds/idmap/inspect.cpp
+index f6afc85..9e65c53 100644
+--- a/cmds/idmap/inspect.cpp
++++ b/cmds/idmap/inspect.cpp
+@@ -283,7 +283,11 @@ namespace {
+                 if (err != NO_ERROR) {
+                     return err;
+                 }
+-                print("", "entry", data32, "%s/%s", type.string(), name.string());
++                if (data32 != ResTable_type::NO_ENTRY) {
++                    print("", "entry", data32, "%s/%s", type.string(), name.string());
++                } else {
++                    print("", "entry", data32, "");
++                }
+             }
+         }
+ 
+-- 
+2.10.0
+

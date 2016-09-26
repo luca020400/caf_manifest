@@ -1,0 +1,284 @@
+From a29ee1f0a86939152c8dfc211d1e5c0fd6865089 Mon Sep 17 00:00:00 2001
+From: Nicholas Chum <nicholaschum@gmail.com>
+Date: Tue, 30 Aug 2016 01:23:42 -0400
+Subject: [PATCH 14/31] OMS-N: Officially announce the rebase completion to
+ Android Nougat [14/14]
+
+This commit cleans up the possible issues with the current iteration
+of the Overlay Manager Service and it's free-compatibility with the
+Android Open Source Project based ROMs.
+
+This commit cleans up the commit to support downloaded overlays, but
+adapted to Android Nougat's new code.
+
+NOTE: enforceCodePolicy() has been added in Nougat to enforce checks on
+hasCode manifest metadata tags to ensure that APKs must declare that it
+wants an APK to be installed with no specified code. However this is
+rather harmful to us since our overlay APKs install as non-code based
+packages, thus tripping up the enforcement, ultimately requiring to be
+disabled.
+
+Change-Id: I077a11c155b41c1463d2cabdf7dcecd63d038620
+---
+ core/java/android/content/pm/ActivityInfo.java     | 13 ++++++
+ core/java/android/content/res/Configuration.java   | 28 ++++++++++++-
+ .../android/server/am/ActivityManagerService.java  |  4 ++
+ .../core/java/com/android/server/pm/Installer.java |  7 +---
+ .../android/server/pm/PackageManagerService.java   | 47 ----------------------
+ 5 files changed, 44 insertions(+), 55 deletions(-)
+
+diff --git a/core/java/android/content/pm/ActivityInfo.java b/core/java/android/content/pm/ActivityInfo.java
+index 5a09c00..0c2c2b9 100644
+--- a/core/java/android/content/pm/ActivityInfo.java
++++ b/core/java/android/content/pm/ActivityInfo.java
+@@ -631,6 +631,19 @@ public class ActivityInfo extends ComponentInfo
+      * constant starts at the high bits.
+      */
+     public static final int CONFIG_FONT_SCALE = 0x40000000;
++    /**
++     * Bit in {@link #configChanges} used to denote that the current configuration change includes
++     * changes to the set of resource assets, i.e. what overlay packages should be used. Note that
++     * applications cannot handle asset changes themselves. (To support that use-case, @hide must be
++     * removed from this constant and corresponding flags for use in AndroidManifest.xml must be
++     * added).
++     *
++     * This is not a core resource configuration, but a higher-level value, so its constant starts
++     * at the high bits.
++     *
++     * @hide
++     */
++    public static final int CONFIG_ASSETS = 0x80000000;
+ 
+     /** @hide
+      * Unfortunately the constants for config changes in native code are
+diff --git a/core/java/android/content/res/Configuration.java b/core/java/android/content/res/Configuration.java
+index 6f43d99..c9e7773 100644
+--- a/core/java/android/content/res/Configuration.java
++++ b/core/java/android/content/res/Configuration.java
+@@ -665,6 +665,11 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+     public int compatSmallestScreenWidthDp;
+ 
+     /**
++     * @hide Internal book-keeping of asset changes. Used to determine if any assets have changed.
++     */
++    public int assetSeq;
++
++    /**
+      * @hide Internal book-keeping.
+      */
+     public int seq;
+@@ -772,6 +777,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         compatScreenWidthDp = o.compatScreenWidthDp;
+         compatScreenHeightDp = o.compatScreenHeightDp;
+         compatSmallestScreenWidthDp = o.compatSmallestScreenWidthDp;
++        assetSeq = o.assetSeq;
+         seq = o.seq;
+     }
+ 
+@@ -906,6 +912,10 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+             case NAVIGATIONHIDDEN_YES: sb.append("/h"); break;
+             default: sb.append("/"); sb.append(navigationHidden); break;
+         }
++        if (assetSeq != 0) {
++            sb.append(" as.");
++            sb.append(assetSeq);
++        }
+         if (seq != 0) {
+             sb.append(" s.");
+             sb.append(seq);
+@@ -936,6 +946,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         screenHeightDp = compatScreenHeightDp = SCREEN_HEIGHT_DP_UNDEFINED;
+         smallestScreenWidthDp = compatSmallestScreenWidthDp = SMALLEST_SCREEN_WIDTH_DP_UNDEFINED;
+         densityDpi = DENSITY_DPI_UNDEFINED;
++        assetSeq = 0;
+         seq = 0;
+     }
+ 
+@@ -1079,6 +1090,10 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         if (delta.compatSmallestScreenWidthDp != SMALLEST_SCREEN_WIDTH_DP_UNDEFINED) {
+             compatSmallestScreenWidthDp = delta.compatSmallestScreenWidthDp;
+         }
++        if (delta.assetSeq != 0 && assetSeq != delta.assetSeq) {
++            changed |= ActivityInfo.CONFIG_ASSETS;
++            assetSeq = delta.assetSeq;
++        }
+         if (delta.seq != 0) {
+             seq = delta.seq;
+         }
+@@ -1193,6 +1208,9 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+                 && densityDpi != delta.densityDpi) {
+             changed |= ActivityInfo.CONFIG_DENSITY;
+         }
++        if (delta.assetSeq != 0 && assetSeq != delta.assetSeq) {
++            changed |= ActivityInfo.CONFIG_ASSETS;
++        }
+ 
+         return changed;
+     }
+@@ -1211,7 +1229,8 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+      */
+     public static boolean needNewResources(@Config int configChanges,
+             @Config int interestingChanges) {
+-        return (configChanges & (interestingChanges|ActivityInfo.CONFIG_FONT_SCALE)) != 0;
++        return (configChanges & (interestingChanges|ActivityInfo.CONFIG_FONT_SCALE|
++            ActivityInfo.CONFIG_ASSETS)) != 0;
+     }
+ 
+     /**
+@@ -1240,7 +1259,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+             // sequence has wrapped around.
+             return false;
+         }
+-        return diff > 0;
++        return diff > 0 || other.assetSeq > assetSeq;
+     }
+ 
+     /**
+@@ -1284,6 +1303,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         dest.writeInt(compatScreenWidthDp);
+         dest.writeInt(compatScreenHeightDp);
+         dest.writeInt(compatSmallestScreenWidthDp);
++        dest.writeInt(assetSeq);
+         dest.writeInt(seq);
+     }
+ 
+@@ -1317,6 +1337,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         compatScreenWidthDp = source.readInt();
+         compatScreenHeightDp = source.readInt();
+         compatSmallestScreenWidthDp = source.readInt();
++        assetSeq = source.readInt();
+         seq = source.readInt();
+     }
+ 
+@@ -1400,6 +1421,8 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         n = this.smallestScreenWidthDp - that.smallestScreenWidthDp;
+         if (n != 0) return n;
+         n = this.densityDpi - that.densityDpi;
++        if (n != 0) return n;
++        n = this.assetSeq - that.assetSeq;
+         //if (n != 0) return n;
+         return n;
+     }
+@@ -1437,6 +1460,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
+         result = 31 * result + screenHeightDp;
+         result = 31 * result + smallestScreenWidthDp;
+         result = 31 * result + densityDpi;
++        result = 31 * result + assetSeq;
+         return result;
+     }
+ 
+diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
+index 21419112..25bced2 100644
+--- a/services/core/java/com/android/server/am/ActivityManagerService.java
++++ b/services/core/java/com/android/server/am/ActivityManagerService.java
+@@ -18927,6 +18927,10 @@ public final class ActivityManagerService extends ActivityManagerNative
+                 }
+             } catch (Exception e) {}
+         }
++
++        Configuration config = new Configuration(mConfiguration);
++        config.assetSeq++;
++        updateConfiguration(config);
+     }
+ 
+     /**
+diff --git a/services/core/java/com/android/server/pm/Installer.java b/services/core/java/com/android/server/pm/Installer.java
+index 5198a2a..e9ff28d 100644
+--- a/services/core/java/com/android/server/pm/Installer.java
++++ b/services/core/java/com/android/server/pm/Installer.java
+@@ -129,12 +129,7 @@ public final class Installer extends SystemService {
+             return Long.parseLong(res[1]);
+         } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+             throw new InstallerException("Invalid inode result: " + Arrays.toString(res));
+-
+-    public int removeIdmap(String overlayApkPath) {
+-        StringBuilder builder = new StringBuilder("rmidmap");
+-        builder.append(' ');
+-        builder.append(overlayApkPath);
+-        return mInstaller.execute(builder.toString());
++        }
+     }
+ 
+     public void dexopt(String apkPath, int uid, String instructionSet, int dexoptNeeded,
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index c0b8cde..cd4f228 100755
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -7043,7 +7043,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+                     synchronized (mPackages) {
+                         // Just remove the loaded entries from package lists.
+                         mPackages.remove(ps.name);
+-                        removeFromOverlaysLP(ps.pkg);
+                     }
+ 
+                     logCriticalInfo(Log.WARN, "Package " + ps.name + " at " + scanFile
+@@ -8087,10 +8086,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+             pkg.applicationInfo.privateFlags |= ApplicationInfo.PRIVATE_FLAG_PRIVILEGED;
+         }
+ 
+-        if ((policyFlags & PackageParser.PARSE_ENFORCE_CODE) != 0) {
+-            enforceCodePolicy(pkg);
+-        }
+-
+         if (mCustomResolverComponentName != null &&
+                 mCustomResolverComponentName.getPackageName().equals(pkg.packageName)) {
+             setUpCustomResolverActivity(pkg);
+@@ -9818,8 +9813,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+         if (r != null) {
+             if (DEBUG_REMOVE) Log.d(TAG, "  Libraries: " + r);
+         }
+-
+-        removeFromOverlaysLP(pkg);
+     }
+ 
+     private static boolean hasPermission(PackageParser.Package pkgInfo, String perm) {
+@@ -20624,46 +20617,6 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
+         }
+     }
+ 
+-    private void removeFromOverlaysLP(PackageParser.Package pkg) {
+-        if (pkg == null) {
+-            return;
+-        }
+-        if (pkg.mOverlayTarget == null) {
+-            // regular package
+-            ArrayMap<String, PackageParser.Package> map = mOverlays.get(pkg.mOverlayTarget);
+-            int N = map.size();
+-            for (int i = 0; i < N; i++) {
+-                PackageParser.Package opkg = map.valueAt(i);
+-                mInstaller.removeIdmap(opkg.baseCodePath);
+-            }
+-            mOverlays.remove(pkg.packageName);
+-        } else {
+-            // overlay package
+-            PackageParser.Package target = mPackages.get(pkg.mOverlayTarget);
+-            if (target != null && target.applicationInfo.resourceDirs != null) {
+-                killApplication(pkg.mOverlayTarget, target.applicationInfo.uid,
+-                        "overlay package removed");
+-                int N = target.applicationInfo.resourceDirs.length;
+-                int i = 0;
+-                for (; i < N; i++) {
+-                    if (target.applicationInfo.resourceDirs[i].equals(pkg.applicationInfo.sourceDir)) {
+-                        break;
+-                    }
+-                }
+-                System.arraycopy(target.applicationInfo.resourceDirs, i + 1,
+-                        target.applicationInfo.resourceDirs, i, N - 1 - i);
+-                String[] tmp = Arrays.copyOfRange(target.applicationInfo.resourceDirs, 0, N - 1);
+-                target.applicationInfo.resourceDirs = tmp;
+-            }
+-
+-            mInstaller.removeIdmap(pkg.baseCodePath);
+-
+-            for (ArrayMap<String, PackageParser.Package> map : mOverlays.values()) {
+-                map.remove(pkg.packageName);
+-            }
+-        }
+-    }
+-
+     private static class MoveCallbacks extends Handler {
+         private static final int MSG_CREATED = 1;
+         private static final int MSG_STATUS_CHANGED = 2;
+-- 
+2.10.0
+

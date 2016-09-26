@@ -1,0 +1,447 @@
+From 8ef13d4ff9b8b95d6020c9b0844441c11184ec5c Mon Sep 17 00:00:00 2001
+From: Jacob McSwain <jacob.a.mcswain@gmail.com>
+Date: Sun, 26 Jun 2016 15:21:52 -0500
+Subject: [PATCH 15/31] OMS-N: Allow multiple targets for enabling and
+ disabling overlays
+
+Just use the enable option like normal, but you can add more than one package
+
+For example:
+    om enable com.android.systemui.AkZent android.AkZent
+
+will work the same as:
+    om enable com.android.systemui.AkZent android.AkZent
+    om enable android.AkZent
+
+This will also delay the refreshes until all the enabling is done
+but you must run refresh() afterwards to refresh the views
+
+Updated to Android N by @nicholaschum
+
+Original Author:
+USA-RedDragon
+
+Original Commit:
+https://github.com/USA-RedDragon/frameworks_base/commit/7e04c67de0eaf27112c385a9b1d9fbe9ccb62d03
+
+Squashed:
+OMS: Add option to disable all overlays through shell interface
+
+Original Author:
+USA-RedDragon
+
+Original Commit:
+https://github.com/USA-RedDragon/frameworks_base/commit/aa1ac6218635ab502ef24bd6b38842e68cc3b2e9
+
+Change-Id: I00e296373001aca5bb39c592c9f2354e816fd533
+---
+ cmds/om/src/com/android/commands/om/Om.java        | 81 +++++++++++++++++++++-
+ core/java/android/content/om/IOverlayManager.aidl  |  9 ++-
+ .../android/server/om/OverlayManagerService.java   | 42 +++++++----
+ .../server/om/OverlayManagerServiceImpl.java       | 12 +++-
+ .../android/server/om/OverlayManagerSettings.java  | 31 +++++----
+ 5 files changed, 140 insertions(+), 35 deletions(-)
+
+diff --git a/cmds/om/src/com/android/commands/om/Om.java b/cmds/om/src/com/android/commands/om/Om.java
+index a1104ee..2cfc9a5 100644
+--- a/cmds/om/src/com/android/commands/om/Om.java
++++ b/cmds/om/src/com/android/commands/om/Om.java
+@@ -64,6 +64,8 @@ public final class Om {
+             return runEnableDisable(true);
+         } else if ("disable".equals(op)) {
+             return runEnableDisable(false);
++        } else if ("disable-all".equals(op)) {
++            return runDisableAll();
+         } else if ("set-priority".equals(op)) {
+             return runSetPriority();
+         } else if (op != null) {
+@@ -189,18 +191,46 @@ public final class Om {
+                     return 1;
+             }
+         }
++
++        int argc = 0;
+         try {
+             String packageName = nextArg();
++            ArrayList<String> packages = new ArrayList<>();
+             if (packageName == null) {
+-                System.err.println("Error: no package specified");
++                System.err.println("Error: no packages specified");
++                return 1;
++            }
++            while(packageName != null) {
++                argc++;
++                packages.add(packageName);
++                packageName = nextArg();
++            }
++            if(argc > 1) {
++                for(String pkg : packages) {
++                    boolean ret = mOm.setEnabled(pkg, enable, userId, true);
++                    if(!ret) {
++                        System.err.println("Error: Failed to " + ((enable) ? "enable ":"disable ") + pkg);
++                    }
++                }
++                return 0;
++            } else if(argc == 1) {
++                return mOm.setEnabled(packages.get(0), enable, userId, false) ? 0:1;
++            } else {
++                System.err.println("Error: should never reach here");
+                 return 1;
+             }
+-            return mOm.setEnabled(packageName, enable, userId) ? 0 : 1;
+         } catch (RemoteException e) {
+             System.err.println(e.toString());
+             System.err.println(OM_NOT_RUNNING_ERR);
+-            return 1;
++        } finally {
++            try {
++                if(argc > 1) mOm.refresh(userId);
++            } catch (RemoteException e) {
++                System.err.println(e.toString());
++                System.err.println(OM_NOT_RUNNING_ERR);
++            }
+         }
++        return 0;
+     }
+ 
+     private int runSetPriority() {
+@@ -247,7 +277,50 @@ public final class Om {
+         }
+     }
+ 
++    private int runDisableAll() {
++        int userId = UserHandle.USER_OWNER;
++        try {
++            String opt;
++            while ((opt = nextOption()) != null) {
++                switch (opt) {
++                    case "--user":
++                        String optionData = nextOptionData();
++                        if (optionData == null || !isNumber(optionData)) {
++                            System.err.println("Error: no USER_ID specified");
++                            showUsage();
++                            return 1;
++                        }
++                        userId = Integer.parseInt(optionData);
++                        break;
++                    default:
++                        System.err.println("Error: Unknown option: " + opt);
++                        return 1;
++                }
++            }
++
++            Map<String, List<OverlayInfo>> targetsAndOverlays = mOm.getAllOverlays(userId);
+ 
++            for (Entry<String, List<OverlayInfo>> targetEntry : targetsAndOverlays.entrySet()) {
++                for (OverlayInfo oi : targetEntry.getValue()) {
++                    boolean worked = mOm.setEnabled(oi.packageName, false, userId, true);
++                    if(!worked) {
++                        System.err.println("Failed to disable " + oi.packageName);
++                    }
++                }
++            }
++        } catch (RemoteException e) {
++            System.err.println(e.toString());
++            System.err.println(OM_NOT_RUNNING_ERR);
++        } finally {
++            try {
++                mOm.refresh(userId);
++            } catch (RemoteException e) {
++                System.err.println(e.toString());
++                System.err.println(OM_NOT_RUNNING_ERR);
++            }
++        }
++        return 0;
++    }
+ 
+     private String nextOption() {
+         if (mNextArg >= mArgs.length) {
+@@ -308,6 +381,7 @@ public final class Om {
+         System.err.println("usage: om list [--user USER_ID] [PACKAGE [PACKAGE [...]]]");
+         System.err.println("       om enable [--user USER_ID] PACKAGE");
+         System.err.println("       om disable [--user USER_ID] PACKAGE");
++        System.err.println("       om disable-all [--user USER_ID]");
+         System.err.println("       om set-priority [--user USER_ID] PACKAGE PARENT|lowest|highest");
+         System.err.println("");
+         System.err.println("om list: print all overlay packages in priority order;");
+@@ -318,6 +392,7 @@ public final class Om {
+         System.err.println("om enable PACKAGE: enable overlay package PACKAGE");
+         System.err.println("");
+         System.err.println("om disable PACKAGE: disable overlay package PACKAGE");
++        System.err.println("om disable-all: disables all overlay packages");
+         System.err.println("");
+         System.err.println("om set-priority PACKAGE PARENT: change the priority of the overlay");
+         System.err.println("         PACKAGE to be just higher than the priority of PACKAGE_PARENT");
+diff --git a/core/java/android/content/om/IOverlayManager.aidl b/core/java/android/content/om/IOverlayManager.aidl
+index aba9573..74d50fd 100644
+--- a/core/java/android/content/om/IOverlayManager.aidl
++++ b/core/java/android/content/om/IOverlayManager.aidl
+@@ -82,10 +82,11 @@ interface IOverlayManager {
+      * @param packageName The name of the overlay package.
+      * @param enable true to enable the overlay, false to disable it.
+      * @param userId The user for which to change the overlay.
++     * @param shouldWait true to wait to reload resources until refresh is called
+      * @return true if the system successfully registered the request, false
+      *         otherwise.
+      */
+-    boolean setEnabled(in String packageName, in boolean enable, in int userId);
++    boolean setEnabled(in String packageName, in boolean enable, in int userId, in boolean shouldWait);
+ 
+     /**
+      * Change the priority of the given overlay to be just higher than the
+@@ -125,4 +126,10 @@ interface IOverlayManager {
+      * @param userId The user for which to change the overlay.
+      */
+     boolean setLowestPriority(in String packageName, in int userId);
++
++    /**
++     * Refresh assets
++     * @param uid the user to refresh assets for
++     */
++    void refresh(in int uid);
+ }
+diff --git a/services/core/java/com/android/server/om/OverlayManagerService.java b/services/core/java/com/android/server/om/OverlayManagerService.java
+index aa5b0f6..5219fcb 100644
+--- a/services/core/java/com/android/server/om/OverlayManagerService.java
++++ b/services/core/java/com/android/server/om/OverlayManagerService.java
+@@ -457,8 +457,8 @@ public class OverlayManagerService extends SystemService {
+         }
+ 
+         @Override
+-        public boolean setEnabled(String packageName, boolean enable, int userId)
+-                throws RemoteException {
++        public boolean setEnabled(String packageName, boolean enable, int userId,
++                boolean shouldWait) throws RemoteException {
+             enforceChangeConfigurationPermission("setEnabled");
+             userId = handleIncomingUser(userId, "setEnabled");
+             if (packageName == null) {
+@@ -468,7 +468,7 @@ public class OverlayManagerService extends SystemService {
+             final long ident = Binder.clearCallingIdentity();
+             try {
+                 synchronized (mLock) {
+-                    return mImpl.onSetEnabled(packageName, enable, userId);
++                    return mImpl.onSetEnabled(packageName, enable, userId, shouldWait);
+                 }
+             } finally {
+                 Binder.restoreCallingIdentity(ident);
+@@ -586,6 +586,15 @@ public class OverlayManagerService extends SystemService {
+                         message);
+             }
+         }
++
++        public void refresh(int uid) {
++            Collection<String> targets;
++            synchronized (mLock) {
++                targets = mImpl.onSwitchUser(uid);
++            }
++
++            updateAssets(uid, targets.toArray(new String[targets.size()]));
++        }
+     };
+ 
+     private boolean isOverlayPackage(@NonNull PackageInfo pi) {
+@@ -599,43 +608,48 @@ public class OverlayManagerService extends SystemService {
+         }
+ 
+         @Override
+-        public void onOverlayAdded(@NonNull OverlayInfo oi) {
+-            scheduleBroadcast(Intent.ACTION_OVERLAY_ADDED, oi, oi.isEnabled());
++        public void onOverlayAdded(@NonNull OverlayInfo oi, boolean shouldWait) {
++            scheduleBroadcast(Intent.ACTION_OVERLAY_ADDED, oi, oi.isEnabled(), shouldWait);
+         }
+ 
+         @Override
+-        public void onOverlayRemoved(@NonNull OverlayInfo oi) {
+-            scheduleBroadcast(Intent.ACTION_OVERLAY_REMOVED, oi, oi.isEnabled());
++        public void onOverlayRemoved(@NonNull OverlayInfo oi, boolean shouldWait) {
++            scheduleBroadcast(Intent.ACTION_OVERLAY_REMOVED, oi, oi.isEnabled(), shouldWait);
+         }
+ 
+         @Override
+-        public void onOverlayChanged(@NonNull OverlayInfo oi, @NonNull OverlayInfo oldOi) {
+-            scheduleBroadcast(Intent.ACTION_OVERLAY_CHANGED, oi, oi.isEnabled() != oldOi.isEnabled());
++        public void onOverlayChanged(@NonNull OverlayInfo oi, @NonNull OverlayInfo oldOi,
++                boolean shouldWait) {
++            scheduleBroadcast(Intent.ACTION_OVERLAY_CHANGED, oi,
++                    oi.isEnabled() != oldOi.isEnabled(), shouldWait);
+         }
+ 
+         @Override
+         public void onOverlayPriorityChanged(@NonNull OverlayInfo oi) {
+-            scheduleBroadcast(Intent.ACTION_OVERLAY_PRIORITY_CHANGED, oi, oi.isEnabled());
++            scheduleBroadcast(Intent.ACTION_OVERLAY_PRIORITY_CHANGED, oi, oi.isEnabled(), false);
+         }
+ 
+         private void scheduleBroadcast(@NonNull String action, @NonNull OverlayInfo oi,
+-                boolean doUpdate) {
+-            FgThread.getHandler().post(new BroadcastRunnable(action, oi, doUpdate));
++                boolean doUpdate, boolean shouldWait) {
++            FgThread.getHandler().post(new BroadcastRunnable(action, oi, doUpdate, shouldWait));
+         }
+ 
+         private class BroadcastRunnable extends Thread {
+             private final String mAction;
+             private final OverlayInfo mOverlayInfo;
+             private final boolean mDoUpdate;
++            private final boolean shouldWait;
+ 
+-            public BroadcastRunnable(String action, OverlayInfo oi, boolean doUpdate) {
++            public BroadcastRunnable(String action, OverlayInfo oi, boolean doUpdate,
++                    boolean shouldWait) {
+                 mAction = action;
+                 mOverlayInfo = oi;
+                 mDoUpdate = doUpdate;
++                this.shouldWait = shouldWait;
+             }
+ 
+             public void run() {
+-                if (mDoUpdate) {
++                if (mDoUpdate && !shouldWait) {
+                     updateAssets(mOverlayInfo.userId, mOverlayInfo.targetPackageName);
+                 }
+                 sendBroadcast(mAction, mOverlayInfo.packageName, mOverlayInfo.userId);
+diff --git a/services/core/java/com/android/server/om/OverlayManagerServiceImpl.java b/services/core/java/com/android/server/om/OverlayManagerServiceImpl.java
+index e0e7e3a..5a0051c 100644
+--- a/services/core/java/com/android/server/om/OverlayManagerServiceImpl.java
++++ b/services/core/java/com/android/server/om/OverlayManagerServiceImpl.java
+@@ -312,7 +312,8 @@ class OverlayManagerServiceImpl {
+         return mSettings.getOverlaysForUser(userId);
+     }
+ 
+-    boolean onSetEnabled(@NonNull String packageName, boolean enable, int userId) {
++    boolean onSetEnabled(@NonNull String packageName, boolean enable, int userId,
++            boolean shouldWait) {
+         if (DEBUG) {
+             Slog.d(TAG, String.format("onSetEnabled packageName=%s enable=%s userId=%d",
+                         packageName, enable, userId));
+@@ -327,7 +328,7 @@ class OverlayManagerServiceImpl {
+             OverlayInfo oi = mSettings.getOverlayInfo(packageName, userId);
+             PackageInfo targetPackage = mPackageManager.getPackageInfo(oi.targetPackageName, userId);
+             mSettings.setEnabled(packageName, userId, enable);
+-            updateState(targetPackage, overlayPackage, userId);
++            updateState(targetPackage, overlayPackage, userId, shouldWait);
+             return true;
+         } catch (OverlayManagerSettings.BadKeyException e) {
+             return false;
+@@ -369,6 +370,11 @@ class OverlayManagerServiceImpl {
+ 
+     private void updateState(PackageInfo targetPackage, @NonNull PackageInfo overlayPackage,
+             int userId) throws OverlayManagerSettings.BadKeyException {
++        updateState(targetPackage, overlayPackage, userId, false);
++    }
++
++    private void updateState(PackageInfo targetPackage, @NonNull PackageInfo overlayPackage,
++            int userId, boolean shouldWait) throws OverlayManagerSettings.BadKeyException {
+         if (targetPackage != null) {
+             mIdmapManager.createIdmap(targetPackage, overlayPackage, userId);
+         }
+@@ -385,7 +391,7 @@ class OverlayManagerServiceImpl {
+                             OverlayInfo.stateToString(currentState),
+                             OverlayInfo.stateToString(newState)));
+             }
+-            mSettings.setState(overlayPackage.packageName, userId, newState);
++            mSettings.setState(overlayPackage.packageName, userId, newState, shouldWait);
+         }
+     }
+ 
+diff --git a/services/core/java/com/android/server/om/OverlayManagerSettings.java b/services/core/java/com/android/server/om/OverlayManagerSettings.java
+index dd5d52e..2b6cbab 100644
+--- a/services/core/java/com/android/server/om/OverlayManagerSettings.java
++++ b/services/core/java/com/android/server/om/OverlayManagerSettings.java
+@@ -66,7 +66,7 @@ class OverlayManagerSettings {
+         OverlayInfo oi = item.getOverlayInfo();
+         mItems.remove(item);
+         if (oi != null) {
+-            notifyOverlayRemoved(oi);
++            notifyOverlayRemoved(oi, false);
+         }
+     }
+ 
+@@ -120,7 +120,7 @@ class OverlayManagerSettings {
+             OverlayInfo oi = item.getOverlayInfo();
+             item.setUpgrading(true);
+             item.setState(STATE_NOT_APPROVED_UNKNOWN);
+-            notifyOverlayRemoved(oi);
++            notifyOverlayRemoved(oi, false);
+             notifySettingsChanged();
+         } else {
+             item.setUpgrading(false);
+@@ -157,7 +157,8 @@ class OverlayManagerSettings {
+         return item.getState();
+     }
+ 
+-    void setState(@NonNull String packageName, int userId, int state) throws BadKeyException {
++    void setState(@NonNull String packageName, int userId, int state, boolean shouldWait)
++            throws BadKeyException {
+         SettingsItem item = select(packageName, userId);
+         if (item == null) {
+             throw new BadKeyException(packageName, userId);
+@@ -166,10 +167,10 @@ class OverlayManagerSettings {
+         item.setState(state);
+         OverlayInfo current = item.getOverlayInfo();
+         if (previous.state == STATE_NOT_APPROVED_UNKNOWN) {
+-            notifyOverlayAdded(current);
++            notifyOverlayAdded(current, shouldWait);
+             notifySettingsChanged();
+         } else if (current.state != previous.state) {
+-            notifyOverlayChanged(current, previous);
++            notifyOverlayChanged(current, previous, shouldWait);
+             notifySettingsChanged();
+         }
+     }
+@@ -584,31 +585,32 @@ class OverlayManagerSettings {
+         }
+     }
+ 
+-    private void notifyOverlayAdded(final OverlayInfo oi) {
++    private void notifyOverlayAdded(final OverlayInfo oi, boolean shouldWait) {
+         if (DEBUG) {
+             assertNotNull(oi);
+         }
+         for (ChangeListener listener : mListeners) {
+-            listener.onOverlayAdded(oi);
++            listener.onOverlayAdded(oi, shouldWait);
+         }
+     }
+ 
+-    private void notifyOverlayRemoved(final OverlayInfo oi) {
++    private void notifyOverlayRemoved(final OverlayInfo oi, boolean shouldWait) {
+         if (DEBUG) {
+             assertNotNull(oi);
+         }
+         for (ChangeListener listener : mListeners) {
+-            listener.onOverlayRemoved(oi);
++            listener.onOverlayRemoved(oi, shouldWait);
+         }
+     }
+ 
+-    private void notifyOverlayChanged(final OverlayInfo oi, final OverlayInfo oldOi) {
++    private void notifyOverlayChanged(final OverlayInfo oi, final OverlayInfo oldOi,
++            boolean shouldWait) {
+         if (DEBUG) {
+             assertNotNull(oi);
+             assertNotNull(oldOi);
+         }
+         for (ChangeListener listener : mListeners) {
+-            listener.onOverlayChanged(oi, oldOi);
++            listener.onOverlayChanged(oi, oldOi, shouldWait);
+         }
+     }
+ 
+@@ -623,9 +625,10 @@ class OverlayManagerSettings {
+ 
+     interface ChangeListener {
+         void onSettingsChanged();
+-        void onOverlayAdded(@NonNull OverlayInfo oi);
+-        void onOverlayRemoved(@NonNull OverlayInfo oi);
+-        void onOverlayChanged(@NonNull OverlayInfo oi, @NonNull OverlayInfo oldOi);
++        void onOverlayAdded(@NonNull OverlayInfo oi, boolean shouldWait);
++        void onOverlayRemoved(@NonNull OverlayInfo oi, boolean shouldWait);
++        void onOverlayChanged(@NonNull OverlayInfo oi, @NonNull OverlayInfo oldOi,
++            boolean shouldWait);
+         void onOverlayPriorityChanged(@NonNull OverlayInfo oi);
+     }
+ 
+-- 
+2.10.0
+
