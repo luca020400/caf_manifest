@@ -1,4 +1,4 @@
-From 6f49a041c610e7ea201f6d5f179700eca0f926ab Mon Sep 17 00:00:00 2001
+From 915a564fd62ed9d2e9eecde7fc4954178d4a19be Mon Sep 17 00:00:00 2001
 From: George G <kreach3r@users.noreply.github.com>
 Date: Mon, 4 Jul 2016 06:25:15 +0300
 Subject: [PATCH 22/31] OMS-N: ApplicationsState: add filter for Substratum
@@ -49,5 +49,5 @@ index 7392453..70a92d6 100644
          private int mCurrentUser;
  
 -- 
-2.10.0
+2.8.2
 

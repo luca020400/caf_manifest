@@ -1,4 +1,4 @@
-From 6b6c980a4a4d0ef541c7c4c979cdd69bbc8e02e9 Mon Sep 17 00:00:00 2001
+From 68acce4a729dd87be3c7ddaba79a7ed6ac6d6160 Mon Sep 17 00:00:00 2001
 From: Thyrus11 <thyrus11@gmail.com>
 Date: Sat, 21 Feb 2015 07:19:42 +0100
 Subject: [PATCH 28/31] Themes: Make resolver list fully themeable
@@ -33,5 +33,5 @@ index a0b03a0..d3baf68 100644
          android:nestedScrollingEnabled="true"
          android:divider="@null" />
 -- 
-2.10.0
+2.8.2
 

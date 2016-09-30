@@ -1,4 +1,4 @@
-From 82efe6e8117e79993010448b0c30a2ccfc69c210 Mon Sep 17 00:00:00 2001
+From 9ce505f47e3f15484d3049bf653c7e7c14199c65 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Mon, 25 Apr 2016 16:29:22 +0200
 Subject: [PATCH 07/31] OMS-N: pm: set EXTRA_REPLACING correctly in
@@ -39,7 +39,7 @@ Change-Id: I92e846011f2deac52d06c2efbb9017b2101da9dc
  1 file changed, 1 insertion(+)
 
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index 782a18a..c0b8cde 100755
+index c35c956..91dccbd 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
 @@ -1890,6 +1890,7 @@ public class PackageManagerService extends IPackageManager.Stub {
@@ -51,5 +51,5 @@ index 782a18a..c0b8cde 100755
                  }
                  sendPackageBroadcast(Intent.ACTION_PACKAGE_ADDED, packageName,
 -- 
-2.10.0
+2.8.2
 

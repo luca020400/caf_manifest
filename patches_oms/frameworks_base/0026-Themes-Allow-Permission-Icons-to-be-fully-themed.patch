@@ -1,4 +1,4 @@
-From 255f51cfe8991c29879525221cd9f500164d62ea Mon Sep 17 00:00:00 2001
+From 6d6389e3912b9deb085183701c4dd81ab619dcda Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Mon, 23 Nov 2015 23:49:15 -0500
 Subject: [PATCH 26/31] Themes: Allow Permission Icons to be fully themed
@@ -42,5 +42,5 @@ index dfc6c8b..e0f4b0d 100644
      <color name="immersive_cling_text_color">@color/primary_text_default_material_light</color>
      <color name="immersive_cling_button_text_color">@android:color/white</color>
 -- 
-2.10.0
+2.8.2
 

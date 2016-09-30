@@ -1,4 +1,4 @@
-From 3211b2b9c0982244e34e50c2358205520dcc40a1 Mon Sep 17 00:00:00 2001
+From be0ef869582331341adc115f236de66e7fc2660a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:32:48 +0100
 Subject: [PATCH 01/31] OMS-N: Support downloaded overlay packages [1/14]
@@ -288,5 +288,5 @@ index 40dda08..edd97a1 100755
          private static final int MSG_CREATED = 1;
          private static final int MSG_STATUS_CHANGED = 2;
 -- 
-2.10.0
+2.8.2
 

@@ -1,4 +1,4 @@
-From e43a3b04e591d3d4e2edab7f0a517cb6b9cc7e30 Mon Sep 17 00:00:00 2001
+From 3b0efbe0bd8cea1198eb2138ee2ecf72db7b185e Mon Sep 17 00:00:00 2001
 From: camcory <camcory1@gmail.com>
 Date: Tue, 13 Sep 2016 13:31:26 -0400
 Subject: [PATCH 24/31] Small adjustment to Font commit
@@ -48,5 +48,5 @@ index d4d7b18..f4590c9 100644
          return new Font(fullFilename, index, axes, weight, isItalic);
      }
 -- 
-2.10.0
+2.8.2
 

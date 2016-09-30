@@ -1,4 +1,4 @@
-From ac0812b151c4a352b641783fd88535c375083745 Mon Sep 17 00:00:00 2001
+From b3f670e13b7c6a3885025c33ca289a5a3cdab814 Mon Sep 17 00:00:00 2001
 From: 0xD34D <clark@scheffsblend.com>
 Date: Wed, 22 Jun 2016 23:54:23 +0300
 Subject: [PATCH 21/31] N-Extras: Add dynamic theme fonts support (Squash)
@@ -579,5 +579,5 @@ index 25bced2..ad793ee 100644
              Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
  
 -- 
-2.10.0
+2.8.2
 

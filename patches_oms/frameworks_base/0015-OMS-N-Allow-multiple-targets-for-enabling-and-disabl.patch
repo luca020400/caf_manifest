@@ -1,4 +1,4 @@
-From 8ef13d4ff9b8b95d6020c9b0844441c11184ec5c Mon Sep 17 00:00:00 2001
+From d63b51691f0e815e61ed674fe403d3024689de78 Mon Sep 17 00:00:00 2001
 From: Jacob McSwain <jacob.a.mcswain@gmail.com>
 Date: Sun, 26 Jun 2016 15:21:52 -0500
 Subject: [PATCH 15/31] OMS-N: Allow multiple targets for enabling and
@@ -443,5 +443,5 @@ index dd5d52e..2b6cbab 100644
      }
  
 -- 
-2.10.0
+2.8.2
 

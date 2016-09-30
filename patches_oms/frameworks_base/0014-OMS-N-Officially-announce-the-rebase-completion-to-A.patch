@@ -1,4 +1,4 @@
-From a29ee1f0a86939152c8dfc211d1e5c0fd6865089 Mon Sep 17 00:00:00 2001
+From e81a3e08319ece5bcff2894e588261201ee19f14 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Tue, 30 Aug 2016 01:23:42 -0400
 Subject: [PATCH 14/31] OMS-N: Officially announce the rebase completion to
@@ -201,7 +201,7 @@ index 5198a2a..e9ff28d 100644
  
      public void dexopt(String apkPath, int uid, String instructionSet, int dexoptNeeded,
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index c0b8cde..cd4f228 100755
+index 91dccbd..c8b1843 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
 @@ -7043,7 +7043,6 @@ public class PackageManagerService extends IPackageManager.Stub {
@@ -280,5 +280,5 @@ index c0b8cde..cd4f228 100755
          private static final int MSG_CREATED = 1;
          private static final int MSG_STATUS_CHANGED = 2;
 -- 
-2.10.0
+2.8.2
 

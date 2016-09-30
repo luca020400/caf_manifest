@@ -1,4 +1,4 @@
-From d2d0a556a5c80e880de7bc46fb95f2d52268b355 Mon Sep 17 00:00:00 2001
+From 09331bc4d0196c4e1281ddd56b10fecd602eddd5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 16:40:23 +0100
 Subject: [PATCH 05/31] OMS-N: introduce the OverlayManagerService [5/14]
@@ -2788,5 +2788,5 @@ index edd97a1..c02ce57 100755
  
      @Override
 -- 
-2.10.0
+2.8.2
 

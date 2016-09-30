@@ -1,4 +1,4 @@
-From 1662e210512b228f34ce3f8567f3b8d581b674fd Mon Sep 17 00:00:00 2001
+From 170dd53bb1a3991bdf03b46ad65c6d6ff7609f12 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 19 Jun 2016 10:37:13 -0400
 Subject: [PATCH 11/31] OMS-N: Persistence on boot through
@@ -74,5 +74,5 @@ index b86b352..e0e7e3a 100644
  
      private void removeIdmapIfPossible(OverlayInfo oi) {
 -- 
-2.10.0
+2.8.2
 

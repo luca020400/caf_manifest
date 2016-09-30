@@ -1,4 +1,4 @@
-From f6611f7cfcad0f233c5e36f4774146df0bd2b08b Mon Sep 17 00:00:00 2001
+From 63701828f2401c7d8efa0d312a6d4a05047e9828 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:35:31 +0200
 Subject: [PATCH 06/31] OMS-N: integrate OverlayManagerService into framework
@@ -40,7 +40,7 @@ Conflicts:
 Change-Id: I175c0af62a59aed9ac94147683e90c5a77cd40d9
 ---
  cmds/idmap/Android.mk                              |   2 +-
- cmds/idmap/idmap.cpp                               |  55 --------
+ cmds/idmap/idmap.cpp                               |  55 -------
  cmds/idmap/idmap.h                                 |   6 -
  core/java/android/app/ActivityManagerNative.java   |  22 +++
  core/java/android/app/ActivityThread.java          |  65 ++++++++-
@@ -50,23 +50,23 @@ Change-Id: I175c0af62a59aed9ac94147683e90c5a77cd40d9
  core/java/android/app/IActivityManager.java        |   3 +
  core/java/android/app/IApplicationThread.java      |   4 +-
  core/java/android/app/LoadedApk.java               |  12 +-
- core/java/android/app/ResourcesManager.java        |  71 ++++++++--
+ core/java/android/app/ResourcesManager.java        |  71 +++++++--
  core/java/android/content/pm/ApplicationInfo.java  |  15 --
  core/java/android/content/pm/PackageParser.java    |  24 +---
  core/java/android/content/res/AssetManager.java    |   8 ++
  core/java/android/content/res/Resources.java       |  16 +++
- core/java/android/content/res/ResourcesImpl.java   |  71 ++++++++--
+ core/java/android/content/res/ResourcesImpl.java   |  71 +++++++--
  core/java/android/content/res/ResourcesKey.java    |  17 +--
  core/jni/android_util_AssetManager.cpp             | 120 ++++------------
  .../android/content/res/ResourcesManagerTest.java  |  28 ++--
  include/androidfw/AssetManager.h                   |  18 +--
- libs/androidfw/AssetManager.cpp                    | 102 +-------------
+ libs/androidfw/AssetManager.cpp                    | 102 +------------
  .../com/android/server/SystemServiceManager.java   |  23 +--
  .../android/server/am/ActivityManagerService.java  |  53 ++++++-
  .../android/server/om/OverlayManagerService.java   |  37 +++--
- .../android/server/pm/PackageManagerService.java   | 156 +++------------------
+ .../android/server/pm/PackageManagerService.java   | 158 +++------------------
  services/java/com/android/server/SystemServer.java |   4 +
- 27 files changed, 416 insertions(+), 547 deletions(-)
+ 27 files changed, 417 insertions(+), 548 deletions(-)
 
 diff --git a/cmds/idmap/Android.mk b/cmds/idmap/Android.mk
 index 50ccb07..eb6da18 100644
@@ -1818,7 +1818,7 @@ index 5da36f1..aa5b0f6 100644
  
      private void schedulePersistSettings() {
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index c02ce57..782a18a 100755
+index c02ce57..c35c956 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
 @@ -389,25 +389,24 @@ public class PackageManagerService extends IPackageManager.Stub {
@@ -1887,6 +1887,15 @@ index c02ce57..782a18a 100755
  
              // Find base frameworks (resource packages without code).
              scanDirTracedLI(frameworkDir, mDefParseFlags
+@@ -2528,7 +2523,7 @@ public class PackageManagerService extends IPackageManager.Stub {
+                     // Collect overlay in <Package>/system/vendor
+                     scanDirLI(new File(RegionalizationSystemDir, "vendor/overlay"),
+                             PackageParser.PARSE_IS_SYSTEM | PackageParser.PARSE_IS_SYSTEM_DIR,
+-                            scanFlags | SCAN_TRUSTED_OVERLAY, 0);
++                            scanFlags, 0);
+                 }
+             }
+ 
 @@ -6705,80 +6700,6 @@ public class PackageManagerService extends IPackageManager.Stub {
          return finalList;
      }
@@ -2060,5 +2069,5 @@ index ce1dcbc..677214b 100644
          AttributeCache.init(mSystemContext);
  
 -- 
-2.10.0
+2.8.2
 

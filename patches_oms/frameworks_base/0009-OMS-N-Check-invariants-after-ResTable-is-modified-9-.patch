@@ -1,4 +1,4 @@
-From 533b2e907d275b29a38db5931f97b68c758c4eda Mon Sep 17 00:00:00 2001
+From 83fd75ea1bab1330808bf97a4b2db19e59f6920d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 23 Feb 2016 13:51:50 +0100
 Subject: [PATCH 09/31] OMS-N: Check invariants after ResTable is modified
@@ -109,5 +109,5 @@ index 207b842..75a760d 100644
 +
  }   // namespace android
 -- 
-2.10.0
+2.8.2
 

@@ -1,4 +1,4 @@
-From 8802425800ba4399f47ab391289fcdf5ce71d562 Mon Sep 17 00:00:00 2001
+From 4b0830411e694ea090e7b1f430e6d465578046c3 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:56:40 +0100
 Subject: [PATCH 04/31] OMS-N: Add ResTable::remove(cookie) [4/14]
@@ -270,5 +270,5 @@ index f50c178..3b5ba77 100644
  
  TEST_F(IdmapTest, overlaidResourceHasSameName) {
 -- 
-2.10.0
+2.8.2
 

@@ -1,4 +1,4 @@
-From 328d0663e00345b7914419d6abfbc5e4b3b23a70 Mon Sep 17 00:00:00 2001
+From 0d9d66bd30b84eac5ea82e507665de50e4941c4d Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 17 Jul 2016 17:56:40 -0400
 Subject: [PATCH 19/31] N-Extras: AudioService: Allow system effect sounds to
@@ -75,5 +75,5 @@ index 94d0736..9529014 100644
                          mediaPlayer.setAudioStreamType(AudioSystem.STREAM_SYSTEM);
                          mediaPlayer.prepare();
 -- 
-2.10.0
+2.8.2
 
