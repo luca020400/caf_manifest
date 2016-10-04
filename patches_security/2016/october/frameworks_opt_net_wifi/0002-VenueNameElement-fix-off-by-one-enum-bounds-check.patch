@@ -1,0 +1,62 @@
+From 35a86eef3c0eef760f7e61c52a343327ba601630 Mon Sep 17 00:00:00 2001
+From: Samuel Tan <samueltan@google.com>
+Date: Mon, 18 Jul 2016 09:49:59 -0700
+Subject: [PATCH 2/3] VenueNameElement: fix off-by-one enum bounds check
+
+Fix the off-by-one error in the conditionals that check
+whether the Venue Group and Venue Type codes in the ANQP
+element are in the "Reserved" range.
+
+BUG: 30169673
+BUG: 29464811
+TEST: Manually set up AP with Hotspot 2.0 support, broadcasting
+      Venue Group value 0xc, and ensure that device does not
+      crash when in range of this AP.
+
+Change-Id: I14adc3a919e19b67fc0f46bf09d0cffb88b5354e
+(cherry picked from commit 48ee5f1e1c6e2a2dc63e9cb84c42f532c8a6847a)
+---
+ service/java/com/android/server/wifi/anqp/VenueNameElement.java | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/service/java/com/android/server/wifi/anqp/VenueNameElement.java b/service/java/com/android/server/wifi/anqp/VenueNameElement.java
+index f0b27dd..f944c40 100644
+--- a/service/java/com/android/server/wifi/anqp/VenueNameElement.java
++++ b/service/java/com/android/server/wifi/anqp/VenueNameElement.java
+@@ -29,13 +29,13 @@ public class VenueNameElement extends ANQPElement {
+         int group = payload.get() & Constants.BYTE_MASK;
+         int type = payload.get() & Constants.BYTE_MASK;
+ 
+-        if (group >= VenueGroup.values().length) {
++        if (group >= VenueGroup.Reserved.ordinal()) {
+             mGroup = VenueGroup.Reserved;
+             mType = VenueType.Reserved;
+         } else {
+             mGroup = VenueGroup.values()[group];
+             type += sGroupBases.get(mGroup);
+-            if (type >= VenueType.values().length) {
++            if (type >= VenueType.Reserved.ordinal()) {
+                 mType = VenueType.Reserved;
+             } else {
+                 mType = VenueType.values()[type];
+@@ -82,7 +82,7 @@ public class VenueNameElement extends ANQPElement {
+         UtilityMiscellaneous,
+         Vehicular,
+         Outdoor,
+-        Reserved
++        Reserved  // Note: this must be the last enum constant
+     }
+ 
+     public enum VenueType {
+@@ -164,7 +164,7 @@ public class VenueNameElement extends ANQPElement {
+         BusStop,
+         Kiosk,
+ 
+-        Reserved
++        Reserved  // Note: this must be the last enum constant
+     }
+ 
+     private static final VenueType[] PerGroup =
+-- 
+2.10.0
+

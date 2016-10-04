@@ -1,0 +1,27 @@
+From 36e472f5b948f8efdaa9335735822e665d0535b1 Mon Sep 17 00:00:00 2001
+From: Adam Seaton <aseaton@google.com>
+Date: Mon, 29 Aug 2016 15:04:46 -0700
+Subject: [PATCH 3/3] Fix Runtime Restart caused by ag/1370419
+
+Bug: 31151930
+Change-Id: Ie357edf4f0fc6a247bc997e77a5fde2649d3ceb8
+---
+ service/java/com/android/server/wifi/anqp/ANQPFactory.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/service/java/com/android/server/wifi/anqp/ANQPFactory.java b/service/java/com/android/server/wifi/anqp/ANQPFactory.java
+index f3ade09..04cab55 100644
+--- a/service/java/com/android/server/wifi/anqp/ANQPFactory.java
++++ b/service/java/com/android/server/wifi/anqp/ANQPFactory.java
+@@ -275,7 +275,7 @@ public class ANQPFactory {
+                 case HSOperatingclass:
+                     return new GenericBlobElement(infoID, payload);
+                 case HSOSUProviders:
+-                    return new HSOsuProvidersElement(infoID, payload);
++                    return new RawByteElement(infoID, payload);
+                 case HSIconFile:
+                     return new HSIconFileElement(infoID, payload);
+                 default:
+-- 
+2.10.0
+
