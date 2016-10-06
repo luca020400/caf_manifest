@@ -1,7 +1,7 @@
-From c894aa36be535886a8e5ff02cdbcd07dd24618f6 Mon Sep 17 00:00:00 2001
+From 870552cad5c5743ef5238e61093aa1b92c0bfc23 Mon Sep 17 00:00:00 2001
 From: Andy Hung <hunga@google.com>
 Date: Wed, 17 Aug 2016 14:11:13 -0700
-Subject: [PATCH 5/7] Add EFFECT_CMD_SET_PARAM parameter checking
+Subject: [PATCH 05/13] Add EFFECT_CMD_SET_PARAM parameter checking
 
 Bug: 30204301
 Change-Id: Ib9c3ee1c2f23c96f8f7092dd9e146bc453d7a290
@@ -11,7 +11,7 @@ Change-Id: Ib9c3ee1c2f23c96f8f7092dd9e146bc453d7a290
  1 file changed, 23 insertions(+)
 
 diff --git a/services/audioflinger/Effects.cpp b/services/audioflinger/Effects.cpp
-index 055e915..28a14f7 100644
+index 58e3713..11e5541 100644
 --- a/services/audioflinger/Effects.cpp
 +++ b/services/audioflinger/Effects.cpp
 @@ -543,6 +543,13 @@ status_t AudioFlinger::EffectModule::remove_effect_from_hal_l()

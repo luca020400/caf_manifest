@@ -1,0 +1,48 @@
+From b4f332ef4942ea8b28e264703018d62870a18989 Mon Sep 17 00:00:00 2001
+From: Mihai Nita <mnita@google.com>
+Date: Tue, 30 Aug 2016 16:23:12 -0700
+Subject: [PATCH 1/3] Changed Turkish translation for Cyprus, cts tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This changes the translation from "Güney Kıbrıs Rum Kesimi" to "Kıbrıs"
+It backports a change that happened between CLDR 28 and 29.
+
+Bug: 31177615
+Change-Id: Ia637195190a60fd3b34d18b1974be5bfba0eaa8a
+(cherry picked from commit f28636b4e04f53079401300bb432943752a526bb)
+(cherry picked from commit 32157fee31c3e81171102be6faff745e22a19ca0)
+---
+ .../icu/cts/coverage/text/LocaleDisplayNamesTest.java   | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/android_icu4j/cts-coverage/src/main/tests/android/icu/cts/coverage/text/LocaleDisplayNamesTest.java b/android_icu4j/cts-coverage/src/main/tests/android/icu/cts/coverage/text/LocaleDisplayNamesTest.java
+index 14a7586..34495c5 100644
+--- a/android_icu4j/cts-coverage/src/main/tests/android/icu/cts/coverage/text/LocaleDisplayNamesTest.java
++++ b/android_icu4j/cts-coverage/src/main/tests/android/icu/cts/coverage/text/LocaleDisplayNamesTest.java
+@@ -92,4 +92,21 @@ public class LocaleDisplayNamesTest {
+                 Locale.CHINA, DisplayContext.CAPITALIZATION_NONE);
+         assertEquals("拼音罗马字", names.variantDisplayName("PINYIN"));
+     }
++
++    // http://b/31177615
++    @Test
++    public void testCyprusTurkishTranslation() {
++        final Locale[] variousTurkishTestLocales = {
++            new Locale("tr"),
++            new Locale("tr", "CY"),
++            new Locale("tr", "TR")
++        };
++
++        for (Locale testLocale : variousTurkishTestLocales) {
++            LocaleDisplayNamesImpl names = (LocaleDisplayNamesImpl) LocaleDisplayNames.getInstance(
++                    testLocale, DisplayContext.STANDARD_NAMES);
++            assertEquals("Bad translation for Cyprus in locale " + testLocale,
++                    "Kıbrıs", names.regionDisplayName("CY"));
++        }
++    }
+ }
+-- 
+2.10.0
+

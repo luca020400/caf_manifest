@@ -1,7 +1,7 @@
-From c48ef757cc50906e8726a3bebc3b60716292cdba Mon Sep 17 00:00:00 2001
+From 2883ec68e09a2ce9614f31875365edd78a871e1a Mon Sep 17 00:00:00 2001
 From: Pawin Vongmasa <pawin@google.com>
 Date: Fri, 19 Aug 2016 02:07:33 -0700
-Subject: [PATCH 6/7] Fix build breakage caused by commit
+Subject: [PATCH 06/13] Fix build breakage caused by commit
  940829f69b52d6038db66a9c727534636ecc456d.
 
 Change-Id: I4776db4a26fb3c31bb994d48788373fe569c812a

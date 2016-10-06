@@ -1,0 +1,47 @@
+From c290e5e020b915ed5648adc326f19043539f3b05 Mon Sep 17 00:00:00 2001
+From: Brandon Maxwell <maxwelb@google.com>
+Date: Wed, 31 Aug 2016 17:12:59 -0700
+Subject: [PATCH] [Cherry-pick] Use the correct handleMmi function
+
+In the event that the PhoneAccountHandle is null, do not pass in null as
+the account handle, instead use the handleMmi string that only takes the
+dialString.
+
+This change seems to have taken place in
+http://ag/#/c/838273/11/src/com/android/dialer/util/TelecomUtil.java
+Fixing that with this CL
+
+Bug:31165762
+Bug:29443147
+Change-Id: Idc174639c48ab3c01ad5bde340272a8ec55d6ab1
+(cherry picked from commit f9163d84e77a5287c16c679a946c3a8f934350d1)
+(cherry picked from commit a1e500b29a85226f6b18e9fff1e429823c680c5d)
+---
+ src/com/android/dialer/util/TelecomUtil.java | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/com/android/dialer/util/TelecomUtil.java b/src/com/android/dialer/util/TelecomUtil.java
+index bd201c4..69c7334 100644
+--- a/src/com/android/dialer/util/TelecomUtil.java
++++ b/src/com/android/dialer/util/TelecomUtil.java
+@@ -95,11 +95,14 @@ public class TelecomUtil {
+     }
+ 
+     public static boolean handleMmi(Context context, String dialString,
+-            PhoneAccountHandle handle) {
++            @Nullable PhoneAccountHandle handle) {
+         if (hasModifyPhoneStatePermission(context)) {
+             try {
+-                return TelecomManagerCompat.handleMmi(
+-                        getTelecomManager(context), dialString, handle);
++                if (handle == null) {
++                    return getTelecomManager(context).handleMmi(dialString);
++                } else {
++                    return getTelecomManager(context).handleMmi(dialString, handle);
++                }
+             } catch (SecurityException e) {
+                 Log.w(TAG, "TelecomManager.handleMmi called without permission.");
+             }
+-- 
+2.10.0
+

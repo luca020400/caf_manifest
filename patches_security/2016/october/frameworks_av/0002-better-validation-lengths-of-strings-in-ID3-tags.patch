@@ -1,7 +1,7 @@
-From 6d0249be2275fd4086783f259f4e2c54722a7c55 Mon Sep 17 00:00:00 2001
+From fdb9f05f371a7e07886d91b7195d433aabebb7a2 Mon Sep 17 00:00:00 2001
 From: Ray Essick <essick@google.com>
 Date: Tue, 16 Aug 2016 14:24:43 -0700
-Subject: [PATCH 2/7] better validation lengths of strings in ID3 tags
+Subject: [PATCH 02/13] better validation lengths of strings in ID3 tags
 
 Validate lengths on strings in ID3 tags, particularly around 0.
 Also added code to handle cases when we can't get memory for
@@ -18,7 +18,7 @@ Test: play mp3 file which caused a <0 length.
  1 file changed, 42 insertions(+), 15 deletions(-)
 
 diff --git a/media/libstagefright/id3/ID3.cpp b/media/libstagefright/id3/ID3.cpp
-index 35691b9..3942158 100644
+index 355c9c7..bc561cc 100644
 --- a/media/libstagefright/id3/ID3.cpp
 +++ b/media/libstagefright/id3/ID3.cpp
 @@ -77,7 +77,10 @@ ID3::ID3(const uint8_t *data, size_t size, bool ignoreV1)
@@ -33,7 +33,7 @@ index 35691b9..3942158 100644
  
      mIsValid = parseV2(source, 0);
  
-@@ -542,6 +545,10 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+@@ -543,6 +546,10 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
          n -= skipped;
      }
  
@@ -44,7 +44,7 @@ index 35691b9..3942158 100644
      if (encoding == 0x00) {
          // supposedly ISO 8859-1
          id->setTo((const char*)frameData + 1, n);
-@@ -555,11 +562,16 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+@@ -556,11 +563,16 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
          const char16_t *framedata = (const char16_t *) (frameData + 1);
          char16_t *framedatacopy = NULL;
  #if BYTE_ORDER == LITTLE_ENDIAN
@@ -65,7 +65,7 @@ index 35691b9..3942158 100644
  #endif
          id->setTo(framedata, len);
          if (framedatacopy != NULL) {
-@@ -572,15 +584,26 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+@@ -573,15 +585,26 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
          const char16_t *framedata = (const char16_t *) (frameData + 1);
          char16_t *framedatacopy = NULL;
          if (*framedata == 0xfffe) {
@@ -97,7 +97,7 @@ index 35691b9..3942158 100644
              framedata++;
              len--;
          }
-@@ -595,12 +618,16 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
+@@ -596,12 +619,16 @@ void ID3::Iterator::getstring(String8 *id, bool otherdata) const {
          }
          if (eightBit) {
              // collapse to 8 bit, then let the media scanner client figure out the real encoding

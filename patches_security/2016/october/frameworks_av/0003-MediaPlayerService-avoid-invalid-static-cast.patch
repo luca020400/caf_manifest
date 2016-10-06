@@ -1,7 +1,7 @@
-From 0c3b93c8c2027e74af642967eee5c142c8fd185d Mon Sep 17 00:00:00 2001
+From c08772ae0556d3576deeef129c9cf079203548c7 Mon Sep 17 00:00:00 2001
 From: Robert Shih <robertshih@google.com>
 Date: Tue, 16 Aug 2016 16:50:54 -0700
-Subject: [PATCH 3/7] MediaPlayerService: avoid invalid static cast
+Subject: [PATCH 03/13] MediaPlayerService: avoid invalid static cast
 
 Bug: 30204103
 Change-Id: Ie0dd3568a375f1e9fed8615ad3d85184bcc99028
@@ -12,10 +12,10 @@ Change-Id: Ie0dd3568a375f1e9fed8615ad3d85184bcc99028
  2 files changed, 11 insertions(+)
 
 diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
-index 32f86df..bb2715e 100644
+index 59a7739..c7c9aa8 100644
 --- a/media/libmediaplayerservice/MediaPlayerService.cpp
 +++ b/media/libmediaplayerservice/MediaPlayerService.cpp
-@@ -558,6 +558,12 @@ void MediaPlayerService::removeClient(wp<Client> client)
+@@ -559,6 +559,12 @@ void MediaPlayerService::removeClient(wp<Client> client)
      mClients.remove(client);
  }
  

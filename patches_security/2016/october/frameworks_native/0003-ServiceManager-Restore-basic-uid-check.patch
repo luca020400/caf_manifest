@@ -1,0 +1,31 @@
+From fc38de790cf746d8907f4bd8894967b256ef82dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Arve=20Hj=C3=B8nnev=C3=A5g?= <arve@android.com>
+Date: Mon, 1 Aug 2016 16:05:17 -0700
+Subject: [PATCH 3/5] ServiceManager: Restore basic uid check
+
+Prevent apps from registering services without relying on selinux checks.
+
+Bug: 29431260
+
+Change-Id: I38c6e8bc7f7cba1cbd3568e8fed1ae7ac2054a9b
+(cherry picked from commit 2b74d2c1d2a2c1bb6e9c420f7e9b339ba2a95179)
+---
+ cmds/servicemanager/service_manager.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmds/servicemanager/service_manager.c b/cmds/servicemanager/service_manager.c
+index 68e3ceb..95429d2 100644
+--- a/cmds/servicemanager/service_manager.c
++++ b/cmds/servicemanager/service_manager.c
+@@ -124,7 +124,7 @@ static int svc_can_register(const uint16_t *name, size_t name_len, pid_t spid, u
+ {
+     const char *perm = "add";
+ 
+-    if (multiuser_get_app_id(uid) >= AID_APP) {
++    if (uid >= AID_APP) {
+         return 0; /* Don't allow apps to register services */
+     }
+ 
+-- 
+2.10.0
+

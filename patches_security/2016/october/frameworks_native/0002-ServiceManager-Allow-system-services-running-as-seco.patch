@@ -1,7 +1,7 @@
-From 047eec456943dc082e33220d28abb7df4e089f69 Mon Sep 17 00:00:00 2001
+From 0804b8cd5da7181d12c75b3df5885d2baf980057 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Arve=20Hj=C3=B8nnev=C3=A5g?= <arve@android.com>
 Date: Thu, 18 Aug 2016 15:42:35 -0700
-Subject: [PATCH 2/2] ServiceManager: Allow system services running as
+Subject: [PATCH 2/5] ServiceManager: Allow system services running as
  secondary users to add services
 
 This should be reverted when all system services have been cleaned up to not

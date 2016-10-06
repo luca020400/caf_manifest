@@ -1,7 +1,7 @@
-From 035cb12f392860113dce96116a5150e2fde6f0cc Mon Sep 17 00:00:00 2001
+From 5823035ad83490651bb7e147e7f6d6f797cfe90d Mon Sep 17 00:00:00 2001
 From: Eric Laurent <elaurent@google.com>
 Date: Wed, 17 Aug 2016 06:19:32 -0700
-Subject: [PATCH 4/7] soundtrigger: add size check on sound model and
+Subject: [PATCH 04/13] soundtrigger: add size check on sound model and
  recogntion data
 
 Bug: 30148546

@@ -1,0 +1,35 @@
+From 2609274fa6290e94f5198cdc440c33bfaf5b5bbd Mon Sep 17 00:00:00 2001
+From: Mihai Nita <mnita@google.com>
+Date: Tue, 30 Aug 2016 11:56:31 -0700
+Subject: [PATCH 2/3] Changed Turkish translation for Cyprus, source only
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This changes the translation from "Güney Kıbrıs Rum Kesimi" to "Kıbrıs"
+It backports a change that happened between CLDR 28 and 29.
+
+Bug: 31177615
+Change-Id: I72397ec3ea60117bfd8687a6ec18aa67e036b992
+(cherry picked from commit 348d2965a1c92155ed17b4cb3baac3b1895095eb)
+(cherry picked from commit 95b7682babdc6650f4a0562b9ace365ccd3d37ef)
+---
+ icu4c/source/data/region/tr.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/icu4c/source/data/region/tr.txt b/icu4c/source/data/region/tr.txt
+index 3081652..889c364 100644
+--- a/icu4c/source/data/region/tr.txt
++++ b/icu4c/source/data/region/tr.txt
+@@ -95,7 +95,7 @@ tr{
+         CV{"Cape Verde"}
+         CW{"Curaçao"}
+         CX{"Christmas Adası"}
+-        CY{"Güney Kıbrıs Rum Kesimi"}
++        CY{"Kıbrıs"}
+         CZ{"Çek Cumhuriyeti"}
+         DE{"Almanya"}
+         DG{"Diego Garcia"}
+-- 
+2.10.0
+

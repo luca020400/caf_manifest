@@ -1,0 +1,180 @@
+From 4a824caf4539d86259de36a863bc0729ac71bad3 Mon Sep 17 00:00:00 2001
+From: Jim Miller <jaggies@google.com>
+Date: Mon, 8 Aug 2016 20:16:22 -0700
+Subject: [PATCH 04/28] Bind fingerprint when we start authentication
+
+This fixes a bug where it was possible to authenticate the wrong user.
+We now bind the userId when we start authentication and confirm it when
+authentication completes.
+
+Fixes bug 30744668
+
+(Cherry pick from Change-Id: I346d92c301414ed81e11fa9c171584c7ae4341c2)
+
+Change-Id: I3584790c39eb2e8c435ad1b2d887bf9b8ebd36fe
+(cherry picked from commit 837d052ed4b5b75dfd4af44f5ad268e683bf2e13)
+---
+ .../hardware/fingerprint/FingerprintManager.java    | 21 +++++++++++++++------
+ .../fingerprint/IFingerprintServiceReceiver.aidl    |  2 +-
+ .../com/android/keyguard/KeyguardUpdateMonitor.java |  8 ++++++--
+ .../server/fingerprint/AuthenticationClient.java    |  6 +++---
+ .../server/fingerprint/FingerprintService.java      |  2 +-
+ 5 files changed, 26 insertions(+), 13 deletions(-)
+
+diff --git a/core/java/android/hardware/fingerprint/FingerprintManager.java b/core/java/android/hardware/fingerprint/FingerprintManager.java
+index 1ff2e8a..f17fd55 100644
+--- a/core/java/android/hardware/fingerprint/FingerprintManager.java
++++ b/core/java/android/hardware/fingerprint/FingerprintManager.java
+@@ -259,6 +259,7 @@ public class FingerprintManager {
+     public static class AuthenticationResult {
+         private Fingerprint mFingerprint;
+         private CryptoObject mCryptoObject;
++        private int mUserId;
+ 
+         /**
+          * Authentication result
+@@ -267,9 +268,10 @@ public class FingerprintManager {
+          * @param fingerprint the recognized fingerprint data, if allowed.
+          * @hide
+          */
+-        public AuthenticationResult(CryptoObject crypto, Fingerprint fingerprint) {
++        public AuthenticationResult(CryptoObject crypto, Fingerprint fingerprint, int userId) {
+             mCryptoObject = crypto;
+             mFingerprint = fingerprint;
++            mUserId = userId;
+         }
+ 
+         /**
+@@ -286,6 +288,12 @@ public class FingerprintManager {
+          * @hide
+          */
+         public Fingerprint getFingerprint() { return mFingerprint; }
++
++        /**
++         * Obtain the userId for which this fingerprint was authenticated.
++         * @hide
++         */
++        public int getUserId() { return mUserId; }
+     };
+ 
+     /**
+@@ -792,7 +800,7 @@ public class FingerprintManager {
+                     sendAcquiredResult((Long) msg.obj /* deviceId */, msg.arg1 /* acquire info */);
+                     break;
+                 case MSG_AUTHENTICATION_SUCCEEDED:
+-                    sendAuthenticatedSucceeded((Fingerprint) msg.obj);
++                    sendAuthenticatedSucceeded((Fingerprint) msg.obj, msg.arg1 /* userId */);
+                     break;
+                 case MSG_AUTHENTICATION_FAILED:
+                     sendAuthenticatedFailed();
+@@ -840,9 +848,10 @@ public class FingerprintManager {
+             }
+         }
+ 
+-        private void sendAuthenticatedSucceeded(Fingerprint fp) {
++        private void sendAuthenticatedSucceeded(Fingerprint fp, int userId) {
+             if (mAuthenticationCallback != null) {
+-                final AuthenticationResult result = new AuthenticationResult(mCryptoObject, fp);
++                final AuthenticationResult result =
++                        new AuthenticationResult(mCryptoObject, fp, userId);
+                 mAuthenticationCallback.onAuthenticationSucceeded(result);
+             }
+         }
+@@ -981,8 +990,8 @@ public class FingerprintManager {
+         }
+ 
+         @Override // binder call
+-        public void onAuthenticationSucceeded(long deviceId, Fingerprint fp) {
+-            mHandler.obtainMessage(MSG_AUTHENTICATION_SUCCEEDED, fp).sendToTarget();
++        public void onAuthenticationSucceeded(long deviceId, Fingerprint fp, int userId) {
++            mHandler.obtainMessage(MSG_AUTHENTICATION_SUCCEEDED, userId, 0, fp).sendToTarget();
+         }
+ 
+         @Override // binder call
+diff --git a/core/java/android/hardware/fingerprint/IFingerprintServiceReceiver.aidl b/core/java/android/hardware/fingerprint/IFingerprintServiceReceiver.aidl
+index 57a429f..b024b29 100644
+--- a/core/java/android/hardware/fingerprint/IFingerprintServiceReceiver.aidl
++++ b/core/java/android/hardware/fingerprint/IFingerprintServiceReceiver.aidl
+@@ -26,7 +26,7 @@ import android.os.UserHandle;
+ oneway interface IFingerprintServiceReceiver {
+     void onEnrollResult(long deviceId, int fingerId, int groupId, int remaining);
+     void onAcquired(long deviceId, int acquiredInfo);
+-    void onAuthenticationSucceeded(long deviceId, in Fingerprint fp);
++    void onAuthenticationSucceeded(long deviceId, in Fingerprint fp, int userId);
+     void onAuthenticationFailed(long deviceId);
+     void onError(long deviceId, int error);
+     void onRemoved(long deviceId, int fingerId, int groupId);
+diff --git a/packages/Keyguard/src/com/android/keyguard/KeyguardUpdateMonitor.java b/packages/Keyguard/src/com/android/keyguard/KeyguardUpdateMonitor.java
+index 6815545..ca173f8 100755
+--- a/packages/Keyguard/src/com/android/keyguard/KeyguardUpdateMonitor.java
++++ b/packages/Keyguard/src/com/android/keyguard/KeyguardUpdateMonitor.java
+@@ -466,7 +466,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener {
+         }
+     }
+ 
+-    private void handleFingerprintAuthenticated() {
++    private void handleFingerprintAuthenticated(int authUserId) {
+         try {
+             final int userId;
+             try {
+@@ -475,6 +475,10 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener {
+                 Log.e(TAG, "Failed to get current user id: ", e);
+                 return;
+             }
++            if (userId != authUserId) {
++                Log.d(TAG, "Fingerprint authenticated for wrong user: " + authUserId);
++                return;
++            }
+             if (isFingerprintDisabled(userId)) {
+                 Log.d(TAG, "Fingerprint disabled by DPM for userId: " + userId);
+                 return;
+@@ -760,7 +764,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener {
+ 
+         @Override
+         public void onAuthenticationSucceeded(AuthenticationResult result) {
+-            handleFingerprintAuthenticated();
++            handleFingerprintAuthenticated(result.getUserId());
+         }
+ 
+         @Override
+diff --git a/services/core/java/com/android/server/fingerprint/AuthenticationClient.java b/services/core/java/com/android/server/fingerprint/AuthenticationClient.java
+index c04b9a1..87da866 100644
+--- a/services/core/java/com/android/server/fingerprint/AuthenticationClient.java
++++ b/services/core/java/com/android/server/fingerprint/AuthenticationClient.java
+@@ -39,9 +39,9 @@ public abstract class AuthenticationClient extends ClientMonitor {
+     public abstract void resetFailedAttempts();
+ 
+     public AuthenticationClient(Context context, long halDeviceId, IBinder token,
+-            IFingerprintServiceReceiver receiver, int callingUserId, int groupId, long opId,
++            IFingerprintServiceReceiver receiver, int targetUserId, int groupId, long opId,
+             boolean restricted, String owner) {
+-        super(context, halDeviceId, token, receiver, callingUserId, groupId, restricted, owner);
++        super(context, halDeviceId, token, receiver, targetUserId, groupId, restricted, owner);
+         mOpId = opId;
+     }
+ 
+@@ -65,7 +65,7 @@ public abstract class AuthenticationClient extends ClientMonitor {
+                     Fingerprint fp = !getIsRestricted()
+                             ? new Fingerprint("" /* TODO */, groupId, fingerId, getHalDeviceId())
+                             : null;
+-                    receiver.onAuthenticationSucceeded(getHalDeviceId(), fp);
++                    receiver.onAuthenticationSucceeded(getHalDeviceId(), fp, getTargetUserId());
+                 }
+             } catch (RemoteException e) {
+                 Slog.w(TAG, "Failed to notify Authenticated:", e);
+diff --git a/services/core/java/com/android/server/fingerprint/FingerprintService.java b/services/core/java/com/android/server/fingerprint/FingerprintService.java
+index 081a3af..015c8e2 100644
+--- a/services/core/java/com/android/server/fingerprint/FingerprintService.java
++++ b/services/core/java/com/android/server/fingerprint/FingerprintService.java
+@@ -501,7 +501,7 @@ public class FingerprintService extends SystemService implements IBinder.DeathRe
+         if (DEBUG) Slog.v(TAG, "startAuthentication(" + opPackageName + ")");
+ 
+         AuthenticationClient client = new AuthenticationClient(getContext(), mHalDeviceId, token,
+-                receiver, callingUserId, groupId, opId, restricted, opPackageName) {
++                receiver, mCurrentUserId, groupId, opId, restricted, opPackageName) {
+             @Override
+             public boolean handleFailedAttempt() {
+                 mFailedAttempts++;
+-- 
+2.10.0
+

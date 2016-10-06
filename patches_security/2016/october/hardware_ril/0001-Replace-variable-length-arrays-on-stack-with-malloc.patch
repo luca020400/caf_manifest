@@ -1,4 +1,4 @@
-From 95610818918f6f11fe7d23aca1380e6c0fac2af0 Mon Sep 17 00:00:00 2001
+From fc3eda96533308afa547f377cc7da6fdd8b5323b Mon Sep 17 00:00:00 2001
 From: Amit Mahajan <amitmahajan@google.com>
 Date: Mon, 15 Aug 2016 09:06:34 -0700
 Subject: [PATCH] Replace variable-length arrays on stack with malloc.
@@ -11,10 +11,10 @@ Change-Id: Ib95e08a1c009d88a4b4fd8d8fdba0641c6129008
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/libril/RilSapSocket.cpp b/libril/RilSapSocket.cpp
-index 19457f4..32d383e 100644
+index b4234d1..cd13389 100644
 --- a/libril/RilSapSocket.cpp
 +++ b/libril/RilSapSocket.cpp
-@@ -344,7 +344,12 @@ void RilSapSocket::sendResponse(MsgHeader* hdr) {
+@@ -346,7 +346,12 @@ void RilSapSocket::sendResponse(MsgHeader* hdr) {
      if ((success = pb_get_encoded_size(&encoded_size, MsgHeader_fields,
          hdr)) && encoded_size <= INT32_MAX && commandFd != -1) {
          buffer_size = encoded_size + sizeof(uint32_t);
@@ -28,7 +28,7 @@ index 19457f4..32d383e 100644
          written_size = htonl((uint32_t) encoded_size);
          ostream = pb_ostream_from_buffer(buffer, buffer_size);
          pb_write(&ostream, (uint8_t *)&written_size, sizeof(written_size));
-@@ -366,6 +371,7 @@ void RilSapSocket::sendResponse(MsgHeader* hdr) {
+@@ -368,6 +373,7 @@ void RilSapSocket::sendResponse(MsgHeader* hdr) {
              RLOGE("Error while encoding response of type %d id %d buffer_size: %d: %s.",
              hdr->type, hdr->id, buffer_size, PB_GET_ERROR(&ostream));
          }
@@ -36,7 +36,7 @@ index 19457f4..32d383e 100644
      } else {
      RLOGE("Not sending response type %d: encoded_size: %u. commandFd: %d. encoded size result: %d",
          hdr->type, encoded_size, commandFd, success);
-@@ -437,7 +443,11 @@ void RilSapSocket::sendDisconnect() {
+@@ -439,7 +445,11 @@ void RilSapSocket::sendDisconnect() {
     if ((success = pb_get_encoded_size(&encoded_size, RIL_SIM_SAP_DISCONNECT_REQ_fields,
          &disconnectReq)) && encoded_size <= INT32_MAX) {
          buffer_size = encoded_size + sizeof(uint32_t);
@@ -49,7 +49,7 @@ index 19457f4..32d383e 100644
          written_size = htonl((uint32_t) encoded_size);
          ostream = pb_ostream_from_buffer(buffer, buffer_size);
          pb_write(&ostream, (uint8_t *)&written_size, sizeof(written_size));
-@@ -469,6 +479,7 @@ void RilSapSocket::sendDisconnect() {
+@@ -471,6 +481,7 @@ void RilSapSocket::sendDisconnect() {
          else {
              RLOGE("Encode failed in send disconnect!");
          }

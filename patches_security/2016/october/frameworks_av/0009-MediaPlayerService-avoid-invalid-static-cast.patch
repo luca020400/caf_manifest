@@ -1,0 +1,28 @@
+From 9743904ce5e4b938875fa31ceb87d26da92dcbee Mon Sep 17 00:00:00 2001
+From: Robert Shih <robertshih@google.com>
+Date: Tue, 16 Aug 2016 16:50:54 -0700
+Subject: [PATCH 09/13] MediaPlayerService: avoid invalid static cast
+
+Bug: 30204103
+Change-Id: Ie0dd3568a375f1e9fed8615ad3d85184bcc99028
+(cherry picked from commit ee0a0e39acdcf8f97e0d6945c31ff36a06a36e9d)
+---
+ media/libmediaplayerservice/MediaPlayerService.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/media/libmediaplayerservice/MediaPlayerService.cpp b/media/libmediaplayerservice/MediaPlayerService.cpp
+index e567ee0..c7c9aa8 100644
+--- a/media/libmediaplayerservice/MediaPlayerService.cpp
++++ b/media/libmediaplayerservice/MediaPlayerService.cpp
+@@ -1092,7 +1092,7 @@ status_t MediaPlayerService::Client::setNextPlayer(const sp<IMediaPlayer>& playe
+     ALOGV("setNextPlayer");
+     Mutex::Autolock l(mLock);
+     sp<Client> c = static_cast<Client*>(player.get());
+-    if (c != NULL && !mService->hasClient(c)) {
++    if (!mService->hasClient(c)) {
+       return BAD_VALUE;
+     }
+ 
+-- 
+2.10.0
+

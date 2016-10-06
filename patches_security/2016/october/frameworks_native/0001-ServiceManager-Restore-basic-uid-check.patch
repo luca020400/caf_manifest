@@ -1,7 +1,7 @@
-From d3c6ce463ac91ecbeb2128beb475d31d3ca6ef42 Mon Sep 17 00:00:00 2001
+From 98e4f98a7331e1689f51ea037908f275c176f8e9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Arve=20Hj=C3=B8nnev=C3=A5g?= <arve@android.com>
 Date: Mon, 1 Aug 2016 16:05:17 -0700
-Subject: [PATCH 1/2] ServiceManager: Restore basic uid check
+Subject: [PATCH 1/5] ServiceManager: Restore basic uid check
 
 Prevent apps from registering services without relying on selinux checks.
 

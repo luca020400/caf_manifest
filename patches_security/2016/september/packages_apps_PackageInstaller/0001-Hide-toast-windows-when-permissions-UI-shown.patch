@@ -1,4 +1,4 @@
-From 6c84557c2c3973547f986392471b406f9270dffc Mon Sep 17 00:00:00 2001
+From 5817c4cc2cfcbd2df6d307114a3dbee19779e57d Mon Sep 17 00:00:00 2001
 From: Svetoslav Ganov <svetoslavganov@google.com>
 Date: Wed, 13 Jul 2016 13:41:33 -0700
 Subject: [PATCH] Hide toast windows when permissions UI shown
@@ -32,5 +32,5 @@ index b23ab2e..a7800ca 100644
      }
  }
 -- 
-2.9.3
+2.10.0
 

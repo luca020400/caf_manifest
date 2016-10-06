@@ -1,7 +1,7 @@
-From d4271b792bdad85a80e2b83ab34c4b30b74f53ec Mon Sep 17 00:00:00 2001
+From 623de1d57d39b9ba6e63573abf553e7be868f687 Mon Sep 17 00:00:00 2001
 From: Pawin Vongmasa <pawin@google.com>
 Date: Mon, 18 Jul 2016 20:12:02 -0700
-Subject: [PATCH 1/7] SoftMPEG4: Check the buffer size before writing the
+Subject: [PATCH 01/13] SoftMPEG4: Check the buffer size before writing the
  reference frame.
 
 Also prevent overflow in SoftMPEG4 and division by zero in SoftMPEG4Encoder.

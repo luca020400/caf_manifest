@@ -1,7 +1,7 @@
-From 35a86eef3c0eef760f7e61c52a343327ba601630 Mon Sep 17 00:00:00 2001
+From 8a444a604b07ecbb4a8158065a6fd3b6d06e0807 Mon Sep 17 00:00:00 2001
 From: Samuel Tan <samueltan@google.com>
 Date: Mon, 18 Jul 2016 09:49:59 -0700
-Subject: [PATCH 2/3] VenueNameElement: fix off-by-one enum bounds check
+Subject: [PATCH 2/2] VenueNameElement: fix off-by-one enum bounds check
 
 Fix the off-by-one error in the conditionals that check
 whether the Venue Group and Venue Type codes in the ANQP

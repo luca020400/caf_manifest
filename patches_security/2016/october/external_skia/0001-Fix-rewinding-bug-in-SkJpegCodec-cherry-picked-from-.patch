@@ -1,0 +1,105 @@
+From c09b562dbfb15d925e1582f85bb93992534455cc Mon Sep 17 00:00:00 2001
+From: Matt Sarett <msarett@google.com>
+Date: Thu, 21 Jul 2016 09:19:47 -0400
+Subject: [PATCH] Fix rewinding bug in SkJpegCodec (cherry picked from Skia)
+
+Performing a sampled and/or subset decode will create some state
+in SkJpegCodec.  If we fail to clean up this state properly,
+subsequent decodes may try to reuse (and potentailly overflow)
+the leftover memory.
+
+Committed: https://skia.googlesource.com/skia/+/2812f03d54b7fa4fd3d724505155d44a5343d91b
+
+BUG:30190637
+BUG:30081412
+Change-Id: I3fc2220c1cf5b6e2bc68e87e19cf54576e2b7a74
+(cherry picked from commit 63a53c1e4b347775d4a36c0826fcd249d0b98f20)
+(cherry picked from commit 52d00b3be74144019413d7aac734e012c00c87c5)
+---
+ src/codec/SkJpegCodec.cpp | 13 ++++++++-----
+ tests/CodexTest.cpp       | 29 +++++++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+), 5 deletions(-)
+
+diff --git a/src/codec/SkJpegCodec.cpp b/src/codec/SkJpegCodec.cpp
+index 41b1adb..706866b 100644
+--- a/src/codec/SkJpegCodec.cpp
++++ b/src/codec/SkJpegCodec.cpp
+@@ -80,6 +80,7 @@ SkJpegCodec::SkJpegCodec(const SkImageInfo& srcInfo, SkStream* stream,
+     : INHERITED(srcInfo, stream)
+     , fDecoderMgr(decoderMgr)
+     , fReadyState(decoderMgr->dinfo()->global_state)
++    , fSrcRow(nullptr)
+     , fSwizzlerSubset(SkIRect::MakeEmpty())
+ {}
+ 
+@@ -155,6 +156,11 @@ bool SkJpegCodec::onRewind() {
+     }
+     SkASSERT(nullptr != decoderMgr);
+     fDecoderMgr.reset(decoderMgr);
++
++    fSwizzler.reset(nullptr);
++    fSrcRow = nullptr;
++    fStorage.free();
++
+     return true;
+ }
+ 
+@@ -415,16 +421,13 @@ SkCodec::Result SkJpegCodec::onStartScanlineDecode(const SkImageInfo& dstInfo,
+         return kInvalidConversion;
+     }
+ 
+-    // Remove objects used for sampling.
+-    fSwizzler.reset(nullptr);
+-    fSrcRow = nullptr;
+-    fStorage.free();
+ #ifdef DCT_IFAST_SUPPORTED
+     (fDecoderMgr->dinfo())->dct_method = JDCT_IFAST;
+ #else
+     (fDecoderMgr->dinfo())->dct_method = JDCT_ISLOW;
+ #endif
+-// Now, given valid output dimensions, we can start the decompress
++
++    // Now, given valid output dimensions, we can start the decompress
+     if (!jpeg_start_decompress(fDecoderMgr->dinfo())) {
+         SkCodecPrintf("start decompress failed\n");
+         return kInvalidInput;
+diff --git a/tests/CodexTest.cpp b/tests/CodexTest.cpp
+index 51e4123..8ce6302 100644
+--- a/tests/CodexTest.cpp
++++ b/tests/CodexTest.cpp
+@@ -971,3 +971,32 @@ DEF_TEST(Codec_wbmp_max_size, r) {
+ 
+     REPORTER_ASSERT(r, !codec);
+ }
++
++DEF_TEST(Codec_jpeg_rewind, r) {
++    const char* path = "mandrill_512_q075.jpg";
++    SkAutoTDelete<SkStream> stream(resource(path));
++    if (!stream) {
++        SkDebugf("Missing resource '%s'\n", path);
++        return;
++    }
++    SkAutoTDelete<SkAndroidCodec> codec(SkAndroidCodec::NewFromStream(stream.release()));
++    if (!codec) {
++        ERRORF(r, "Unable to create codec '%s'.", path);
++        return;
++    }
++
++    const int width = codec->getInfo().width();
++    const int height = codec->getInfo().height();
++    size_t rowBytes = sizeof(SkPMColor) * width;
++    SkAutoMalloc pixelStorage(height * rowBytes);
++
++    // Perform a sampled decode.
++    SkAndroidCodec::AndroidOptions opts;
++    opts.fSampleSize = 12;
++    codec->getAndroidPixels(codec->getInfo().makeWH(width / 12, height / 12), pixelStorage.get(),
++                            rowBytes, &opts);
++
++    // Rewind the codec and perform a full image decode.
++    SkCodec::Result result = codec->getPixels(codec->getInfo(), pixelStorage.get(), rowBytes);
++    REPORTER_ASSERT(r, SkCodec::kSuccess == result);
++}
+-- 
+2.10.0
+
