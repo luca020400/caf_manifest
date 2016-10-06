@@ -1,4 +1,4 @@
-From ec180c1ebb291367a850f7dbe61391af771a56e0 Mon Sep 17 00:00:00 2001
+From 28c520c906b7d97736ea41232dad595e2f14ca92 Mon Sep 17 00:00:00 2001
 From: Altaf-Mahdi <altaf.mahdi@gmail.com>
 Date: Mon, 11 Jul 2016 16:03:06 +0100
 Subject: [PATCH 09/11] wifi-hal: stop the UMAC logspam
@@ -22,5 +22,5 @@ index ede3050..d0d98a8 100644
              return WIFI_ERROR_UNKNOWN;
          }
 -- 
-2.9.3
+2.10.0
 

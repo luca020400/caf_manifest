@@ -1,4 +1,4 @@
-From 0ef1ae89c0dbee0fa4fe5acd2591eccad2ed5a72 Mon Sep 17 00:00:00 2001
+From 0a541bcd1d35c21e61a3a7b3ce44a513c6db9d06 Mon Sep 17 00:00:00 2001
 From: Steve Kondik <steve@cyngn.com>
 Date: Fri, 16 Oct 2015 21:15:20 -0700
 Subject: [PATCH 06/11] wcnss_service: Deal with mdm-detect too
@@ -23,10 +23,10 @@ index 89e3a7d..4af9ab2 100644
  
  LOCAL_MODULE := libwcnss_qmi
 diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
-index 6ad9a0e..94d148e 100644
+index 21c690a..bf07355 100644
 --- a/wcnss-service/wcnss_service.c
 +++ b/wcnss-service/wcnss_service.c
-@@ -41,8 +41,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -42,8 +42,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #include <cutils/properties.h>
  #ifdef WCNSS_QMI
  #include "wcnss_qmi_client.h"
@@ -37,7 +37,7 @@ index 6ad9a0e..94d148e 100644
  #ifdef WCNSS_QMI_OSS
  #include <dlfcn.h>
  #endif
-@@ -487,7 +489,7 @@ void setup_wlan_driver_ath_prop()
+@@ -514,7 +516,7 @@ void setup_wlan_driver_ath_prop()
  	property_set("wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
  }
  
@@ -46,7 +46,7 @@ index 6ad9a0e..94d148e 100644
  int check_modem_compatability(struct dev_info *mdm_detect_info)
  {
  	char args[MODEM_BASEBAND_PROPERTY_SIZE] = {0};
-@@ -578,7 +580,9 @@ int main(int argc, char *argv[])
+@@ -797,7 +799,9 @@ int main(int argc, char *argv[])
  	int fd_dev, ret_cal;
  #ifdef WCNSS_QMI
  	int nv_mac_addr = FAILED;
@@ -56,7 +56,7 @@ index 6ad9a0e..94d148e 100644
  	int nom = 0;
  #endif
  
-@@ -610,7 +614,7 @@ int main(int argc, char *argv[])
+@@ -829,7 +833,7 @@ int main(int argc, char *argv[])
  	/* Call ESOC API to get the number of modems.
  	   If the number of modems is not zero, only then proceed
  	   with the eap_proxy intialization.*/
@@ -65,7 +65,7 @@ index 6ad9a0e..94d148e 100644
  	nom = get_system_info(&mdm_detect_info);
  
  	if (nom > 0)
-@@ -628,6 +632,7 @@ int main(int argc, char *argv[])
+@@ -847,6 +851,7 @@ int main(int argc, char *argv[])
  		ALOGE("wcnss_service: Target does not have external modem");
  		goto nomodem;
  	}
@@ -74,5 +74,5 @@ index 6ad9a0e..94d148e 100644
  	/* initialize the DMS client and request the wlan mac address */
  
 -- 
-2.9.3
+2.10.0
 

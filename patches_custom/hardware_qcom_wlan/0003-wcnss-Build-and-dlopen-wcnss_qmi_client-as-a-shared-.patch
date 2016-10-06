@@ -1,4 +1,4 @@
-From 5d06c89154e4da708287ed79111f861725aad651 Mon Sep 17 00:00:00 2001
+From c65b998284f9dd4fb1e7f7dbeaf3fda68671e4bc Mon Sep 17 00:00:00 2001
 From: Ethan Chen <intervigil@gmail.com>
 Date: Mon, 14 Apr 2014 15:52:41 -0700
 Subject: [PATCH 03/11] wcnss: Build and dlopen wcnss_qmi_client as a shared
@@ -81,10 +81,10 @@ index c5310f0..242fac2 100644
 +
 +endif #TARGET_ARCH == arm
 diff --git a/wcnss-service/wcnss_service.c b/wcnss-service/wcnss_service.c
-index 21e389e..6ad9a0e 100644
+index 29b1f67..21c690a 100644
 --- a/wcnss-service/wcnss_service.c
 +++ b/wcnss-service/wcnss_service.c
-@@ -43,6 +43,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -44,6 +44,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #include "wcnss_qmi_client.h"
  #include "mdm_detect.h"
  #endif
@@ -94,7 +94,7 @@ index 21e389e..6ad9a0e 100644
  
  #define SUCCESS 0
  #define FAILED -1
-@@ -79,7 +82,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@@ -80,7 +83,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  #define HEXA_A		10
  #define HEX_BASE		16
  
@@ -103,7 +103,7 @@ index 21e389e..6ad9a0e 100644
  #define WLAN_ADDR_SIZE   6
  unsigned char wlan_nv_mac_addr[WLAN_ADDR_SIZE];
  #ifdef WCNSS_QMI_MAC_ADDR_REV
-@@ -403,7 +406,7 @@ void setup_wcnss_parameters(int *cal)
+@@ -430,7 +433,7 @@ void setup_wcnss_parameters(int *cal)
  		}
  	}
  
@@ -112,9 +112,9 @@ index 21e389e..6ad9a0e 100644
  	if (SUCCESS == nv_mac_addr)
  	{
  		pos = 0;
-@@ -514,6 +517,60 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
+@@ -733,6 +736,60 @@ void dynamic_nv_replace()
+ 
  }
- #endif
  
 +#ifdef WCNSS_QMI_OSS
 +static void *wcnss_qmi_handle = NULL;
@@ -173,7 +173,7 @@ index 21e389e..6ad9a0e 100644
  int main(int argc, char *argv[])
  {
  	UNUSED(argc), UNUSED(argv);
-@@ -527,6 +584,28 @@ int main(int argc, char *argv[])
+@@ -746,6 +803,28 @@ int main(int argc, char *argv[])
  
  	setup_wlan_config_file();
  
@@ -202,7 +202,7 @@ index 21e389e..6ad9a0e 100644
  #ifdef WCNSS_QMI
  	/* Call ESOC API to get the number of modems.
  	   If the number of modems is not zero, only then proceed
-@@ -603,5 +682,9 @@ nomodem:
+@@ -824,5 +903,9 @@ nomodem:
  
  	close(fd_dev);
  
@@ -213,5 +213,5 @@ index 21e389e..6ad9a0e 100644
  	return rc;
  }
 -- 
-2.9.3
+2.10.0
 

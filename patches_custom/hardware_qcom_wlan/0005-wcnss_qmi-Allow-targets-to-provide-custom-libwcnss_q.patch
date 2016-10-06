@@ -1,4 +1,4 @@
-From fc2ae29f1a3572e33450dc586d5477fc4e3b5c34 Mon Sep 17 00:00:00 2001
+From fff63b9a5ebdd060b3ad1db37b547ce8045daf52 Mon Sep 17 00:00:00 2001
 From: Ethan Chen <intervigil@gmail.com>
 Date: Thu, 13 Nov 2014 11:27:34 -0800
 Subject: [PATCH 05/11] wcnss_qmi: Allow targets to provide custom libwcnss_qmi
@@ -54,5 +54,5 @@ index 76a08ba..89e3a7d 100644
  
  endif #TARGET_ARCH == arm
 -- 
-2.9.3
+2.10.0
 

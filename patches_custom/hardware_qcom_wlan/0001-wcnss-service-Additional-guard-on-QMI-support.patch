@@ -1,4 +1,4 @@
-From 1e5bbf33d4223fb1194b4c491867f2005403466d Mon Sep 17 00:00:00 2001
+From ef58d486cb88cae342dc780b78a8b10f8bb86790 Mon Sep 17 00:00:00 2001
 From: Steve Kondik <shade@chemlab.org>
 Date: Mon, 10 Nov 2014 20:21:54 -0800
 Subject: [PATCH 01/11] wcnss-service: Additional guard on QMI support
@@ -37,5 +37,5 @@ index 16cc10e..5d80d52 100644
  LOCAL_CFLAGS += -Wall -Werror
  include $(BUILD_EXECUTABLE)
 -- 
-2.9.3
+2.10.0
 

@@ -1,4 +1,4 @@
-From 6637128ac9659e695ef1322fb87732a8dcda1e6b Mon Sep 17 00:00:00 2001
+From 4cabeca505ab293ff53b35e5591abd5dfb1a114a Mon Sep 17 00:00:00 2001
 From: Anand N Sunkad <asunka@codeaurora.org>
 Date: Wed, 24 Jun 2015 20:50:17 +0530
 Subject: [PATCH 07/11] wcnss_service: Migrate from QMI to QCCI
@@ -38,5 +38,5 @@ index 4af9ab2..e2f2d11 100644
  LOCAL_SHARED_LIBRARIES += libmdmdetect
  
 -- 
-2.9.3
+2.10.0
 

@@ -1,4 +1,4 @@
-From f01ab0f842666849db136ab2d92af9196a64fd06 Mon Sep 17 00:00:00 2001
+From 0c62c91aab9282502efd11b9883f4d929ba5d462 Mon Sep 17 00:00:00 2001
 From: Ricardo Cerqueira <cyanogenmod@cerqueira.org>
 Date: Wed, 28 May 2014 17:12:24 +0100
 Subject: [PATCH 04/11] wcnss_qmi: Generate a fixed random mac address if the
@@ -112,5 +112,5 @@ index b9f94f7..1e800b0 100644
  }
  
 -- 
-2.9.3
+2.10.0
 
