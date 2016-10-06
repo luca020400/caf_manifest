@@ -1,7 +1,7 @@
-From fafc81db8f359c831881c36ceeeb648403d03c8d Mon Sep 17 00:00:00 2001
+From ae351f4bec43b3e4283232299b27d9dab6b69b6c Mon Sep 17 00:00:00 2001
 From: Rashed Abdel-Tawab <rashed@linux.com>
 Date: Sun, 30 Nov 2014 00:17:03 -0500
-Subject: [PATCH 1/7] Status bar: Add HSPA+ icons
+Subject: [PATCH 1/6] Status bar: Add HSPA+ icons
 
 Forward port H+ icon in the status bar when connected to HSPA+
 Uses new vector drawables by blunden
@@ -307,10 +307,10 @@ index e20e09f..a8e7cd8 100644
      <string name="accessibility_data_connection_3g">3G</string>
  
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
-index e7c4a74..d0dfe5b 100755
+index 4ddc540..b244905 100755
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
-@@ -235,6 +235,9 @@ public class MobileSignalController extends SignalController<
+@@ -238,6 +238,9 @@ public class MobileSignalController extends SignalController<
          mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSDPA, hGroup);
          mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSUPA, hGroup);
          mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPA, hGroup);
@@ -320,7 +320,7 @@ index e7c4a74..d0dfe5b 100755
          mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPAP, hGroup);
          if (mContext.getResources().getBoolean(R.bool.config_show4gForHspap)) {
              mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPAP, TelephonyIcons.FOUR_G);
-@@ -248,7 +251,7 @@ public class MobileSignalController extends SignalController<
+@@ -251,7 +254,7 @@ public class MobileSignalController extends SignalController<
                      TelephonyIcons.THREE_G_PLUS);
              mNetworkToIconLookup.put(TelephonyManager.NETWORK_TYPE_HSPA,
                      TelephonyIcons.THREE_G_PLUS);
@@ -342,7 +342,7 @@ index 6612935..e3cfa79 100644
                              datatype.equals("roam") ? TelephonyIcons.ROAMING :
                              TelephonyIcons.UNKNOWN;
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
-index 3ae3aaa..174f536 100644
+index 7aedecc..2ffa723 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIcons.java
 @@ -177,7 +177,20 @@ class TelephonyIcons {
@@ -376,7 +376,7 @@ index 3ae3aaa..174f536 100644
      static final int ICON_3G = R.drawable.stat_sys_data_fully_connected_3g;
      static final int ICON_3G_PLUS = R.drawable.stat_sys_data_fully_connected_3g_plus;
      static final int ICON_4G = R.drawable.stat_sys_data_fully_connected_4g;
-@@ -443,8 +456,8 @@ class TelephonyIcons {
+@@ -444,8 +457,8 @@ class TelephonyIcons {
                      if (type == TelephonyManager.NETWORK_TYPE_HSPA &&
                              MobileSignalController.isCarrierOneSupported()) {
                          mSelectedDataActivityIndex[slot] = DATA_TYPE_HP;
@@ -387,7 +387,7 @@ index 3ae3aaa..174f536 100644
                          mSelectedSignalStreagthIndex[slot] = SIGNAL_STRENGTH_TYPE_HP;
                      } else {
                          mSelectedDataActivityIndex[slot] = DATA_TYPE_H;
-@@ -808,14 +821,14 @@ class TelephonyIcons {
+@@ -812,14 +825,14 @@ class TelephonyIcons {
              TelephonyIcons.TELEPHONY_NO_NETWORK,
              TelephonyIcons.QS_TELEPHONY_NO_NETWORK,
              AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[0],
@@ -405,7 +405,7 @@ index 3ae3aaa..174f536 100644
              TelephonyIcons.TELEPHONY_SIGNAL_STRENGTH,
              TelephonyIcons.QS_TELEPHONY_SIGNAL_STRENGTH,
              AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH,
-@@ -823,10 +836,10 @@ class TelephonyIcons {
+@@ -827,10 +840,10 @@ class TelephonyIcons {
              TelephonyIcons.TELEPHONY_NO_NETWORK,
              TelephonyIcons.QS_TELEPHONY_NO_NETWORK,
              AccessibilityContentDescriptions.PHONE_SIGNAL_STRENGTH[0],
@@ -420,5 +420,5 @@ index 3ae3aaa..174f536 100644
  
      static final MobileIconGroup FOUR_G = new MobileIconGroup(
 -- 
-2.8.2
+2.10.0
 

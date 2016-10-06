@@ -1,7 +1,7 @@
-From 066ae60da607d81a7dbb3437ca7643cdf5af59d6 Mon Sep 17 00:00:00 2001
+From d4b846fd19ded2f729fc5b439b95f1bfe45f76f5 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Wed, 7 Sep 2016 07:17:56 -0700
-Subject: [PATCH 2/7] core: Add support for more webviews
+Subject: [PATCH 2/6] core: Add support for more webviews
 
 * Extracted from seed factory image
 
@@ -34,5 +34,5 @@ index f062b59..b22f8e2 100644
 +
  </webviewproviders>
 -- 
-2.8.2
+2.10.0
 

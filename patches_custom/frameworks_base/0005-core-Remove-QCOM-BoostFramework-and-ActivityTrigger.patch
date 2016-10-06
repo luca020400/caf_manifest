@@ -1,7 +1,7 @@
-From c10b6e4fe55153c52f67aadfadab1bd5a17b07c0 Mon Sep 17 00:00:00 2001
+From 0f0f9b3b09578143afe79983182aa9d92a3591b1 Mon Sep 17 00:00:00 2001
 From: Zhao Wei Liew <zhaoweiliew@gmail.com>
 Date: Thu, 8 Sep 2016 14:05:06 +0800
-Subject: [PATCH 5/7] core: Remove QCOM BoostFramework and ActivityTrigger
+Subject: [PATCH 5/6] core: Remove QCOM BoostFramework and ActivityTrigger
 
 These rely on a bunch of proprietary libs that not
 all devices support. CM has its own boosting solution
@@ -1320,7 +1320,7 @@ index 26381e4..0000000
 -}   // namespace android
 \ No newline at end of file
 diff --git a/core/res/res/values/config.xml b/core/res/res/values/config.xml
-index d216a05..193b1be 100755
+index 5765a77..c6586c3 100755
 --- a/core/res/res/values/config.xml
 +++ b/core/res/res/values/config.xml
 @@ -2486,59 +2486,6 @@
@@ -1384,7 +1384,7 @@ index d216a05..193b1be 100755
      <!-- True if the device supports persisting security logs across reboots.
           This requires the device's kernel to have pstore and pmsg enabled,
 diff --git a/core/res/res/values/symbols.xml b/core/res/res/values/symbols.xml
-index da63b0a..4d21f40 100644
+index 59a63c7..ea94f1c 100644
 --- a/core/res/res/values/symbols.xml
 +++ b/core/res/res/values/symbols.xml
 @@ -2634,59 +2634,6 @@
@@ -1514,7 +1514,7 @@ index 7a6a19f..e4aa103 100644
                      setExpandedHeightInternal(getMaxPanelHeight());
                  }
 diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
-index 86806b9..52f008c 100644
+index fd00836..47e68d1 100644
 --- a/services/core/java/com/android/server/am/ActivityManagerService.java
 +++ b/services/core/java/com/android/server/am/ActivityManagerService.java
 @@ -29,7 +29,6 @@ import com.android.internal.app.IVoiceInteractor;
@@ -1695,7 +1695,7 @@ index 86806b9..52f008c 100644
              app.setPid(startResult.pid);
              app.usingWrapper = startResult.usingWrapper;
              app.removed = false;
-@@ -3931,9 +3823,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -3940,9 +3832,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                  }
              }
              checkTime(startTime, "startProcess: done updating pids map");
@@ -1705,7 +1705,7 @@ index 86806b9..52f008c 100644
          } catch (RuntimeException e) {
              Slog.e(TAG, "Failure starting process " + app.processName, e);
  
-@@ -5307,9 +5196,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -5308,9 +5197,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                  Slog.i(TAG, "Process " + app.processName + " (pid " + pid
                          + ") has died");
                  mAllowLowerMemLevel = true;
@@ -1715,7 +1715,7 @@ index 86806b9..52f008c 100644
              } else {
                  // Note that we always want to do oom adj to update our state with the
                  // new number of procs.
-@@ -6902,27 +6788,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -6903,27 +6789,6 @@ public final class ActivityManagerService extends ActivityManagerNative
              }
          }, dumpheapFilter);
  
@@ -1743,7 +1743,7 @@ index 86806b9..52f008c 100644
          // Let system services know.
          mSystemServiceManager.startBootPhase(SystemService.PHASE_BOOT_COMPLETED);
  
-@@ -21783,15 +21648,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -21781,15 +21646,6 @@ public final class ActivityManagerService extends ActivityManagerNative
              synchronized (ActivityManagerService.this) {
                  SleepTokenImpl token = new SleepTokenImpl(tag);
                  mSleepTokens.add(token);
@@ -1759,7 +1759,7 @@ index 86806b9..52f008c 100644
                  updateSleepIfNeededLocked();
                  return token;
              }
-@@ -21916,15 +21772,6 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -21914,15 +21770,6 @@ public final class ActivityManagerService extends ActivityManagerNative
          public void release() {
              synchronized (ActivityManagerService.this) {
                  if (mSleepTokens.remove(this)) {
@@ -1776,7 +1776,7 @@ index 86806b9..52f008c 100644
                  }
              }
 diff --git a/services/core/java/com/android/server/am/ActivityStack.java b/services/core/java/com/android/server/am/ActivityStack.java
-index 58290e7..4ead64b 100644
+index cd88953..5859d34 100644
 --- a/services/core/java/com/android/server/am/ActivityStack.java
 +++ b/services/core/java/com/android/server/am/ActivityStack.java
 @@ -119,8 +119,6 @@ import android.util.EventLog;
@@ -1900,7 +1900,7 @@ index 58290e7..4ead64b 100644
                      mWindowManager.setAppVisibility(r.appToken, false);
                  }
 diff --git a/services/core/java/com/android/server/am/ActivityStackSupervisor.java b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
-index 30ea8df..36207c4 100644
+index 5d36422..06e5ea2 100644
 --- a/services/core/java/com/android/server/am/ActivityStackSupervisor.java
 +++ b/services/core/java/com/android/server/am/ActivityStackSupervisor.java
 @@ -84,7 +84,6 @@ import android.view.Display;
@@ -2149,5 +2149,5 @@ index 9e0279d..3687512 100644
                          }
                      }
 -- 
-2.8.2
+2.10.0
 

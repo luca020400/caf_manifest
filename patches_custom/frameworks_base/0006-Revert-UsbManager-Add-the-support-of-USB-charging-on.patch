@@ -1,7 +1,7 @@
-From bfeae37d447976d5ea0deb4091f2d3936efc332b Mon Sep 17 00:00:00 2001
+From 726b07319d654299bccb96f712c85465d5fc640f Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sat, 24 Sep 2016 21:46:11 +0200
-Subject: [PATCH 6/7] Revert "UsbManager: Add the support of USB charging only
+Subject: [PATCH 6/6] Revert "UsbManager: Add the support of USB charging only
  function"
 
 This reverts commit a694b103f43a3570fb18a92614d6d6585ac3c493.
@@ -38,10 +38,10 @@ index 9afae31..f9a7d19
 diff --git a/services/usb/java/com/android/server/usb/UsbDeviceManager.java b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
 old mode 100755
 new mode 100644
-index 8cada77..df9242d
+index 4d3817f..60de05f
 --- a/services/usb/java/com/android/server/usb/UsbDeviceManager.java
 +++ b/services/usb/java/com/android/server/usb/UsbDeviceManager.java
-@@ -528,9 +528,7 @@ public class UsbDeviceManager {
+@@ -535,9 +535,7 @@ public class UsbDeviceManager {
          }
  
          private String applyAdbFunction(String functions) {
@@ -67,5 +67,5 @@ index d6f6b82..d6dbe90
          }
  
 -- 
-2.8.2
+2.10.0
 

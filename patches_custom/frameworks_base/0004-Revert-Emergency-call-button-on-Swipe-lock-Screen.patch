@@ -1,18 +1,31 @@
-From fd5ddebc6fba5fea790484bfa046055edd789c6a Mon Sep 17 00:00:00 2001
+From 8199a9471e548e0b280b9b31d80e4700f3c3846c Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Thu, 8 Sep 2016 18:39:04 +0200
-Subject: [PATCH 4/7] Revert "Emergency call button on Swipe lock Screen."
+Subject: [PATCH 4/6] Revert "Emergency call button on Swipe lock Screen."
 
 This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
 ---
+ packages/Keyguard/res/values/config.xml                    |  3 ---
  .../Keyguard/src/com/android/keyguard/EmergencyButton.java |  5 ++---
  packages/SystemUI/res/layout/keyguard_bottom_area.xml      |  9 ---------
  packages/SystemUI/res/values/dimens.xml                    |  2 +-
  .../systemui/statusbar/phone/KeyguardBottomAreaView.java   | 14 --------------
- 4 files changed, 3 insertions(+), 27 deletions(-)
+ 5 files changed, 3 insertions(+), 30 deletions(-)
 
+diff --git a/packages/Keyguard/res/values/config.xml b/packages/Keyguard/res/values/config.xml
+index 917825a..44336d3 100644
+--- a/packages/Keyguard/res/values/config.xml
++++ b/packages/Keyguard/res/values/config.xml
+@@ -34,7 +34,4 @@
+ 
+     <!-- config for showing AM/PM on lock screen in 12hour format -->
+     <bool name="config_showAmpm">true</bool>
+-
+-    <!-- whether to show emergency button in lock screen -->
+-    <bool name="config_showEmergencyButton">true</bool>
+ </resources>
 diff --git a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-index cf34e14..a5269e5 100644
+index 491c31e..a5269e5 100644
 --- a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 +++ b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 @@ -151,7 +151,7 @@ public class EmergencyButton extends Button {
@@ -29,7 +42,7 @@ index cf34e14..a5269e5 100644
                  } else {
                      // Only show if there is a secure screen (pin/pattern/SIM pin/SIM puk);
 -                    visible = mLockPatternUtils.isSecure(KeyguardUpdateMonitor.getCurrentUser()) ||
--                            SystemProperties.getBoolean("persist.radio.emgcy_btn_onswipe", false);
+-                              mContext.getResources().getBoolean(R.bool.config_showEmergencyButton);
 +                    visible = mLockPatternUtils.isSecure(KeyguardUpdateMonitor.getCurrentUser());
                  }
              }
@@ -68,7 +81,7 @@ index 2f5653d..b8e6a0e 100644
      <!-- The text size for battery level -->
      <dimen name="battery_level_text_size">12sp</dimen>
 diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
-index e0290b0..772c766 100644
+index 161ceb6..772c766 100644
 --- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
 +++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/KeyguardBottomAreaView.java
 @@ -35,7 +35,6 @@ import android.os.IBinder;
@@ -125,7 +138,7 @@ index e0290b0..772c766 100644
      }
 -
 -    private void updateEmergencyButton() {
--        if (SystemProperties.getBoolean("persist.radio.emgcy_btn_onswipe",false)) {
+-        if(mContext.getResources().getBoolean(R.bool.config_showEmergencyButton)){
 -            if (mEmergencyButton != null) {
 -                mEmergencyButton.updateEmergencyCallButton();
 -            }
@@ -133,5 +146,5 @@ index e0290b0..772c766 100644
 -    }
  }
 -- 
-2.8.2
+2.10.0
 
