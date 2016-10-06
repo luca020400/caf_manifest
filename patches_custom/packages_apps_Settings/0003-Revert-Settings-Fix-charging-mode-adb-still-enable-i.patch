@@ -1,4 +1,4 @@
-From 58b66a5e8b979d24984c3e3a30d2872f0964f1a2 Mon Sep 17 00:00:00 2001
+From 9daa3325af11f035f0ac89db0f19098b6c296fd6 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sat, 24 Sep 2016 21:45:37 +0200
 Subject: [PATCH 3/3] Revert "Settings: Fix charging mode adb still enable

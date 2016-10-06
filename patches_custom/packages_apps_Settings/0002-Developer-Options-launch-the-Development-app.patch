@@ -1,4 +1,4 @@
-From b2b7f981adb6967e2554a6547c825984ce8ac6a5 Mon Sep 17 00:00:00 2001
+From 8d6370775739635c391e90d3b86d4e80591d6662 Mon Sep 17 00:00:00 2001
 From: Chirayu Desai <cdesai@cyanogenmod.org>
 Date: Wed, 5 Dec 2012 18:45:29 -0500
 Subject: [PATCH 2/3] Developer Options: launch the Development app
