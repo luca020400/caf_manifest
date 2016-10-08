@@ -18,6 +18,11 @@
   </project>
   <project path="build/kati" name="luca020400/android_build_kati" remote="github" revision="cm-14.0-caf" />
 
+  <remove-project name="platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" />
+  <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" name="platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" groups="pdk,linux,arm" revision="refs/tags/ndk-r13" clone-depth="1" />
+  <remove-project name="platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9" />
+  <project path="prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9" name="platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9" groups="pdk,linux,arm" revision="refs/tags/ndk-r13" clone-depth="1" />
+
   <project path="external/libncurses" name="CyanogenMod/android_external_libncurses" revision="cm-14.0" remote="github" />
   <project path="external/openssh" name="CyanogenMod/android_external_openssh" revision="cm-14.0" remote="github" />
   <project path="external/nano" name="CyanogenMod/android_external_nano" revision="cm-14.0" remote="github" />
