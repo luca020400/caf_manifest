@@ -79,5 +79,10 @@ DEVICE_PACKAGE_OVERLAYS += caf_manifest/overlay
 # ART
 USE_DEX2OAT_DEBUG ?= false
 
+# Backup Tool
+PRODUCT_COPY_FILES += \
+    caf_manifest/backuptool/backuptool.sh:install/bin/backuptool.sh \
+    caf_manifest/backuptool/backuptool.functions:install/bin/backuptool.functions
+
 # include definitions for SDCLANG
 include caf_manifest/sdclang/sdclang.mk
