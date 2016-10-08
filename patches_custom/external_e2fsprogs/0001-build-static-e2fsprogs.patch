@@ -1,4 +1,4 @@
-From 19c9a74ae80074714cc5251ea58cbda284f8061f Mon Sep 17 00:00:00 2001
+From 1cacb8d091f2241ce37012256b3b432d057cd460 Mon Sep 17 00:00:00 2001
 From: Austen Dicken <cvpcsm@gmail.com>
 Date: Wed, 23 Nov 2011 01:03:46 -0600
 Subject: [PATCH] build static e2fsprogs
@@ -21,26 +21,27 @@ e2fsprogs: Clean up makefiles
  * Remove duplicate modules
 
 Change-Id: If68c5685a76943bc6bfdcb630c15c2f9ac59effd
+
+e2fsprogs: Cleanup Obsolete LOCAL_PRELINK_MODULE.
 ---
- e2fsck/Android.mk    | 42 ++++++++++++++++++++++++++++++++++
- lib/quota/Android.mk |  3 ++-
- lib/uuid/Android.mk  | 12 ++++++++++
+ e2fsck/Android.mk    | 41 +++++++++++++++++++++++++++++++++
+ lib/quota/Android.mk |  2 +-
+ lib/uuid/Android.mk  | 11 +++++++++
  misc/Android.mk      | 64 ++++++++++++++++++++++++++++++++++++++++++++++++++++
  resize/Android.mk    | 13 +++++++++++
- 5 files changed, 133 insertions(+), 1 deletion(-)
+ 5 files changed, 130 insertions(+), 1 deletion(-)
 
 diff --git a/e2fsck/Android.mk b/e2fsck/Android.mk
-index 0789298..b54d665 100644
+index 0789298..6b29ccf 100644
 --- a/e2fsck/Android.mk
 +++ b/e2fsck/Android.mk
-@@ -56,6 +56,18 @@ include $(BUILD_SHARED_LIBRARY)
+@@ -56,6 +56,17 @@ include $(BUILD_SHARED_LIBRARY)
  include $(CLEAR_VARS)
  
  LOCAL_SRC_FILES := $(libext2_profile_src_files)
 +LOCAL_STATIC_LIBRARIES := $(libext2_profile_system_shared_libraries) $(libext2_profile_shared_libraries)
 +LOCAL_C_INCLUDES := $(libext2_profile_c_includes)
 +LOCAL_CFLAGS := $(libext2_profile_cflags)
-+LOCAL_PRELINK_MODULE := false
 +LOCAL_MODULE := libext2_profile
 +LOCAL_MODULE_TAGS := optional
 +
@@ -52,7 +53,7 @@ index 0789298..b54d665 100644
  LOCAL_SHARED_LIBRARIES := $(addsuffix -host, $(libext2_profile_shared_libraries))
  LOCAL_C_INCLUDES := $(libext2_profile_c_includes)
  LOCAL_CFLAGS := $(libext2_profile_cflags)
-@@ -156,6 +168,36 @@ include $(CLEAR_VARS)
+@@ -156,6 +167,36 @@ include $(CLEAR_VARS)
  LOCAL_SRC_FILES := $(e2fsck_src_files)
  LOCAL_C_INCLUDES := $(e2fsck_c_includes)
  LOCAL_CFLAGS := $(e2fsck_cflags)
@@ -90,31 +91,29 @@ index 0789298..b54d665 100644
  LOCAL_MODULE := e2fsck_host
  LOCAL_MODULE_STEM := e2fsck
 diff --git a/lib/quota/Android.mk b/lib/quota/Android.mk
-index d102ec3..facd9cc 100644
+index d102ec3..982ea82 100644
 --- a/lib/quota/Android.mk
 +++ b/lib/quota/Android.mk
-@@ -55,7 +55,8 @@ include $(CLEAR_VARS)
+@@ -55,7 +55,7 @@ include $(CLEAR_VARS)
  LOCAL_SRC_FILES := $(libext2_quota_src_files)
  LOCAL_C_INCLUDES := $(libext2_quota_c_includes)
  LOCAL_CFLAGS := $(libext2_quota_cflags)
 -LOCAL_STATIC_LIBRARIES := libc $(libext2_quota_static_libraries)
 +LOCAL_SYSTEM_STATIC_LIBRARIES := libc $(libext2_quota_shared_libraries) libext2fs
-+LOCAL_PRELINK_MODULE := false
  LOCAL_MODULE := libext2_quota
  LOCAL_MODULE_TAGS := optional
  
 diff --git a/lib/uuid/Android.mk b/lib/uuid/Android.mk
-index b26521e..94e65aa 100644
+index b26521e..e76bc15 100644
 --- a/lib/uuid/Android.mk
 +++ b/lib/uuid/Android.mk
-@@ -62,6 +62,18 @@ LOCAL_SRC_FILES := $(libext2_uuid_src_files)
+@@ -62,6 +62,17 @@ LOCAL_SRC_FILES := $(libext2_uuid_src_files)
  LOCAL_C_INCLUDES := $(libext2_uuid_c_includes)
  LOCAL_CFLAGS := $(libext2_uuid_cflags)
  LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 +LOCAL_STATIC_LIBRARIES := $(libext2_uuid_system_shared_libraries)
 +LOCAL_MODULE := libext2_uuid
 +LOCAL_MODULE_TAGS := eng
-+LOCAL_PRELINK_MODULE := false
 +
 +include $(BUILD_STATIC_LIBRARY)
 +
