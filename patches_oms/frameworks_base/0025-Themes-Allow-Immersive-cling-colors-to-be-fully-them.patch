@@ -1,7 +1,7 @@
-From 1d3afaae86b278480e1a38d1b02d79ffb7c65863 Mon Sep 17 00:00:00 2001
+From d99101e09c4c2a4d7761ed3a1e74a17d17e501af Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Tue, 17 Nov 2015 18:57:11 -0500
-Subject: [PATCH 25/31] Themes: Allow Immersive cling colors to be fully themed
+Subject: [PATCH 25/33] Themes: Allow Immersive cling colors to be fully themed
 
 This allows the immersive mode help tooltip to be themed completely by
 removing hardcoded framework calls. Let the themer decide what they want
@@ -76,5 +76,5 @@ index c77eb01..dfc6c8b 100644
 +    <color name="immersive_cling_button_text_color">@android:color/white</color>
  </resources>
 -- 
-2.8.2
+2.10.0
 

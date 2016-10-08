@@ -1,7 +1,7 @@
-From c3db937348e445988453b40e7e33dd6e3516e998 Mon Sep 17 00:00:00 2001
+From 65bce5270c3cc3fb84eddcbdf26d95cb409e32e4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:35:09 +0200
-Subject: [PATCH 02/31] OMS-N: installd: add command 'rmidmap' [2/14]
+Subject: [PATCH 02/33] OMS-N: installd: add command 'rmidmap' [2/14]
 
 Add an installd command to remove an idmap file. This is the inverse of
 the 'idmap' command and is intended for clean-up once an idmap file is
@@ -37,5 +37,5 @@ index 9cea3b2..5198a2a 100644
          assertValidInstructionSet(instructionSet);
          mInstaller.execute("rmdex", codePath, instructionSet);
 -- 
-2.8.2
+2.10.0
 

@@ -1,7 +1,7 @@
-From 43fc8d9aa241ad8e89eaafb0c945c65112e1a9b9 Mon Sep 17 00:00:00 2001
+From 6b7ef3954d274465c3bf0e49b220040d820f7217 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 30 Aug 2016 01:19:19 -0400
-Subject: [PATCH 13/31] OMS-N: adb shell command to access
+Subject: [PATCH 13/33] OMS-N: adb shell command to access
  OverlayManagerService [13/14]
 
 Re-add the command to communicate with the OverlayManagerService for
@@ -400,5 +400,5 @@ index 0000000..a1104ee
 +}
 \ No newline at end of file
 -- 
-2.8.2
+2.10.0
 

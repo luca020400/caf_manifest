@@ -1,7 +1,7 @@
-From be0ef869582331341adc115f236de66e7fc2660a Mon Sep 17 00:00:00 2001
+From 0c7c66c261f89e09bdc51949478168458cfb30bf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:32:48 +0100
-Subject: [PATCH 01/31] OMS-N: Support downloaded overlay packages [1/14]
+Subject: [PATCH 01/33] OMS-N: Support downloaded overlay packages [1/14]
 
 Require non-pre-loaded, ie downloaded, overlay package's signature
 match that of the target package.
@@ -167,10 +167,10 @@ index 7b85a4f..9cea3b2 100644
  
      public void dexopt(String apkPath, int uid, String instructionSet, int dexoptNeeded,
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index 40dda08..edd97a1 100755
+index 4cbe644..6811428 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
-@@ -6722,9 +6722,10 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -6723,9 +6723,10 @@ public class PackageManagerService extends IPackageManager.Stub {
  
      private boolean createIdmapForPackagePairLI(PackageParser.Package pkg,
              PackageParser.Package opkg) {
@@ -183,7 +183,7 @@ index 40dda08..edd97a1 100755
              return false;
          }
          ArrayMap<String, PackageParser.Package> overlaySet = mOverlays.get(pkg.packageName);
-@@ -6746,7 +6747,26 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -6747,7 +6748,26 @@ public class PackageManagerService extends IPackageManager.Stub {
              overlaySet.values().toArray(new PackageParser.Package[0]);
          Comparator<PackageParser.Package> cmp = new Comparator<PackageParser.Package>() {
              public int compare(PackageParser.Package p1, PackageParser.Package p2) {
@@ -211,7 +211,7 @@ index 40dda08..edd97a1 100755
              }
          };
          Arrays.sort(overlayArray, cmp);
-@@ -7105,6 +7125,7 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -7106,6 +7126,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                      synchronized (mPackages) {
                          // Just remove the loaded entries from package lists.
                          mPackages.remove(ps.name);
@@ -219,7 +219,7 @@ index 40dda08..edd97a1 100755
                      }
  
                      logCriticalInfo(Log.WARN, "Package " + ps.name + " at " + scanFile
-@@ -9075,6 +9096,11 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -9076,6 +9097,11 @@ public class PackageManagerService extends IPackageManager.Stub {
                          createIdmapFailed = true;
                      }
                  }
@@ -231,7 +231,7 @@ index 40dda08..edd97a1 100755
              } else if (mOverlays.containsKey(pkg.packageName) &&
                      !pkg.packageName.equals("android")) {
                  // This is a regular package, with one or more known overlay packages.
-@@ -9907,6 +9933,8 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -9908,6 +9934,8 @@ public class PackageManagerService extends IPackageManager.Stub {
          if (r != null) {
              if (DEBUG_REMOVE) Log.d(TAG, "  Libraries: " + r);
          }
@@ -240,7 +240,7 @@ index 40dda08..edd97a1 100755
      }
  
      private static boolean hasPermission(PackageParser.Package pkgInfo, String perm) {
-@@ -20711,6 +20739,46 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
+@@ -20720,6 +20748,46 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
          }
      }
  
@@ -288,5 +288,5 @@ index 40dda08..edd97a1 100755
          private static final int MSG_CREATED = 1;
          private static final int MSG_STATUS_CHANGED = 2;
 -- 
-2.8.2
+2.10.0
 

@@ -1,7 +1,7 @@
-From 63701828f2401c7d8efa0d312a6d4a05047e9828 Mon Sep 17 00:00:00 2001
+From 0ee32edeb6ba56749b7deac3b27e06e03161fc60 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:35:31 +0200
-Subject: [PATCH 06/31] OMS-N: integrate OverlayManagerService into framework
+Subject: [PATCH 06/33] OMS-N: integrate OverlayManagerService into framework
  [6/14]
 
 Hand over ownership of overlays to OverlayManagerService.
@@ -1685,7 +1685,7 @@ index ecc69e9..f10f93d 100644
       * Starts the specified boot phase for all system services that have been started up to
       * this point.
 diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
-index 52f008c..21419112 100644
+index 47e68d1..b36ba20 100644
 --- a/services/core/java/com/android/server/am/ActivityManagerService.java
 +++ b/services/core/java/com/android/server/am/ActivityManagerService.java
 @@ -53,6 +53,7 @@ import com.android.server.SystemServiceManager;
@@ -1696,7 +1696,7 @@ index 52f008c..21419112 100644
  import com.android.server.pm.Installer;
  import com.android.server.statusbar.StatusBarManagerInternal;
  import com.android.server.vr.VrManagerInternal;
-@@ -6548,7 +6549,8 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -6549,7 +6550,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                      isRestrictedBackupMode || !normalMode, app.persistent,
                      new Configuration(mConfiguration), app.compat,
                      getCommonServicesLocked(app.isolated),
@@ -1706,7 +1706,7 @@ index 52f008c..21419112 100644
              updateLruProcessLocked(app, false, null);
              app.lastRequestedGc = app.lastLowMemory = SystemClock.uptimeMillis();
          } catch (Exception e) {
-@@ -6634,6 +6636,13 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -6635,6 +6637,13 @@ public final class ActivityManagerService extends ActivityManagerNative
          return true;
      }
  
@@ -1720,7 +1720,7 @@ index 52f008c..21419112 100644
      @Override
      public final void attachApplication(IApplicationThread thread) {
          synchronized (this) {
-@@ -18879,6 +18888,48 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -18877,6 +18886,48 @@ public final class ActivityManagerService extends ActivityManagerNative
      }
  
      /**
@@ -1818,7 +1818,7 @@ index 5da36f1..aa5b0f6 100644
  
      private void schedulePersistSettings() {
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index c02ce57..c35c956 100755
+index 64857c7..a6f3cd5 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
 @@ -389,25 +389,24 @@ public class PackageManagerService extends IPackageManager.Stub {
@@ -1865,7 +1865,7 @@ index c02ce57..c35c956 100755
  
      private static final int[] EMPTY_INT_ARRAY = new int[0];
  
-@@ -585,10 +584,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -586,10 +585,6 @@ public class PackageManagerService extends IPackageManager.Stub {
      final ArrayMap<String, Set<String>> mKnownCodebase =
              new ArrayMap<String, Set<String>>();
  
@@ -1876,7 +1876,7 @@ index c02ce57..c35c956 100755
      /**
       * Tracks new system packages [received in an OTA] that we expect to
       * find updated user-installed versions. Keys are package name, values
-@@ -2470,8 +2465,8 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -2471,8 +2466,8 @@ public class PackageManagerService extends IPackageManager.Stub {
              File vendorOverlayDir = new File(VENDOR_OVERLAY_DIR);
              scanDirTracedLI(vendorOverlayDir, mDefParseFlags
                      | PackageParser.PARSE_IS_SYSTEM
@@ -1887,7 +1887,7 @@ index c02ce57..c35c956 100755
  
              // Find base frameworks (resource packages without code).
              scanDirTracedLI(frameworkDir, mDefParseFlags
-@@ -2528,7 +2523,7 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -2529,7 +2524,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                      // Collect overlay in <Package>/system/vendor
                      scanDirLI(new File(RegionalizationSystemDir, "vendor/overlay"),
                              PackageParser.PARSE_IS_SYSTEM | PackageParser.PARSE_IS_SYSTEM_DIR,
@@ -1896,7 +1896,7 @@ index c02ce57..c35c956 100755
                  }
              }
  
-@@ -6705,80 +6700,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -6706,80 +6701,6 @@ public class PackageManagerService extends IPackageManager.Stub {
          return finalList;
      }
  
@@ -1977,7 +1977,7 @@ index c02ce57..c35c956 100755
      private void scanDirTracedLI(File dir, final int parseFlags, int scanFlags, long currentTime) {
          Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "scanDir");
          try {
-@@ -6947,10 +6868,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -6948,10 +6869,6 @@ public class PackageManagerService extends IPackageManager.Stub {
          pp.setOnlyPowerOffAlarmApps(mOnlyPowerOffAlarm);
          pp.setDisplayMetrics(mMetrics);
  
@@ -1988,7 +1988,7 @@ index c02ce57..c35c956 100755
          Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "parsePackage");
          final PackageParser.Package pkg;
          try {
-@@ -8164,7 +8081,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -8165,7 +8082,6 @@ public class PackageManagerService extends IPackageManager.Stub {
              pkg.applicationInfo.privateFlags &=
                      ~ApplicationInfo.PRIVATE_FLAG_DIRECT_BOOT_AWARE;
          }
@@ -1996,7 +1996,7 @@ index c02ce57..c35c956 100755
  
          if ((policyFlags&PackageParser.PARSE_IS_PRIVILEGED) != 0) {
              pkg.applicationInfo.privateFlags |= ApplicationInfo.PRIVATE_FLAG_PRIVILEGED;
-@@ -8741,7 +8657,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -8742,7 +8658,6 @@ public class PackageManagerService extends IPackageManager.Stub {
          // writer
          Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "updateSettings");
  
@@ -2004,7 +2004,7 @@ index c02ce57..c35c956 100755
          synchronized (mPackages) {
              // We don't expect installation to fail beyond this point
  
-@@ -9079,41 +8994,10 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -9080,41 +8995,10 @@ public class PackageManagerService extends IPackageManager.Stub {
              }
  
              pkgSetting.setTimeStamp(scanFileTime);
@@ -2047,7 +2047,7 @@ index c02ce57..c35c956 100755
      }
  
 diff --git a/services/java/com/android/server/SystemServer.java b/services/java/com/android/server/SystemServer.java
-index ce1dcbc..677214b 100644
+index 8425cc6..241646f 100644
 --- a/services/java/com/android/server/SystemServer.java
 +++ b/services/java/com/android/server/SystemServer.java
 @@ -76,6 +76,7 @@ import com.android.server.media.projection.MediaProjectionManagerService;
@@ -2058,7 +2058,7 @@ index ce1dcbc..677214b 100644
  import com.android.server.os.RegionalizationService;
  import com.android.server.os.SchedulingPolicyService;
  import com.android.server.pm.BackgroundDexOptService;
-@@ -491,6 +492,9 @@ public final class SystemServer {
+@@ -494,6 +495,9 @@ public final class SystemServer {
          mSystemServiceManager.startService(UserManagerService.LifeCycle.class);
          Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
  
@@ -2069,5 +2069,5 @@ index ce1dcbc..677214b 100644
          AttributeCache.init(mSystemContext);
  
 -- 
-2.8.2
+2.10.0
 

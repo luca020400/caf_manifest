@@ -1,7 +1,7 @@
-From 0d9d66bd30b84eac5ea82e507665de50e4941c4d Mon Sep 17 00:00:00 2001
+From 21041663029c45516552781c36b022ce8d39a277 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 17 Jul 2016 17:56:40 -0400
-Subject: [PATCH 19/31] N-Extras: AudioService: Allow system effect sounds to
+Subject: [PATCH 19/33] N-Extras: AudioService: Allow system effect sounds to
  be themed
 
 This commit checks whether there is a preexisting file in the themed
@@ -75,5 +75,5 @@ index 94d0736..9529014 100644
                          mediaPlayer.setAudioStreamType(AudioSystem.STREAM_SYSTEM);
                          mediaPlayer.prepare();
 -- 
-2.8.2
+2.10.0
 

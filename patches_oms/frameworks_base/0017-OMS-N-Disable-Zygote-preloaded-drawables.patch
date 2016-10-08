@@ -1,7 +1,7 @@
-From 4566c66b304ef64311b1d661af5d318a3817fac8 Mon Sep 17 00:00:00 2001
+From 034d30aa3e90b8d17f2b0b23c27157a45385e3bf Mon Sep 17 00:00:00 2001
 From: Josh Guilfoyle <Josh.Guilfoyle@T-Mobile.com>
 Date: Wed, 26 Jan 2011 23:28:43 -0800
-Subject: [PATCH 17/31] OMS-N: Disable Zygote preloaded drawables.
+Subject: [PATCH 17/33] OMS-N: Disable Zygote preloaded drawables.
 
 With a theme applied, most of these preloaded drawables go unused.  Any
 assets the theme has redirected will need to be loaded with each app
@@ -41,5 +41,5 @@ index 9c960c0..b7f2920 100644
              mResources.finishPreloading();
          } catch (RuntimeException e) {
 -- 
-2.8.2
+2.10.0
 

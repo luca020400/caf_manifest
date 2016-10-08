@@ -1,7 +1,7 @@
-From e81a3e08319ece5bcff2894e588261201ee19f14 Mon Sep 17 00:00:00 2001
+From b21bb4cddfc3bba5dd8b10b550b1742f81567a80 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Tue, 30 Aug 2016 01:23:42 -0400
-Subject: [PATCH 14/31] OMS-N: Officially announce the rebase completion to
+Subject: [PATCH 14/33] OMS-N: Officially announce the rebase completion to
  Android Nougat [14/14]
 
 This commit cleans up the possible issues with the current iteration
@@ -168,10 +168,10 @@ index 6f43d99..c9e7773 100644
      }
  
 diff --git a/services/core/java/com/android/server/am/ActivityManagerService.java b/services/core/java/com/android/server/am/ActivityManagerService.java
-index 21419112..25bced2 100644
+index b36ba20..da83761 100644
 --- a/services/core/java/com/android/server/am/ActivityManagerService.java
 +++ b/services/core/java/com/android/server/am/ActivityManagerService.java
-@@ -18927,6 +18927,10 @@ public final class ActivityManagerService extends ActivityManagerNative
+@@ -18925,6 +18925,10 @@ public final class ActivityManagerService extends ActivityManagerNative
                  }
              } catch (Exception e) {}
          }
@@ -201,10 +201,10 @@ index 5198a2a..e9ff28d 100644
  
      public void dexopt(String apkPath, int uid, String instructionSet, int dexoptNeeded,
 diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
-index 91dccbd..c8b1843 100755
+index 0c686c7..cfb9e05 100755
 --- a/services/core/java/com/android/server/pm/PackageManagerService.java
 +++ b/services/core/java/com/android/server/pm/PackageManagerService.java
-@@ -7043,7 +7043,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -7044,7 +7044,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                      synchronized (mPackages) {
                          // Just remove the loaded entries from package lists.
                          mPackages.remove(ps.name);
@@ -212,7 +212,7 @@ index 91dccbd..c8b1843 100755
                      }
  
                      logCriticalInfo(Log.WARN, "Package " + ps.name + " at " + scanFile
-@@ -8087,10 +8086,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -8088,10 +8087,6 @@ public class PackageManagerService extends IPackageManager.Stub {
              pkg.applicationInfo.privateFlags |= ApplicationInfo.PRIVATE_FLAG_PRIVILEGED;
          }
  
@@ -223,7 +223,7 @@ index 91dccbd..c8b1843 100755
          if (mCustomResolverComponentName != null &&
                  mCustomResolverComponentName.getPackageName().equals(pkg.packageName)) {
              setUpCustomResolverActivity(pkg);
-@@ -9818,8 +9813,6 @@ public class PackageManagerService extends IPackageManager.Stub {
+@@ -9819,8 +9814,6 @@ public class PackageManagerService extends IPackageManager.Stub {
          if (r != null) {
              if (DEBUG_REMOVE) Log.d(TAG, "  Libraries: " + r);
          }
@@ -232,7 +232,7 @@ index 91dccbd..c8b1843 100755
      }
  
      private static boolean hasPermission(PackageParser.Package pkgInfo, String perm) {
-@@ -20624,46 +20617,6 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
+@@ -20633,46 +20626,6 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
          }
      }
  
@@ -280,5 +280,5 @@ index 91dccbd..c8b1843 100755
          private static final int MSG_CREATED = 1;
          private static final int MSG_STATUS_CHANGED = 2;
 -- 
-2.8.2
+2.10.0
 

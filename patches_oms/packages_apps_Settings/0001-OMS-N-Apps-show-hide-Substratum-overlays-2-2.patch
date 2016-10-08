@@ -1,7 +1,7 @@
-From 1400be778f98876764ac6bb5d4df795373642a57 Mon Sep 17 00:00:00 2001
+From cf9f8a705ff957b1831a91f02ba90bdd95d408af Mon Sep 17 00:00:00 2001
 From: George G <kreach3r@users.noreply.github.com>
 Date: Mon, 4 Jul 2016 12:07:11 +0300
-Subject: [PATCH] OMS-N: Apps: show/hide Substratum overlays [2/2]
+Subject: [PATCH 1/4] OMS-N: Apps: show/hide Substratum overlays [2/2]
 
 Default behavior is "hidden" substratum overlays,
 as they pollute the screen, and you can't notice the

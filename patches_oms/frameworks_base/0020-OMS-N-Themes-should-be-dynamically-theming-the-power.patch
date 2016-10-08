@@ -1,7 +1,7 @@
-From 325fbfbec58f78045211bc45d50df72c4647a47f Mon Sep 17 00:00:00 2001
+From 502d70c2383e79808d693fd912db7ebc13b466b9 Mon Sep 17 00:00:00 2001
 From: 0xD34D <clark@scheffsblend.com>
 Date: Sun, 5 Jun 2016 04:25:44 +0300
-Subject: [PATCH 20/31] OMS-N: Themes should be dynamically theming the power
+Subject: [PATCH 20/33] OMS-N: Themes should be dynamically theming the power
  menu
 
 OMS introduced a different way of loading resources into apps, and this new behavior is still buggy. Power menu wasn't getting themed with
@@ -167,7 +167,7 @@ index 457d3d5..a72ed5d 100644
      }
  
 diff --git a/services/core/java/com/android/server/power/ShutdownThread.java b/services/core/java/com/android/server/power/ShutdownThread.java
-index 00c7ce9..0acda12 100644
+index 3aab504..d8b1764 100644
 --- a/services/core/java/com/android/server/power/ShutdownThread.java
 +++ b/services/core/java/com/android/server/power/ShutdownThread.java
 @@ -50,6 +50,7 @@ import android.os.storage.IMountShutdownObserver;
@@ -178,7 +178,7 @@ index 00c7ce9..0acda12 100644
  import com.android.internal.telephony.ITelephony;
  import com.android.server.pm.PackageManagerService;
  
-@@ -134,7 +135,7 @@ public final class ShutdownThread extends Thread {
+@@ -136,7 +137,7 @@ public final class ShutdownThread extends Thread {
          mReboot = false;
          mRebootSafeMode = false;
          mReason = reason;
@@ -187,7 +187,7 @@ index 00c7ce9..0acda12 100644
      }
  
      static void shutdownInner(final Context context, boolean confirm) {
-@@ -171,10 +172,12 @@ public final class ShutdownThread extends Thread {
+@@ -173,10 +174,12 @@ public final class ShutdownThread extends Thread {
  
          if (confirm) {
              final CloseDialogReceiver closer = new CloseDialogReceiver(context);
@@ -201,7 +201,7 @@ index 00c7ce9..0acda12 100644
                      .setTitle(mRebootSafeMode
                              ? com.android.internal.R.string.reboot_safemode_title
                              : showRebootOption
-@@ -232,7 +235,7 @@ public final class ShutdownThread extends Thread {
+@@ -234,7 +237,7 @@ public final class ShutdownThread extends Thread {
          mRebootSafeMode = false;
          mRebootHasProgressBar = false;
          mReason = reason;
@@ -210,7 +210,7 @@ index 00c7ce9..0acda12 100644
      }
  
      /**
-@@ -746,4 +749,11 @@ public final class ShutdownThread extends Thread {
+@@ -779,4 +782,11 @@ public final class ShutdownThread extends Thread {
              Log.w(TAG, "Timed out waiting for uncrypt.");
          }
      }
@@ -223,5 +223,5 @@ index 00c7ce9..0acda12 100644
 +    }
  }
 -- 
-2.8.2
+2.10.0
 

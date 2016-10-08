@@ -1,7 +1,7 @@
-From 41693bf1b627753cb143292fcf68a9285a8eac6d Mon Sep 17 00:00:00 2001
+From a2ff7a09252652e9b92954a47c16b39b0aaa47b4 Mon Sep 17 00:00:00 2001
 From: Ivan Iskandar <iiiiskandar14@gmail.com>
 Date: Sun, 18 Sep 2016 21:33:18 +0700
-Subject: [PATCH 31/31] SystemUI: Expose QS edit item decoration background
+Subject: [PATCH 31/33] SystemUI: Expose QS edit item decoration background
  color
 
 PS2:
@@ -49,5 +49,5 @@ index 8e4ed91..fbd566f 100644
                  mDrawable.setBounds(0, top, width, bottom);
                  mDrawable.draw(c);
 -- 
-2.8.2
+2.10.0
 

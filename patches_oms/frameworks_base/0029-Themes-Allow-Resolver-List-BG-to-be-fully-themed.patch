@@ -1,7 +1,7 @@
-From 90d2d02a17fe0965573601bb532788765107e136 Mon Sep 17 00:00:00 2001
+From 5204cb6548d4c0e983007b525d2a92057719482f Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 8 Nov 2015 05:27:28 -0500
-Subject: [PATCH 29/31] Themes: Allow Resolver List BG to be fully themed
+Subject: [PATCH 29/33] Themes: Allow Resolver List BG to be fully themed
 
 We are able to trace the activity of the new resolver/chooser through
 different
@@ -54,5 +54,5 @@ index d12c8ba..d947094 100644
                android:padding="32dp"
                android:gravity="center"
 -- 
-2.8.2
+2.10.0
 

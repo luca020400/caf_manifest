@@ -1,7 +1,7 @@
-From 4b0830411e694ea090e7b1f430e6d465578046c3 Mon Sep 17 00:00:00 2001
+From da98e0f6e75eb90d32ecdc5c4f651886944f0185 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:56:40 +0100
-Subject: [PATCH 04/31] OMS-N: Add ResTable::remove(cookie) [4/14]
+Subject: [PATCH 04/33] OMS-N: Add ResTable::remove(cookie) [4/14]
 
 Implement ResTable::remove(cookie). Expose the new functionality via
 AssetManager and JNI.
@@ -270,5 +270,5 @@ index f50c178..3b5ba77 100644
  
  TEST_F(IdmapTest, overlaidResourceHasSameName) {
 -- 
-2.8.2
+2.10.0
 
