@@ -1,4 +1,4 @@
-From a2ff7a09252652e9b92954a47c16b39b0aaa47b4 Mon Sep 17 00:00:00 2001
+From 435553116e2955842bd49c6529daf9420092318f Mon Sep 17 00:00:00 2001
 From: Ivan Iskandar <iiiiskandar14@gmail.com>
 Date: Sun, 18 Sep 2016 21:33:18 +0700
 Subject: [PATCH 31/33] SystemUI: Expose QS edit item decoration background

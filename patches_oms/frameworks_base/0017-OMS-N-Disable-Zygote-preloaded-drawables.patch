@@ -1,4 +1,4 @@
-From 034d30aa3e90b8d17f2b0b23c27157a45385e3bf Mon Sep 17 00:00:00 2001
+From b34851cb4d9061e4549b2bd8bbeb8602d2d65146 Mon Sep 17 00:00:00 2001
 From: Josh Guilfoyle <Josh.Guilfoyle@T-Mobile.com>
 Date: Wed, 26 Jan 2011 23:28:43 -0800
 Subject: [PATCH 17/33] OMS-N: Disable Zygote preloaded drawables.

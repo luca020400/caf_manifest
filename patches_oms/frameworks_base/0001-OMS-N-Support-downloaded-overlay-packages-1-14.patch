@@ -1,4 +1,4 @@
-From 0c7c66c261f89e09bdc51949478168458cfb30bf Mon Sep 17 00:00:00 2001
+From 5c82f6d4615c9571b303d79579d2a250c3951086 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:32:48 +0100
 Subject: [PATCH 01/33] OMS-N: Support downloaded overlay packages [1/14]

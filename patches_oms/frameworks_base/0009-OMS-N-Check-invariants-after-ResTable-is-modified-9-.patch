@@ -1,4 +1,4 @@
-From ab673d997d7064d400cf1acafe5f96e80c6062aa Mon Sep 17 00:00:00 2001
+From 0548318c66b131688add317bd93ed57b9b0e6d4e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 23 Feb 2016 13:51:50 +0100
 Subject: [PATCH 09/33] OMS-N: Check invariants after ResTable is modified

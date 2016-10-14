@@ -1,4 +1,4 @@
-From febed1a9a4cf43db51529a75fc41b8159fa0f140 Mon Sep 17 00:00:00 2001
+From b2c4dacec1a7e10e4bcdd9cc1d9677626be687da Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sat, 27 Aug 2016 10:56:46 -0400
 Subject: [PATCH 30/33] Notifications: Expose a bool to disable dynamic colors

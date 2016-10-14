@@ -1,4 +1,4 @@
-From 528da7a8bee44112e582d318e4778d0fb5294026 Mon Sep 17 00:00:00 2001
+From 5948e19da5f489d8d814466944f04d07da3b7e4d Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 19 Jun 2016 10:37:13 -0400
 Subject: [PATCH 11/33] OMS-N: Persistence on boot through

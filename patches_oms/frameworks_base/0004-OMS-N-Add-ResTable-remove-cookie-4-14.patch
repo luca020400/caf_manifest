@@ -1,4 +1,4 @@
-From da98e0f6e75eb90d32ecdc5c4f651886944f0185 Mon Sep 17 00:00:00 2001
+From 7058f6ce2a44e53a17350ef54455ce9e1a0c7b0d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:56:40 +0100
 Subject: [PATCH 04/33] OMS-N: Add ResTable::remove(cookie) [4/14]

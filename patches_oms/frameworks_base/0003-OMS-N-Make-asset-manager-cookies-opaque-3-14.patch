@@ -1,4 +1,4 @@
-From f9dc2bd1c6ac37209b05c72e2fd6284549187921 Mon Sep 17 00:00:00 2001
+From 653f0728bf8650218709b20abedb6c4066f1f225 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 15:45:23 +0100
 Subject: [PATCH 03/33] OMS-N: Make asset manager cookies opaque [3/14]

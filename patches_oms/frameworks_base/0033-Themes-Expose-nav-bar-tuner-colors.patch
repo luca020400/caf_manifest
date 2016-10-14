@@ -1,7 +1,7 @@
-From e3455bc30e2171235bdb9843444da8ce2c6111b8 Mon Sep 17 00:00:00 2001
+From c9098c82ad4eb5ec217e5eaf97bcbf6324405772 Mon Sep 17 00:00:00 2001
 From: daveyannihilation <daveyannihilation@hotmail.com>
 Date: Wed, 21 Sep 2016 10:47:08 +0800
-Subject: [PATCH 32/33] Themes: Expose nav bar tuner colors
+Subject: [PATCH 33/33] Themes: Expose nav bar tuner colors
 
 PS2 Change to the actual color in fwb that this attr calls to.
 

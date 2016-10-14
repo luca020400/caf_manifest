@@ -1,4 +1,4 @@
-From 80e5e54ec132d3ef3898a8539ad1bb27b492ca04 Mon Sep 17 00:00:00 2001
+From de458f7b07c89eab45a27e9469aa40956d9c0e04 Mon Sep 17 00:00:00 2001
 From: 0xD34D <clark@scheffsblend.com>
 Date: Mon, 20 Jun 2016 22:59:48 +0300
 Subject: [PATCH 18/33] N-Extras: Add dynamic theme BootAnimation support
