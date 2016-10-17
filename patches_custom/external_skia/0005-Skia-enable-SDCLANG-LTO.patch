@@ -1,0 +1,28 @@
+From 73a807ecd61118b40a874d30da4ae984a257b1ae Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Fri, 7 Oct 2016 22:16:11 +0200
+Subject: [PATCH 5/6] Skia: enable SDCLANG LTO
+
+* together with QCLD
+
+Change-Id: I818b2d40f4dcb9a63dd3859eda89c0c463382d98
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ Android.mk | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Android.mk b/Android.mk
+index c68475f..b073351 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -43,6 +43,7 @@ LOCAL_PATH:= $(call my-dir)
+ ###############################################################################
+ 
+ include $(CLEAR_VARS)
++LOCAL_SDCLANG_LTO := true
+ LOCAL_FDO_SUPPORT := true
+ # This should be the last -Oxxx specified in LOCAL_CFLAGS
+ LOCAL_CFLAGS += -O3
+-- 
+2.10.0
+

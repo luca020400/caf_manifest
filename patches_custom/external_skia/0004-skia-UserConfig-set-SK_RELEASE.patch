@@ -1,0 +1,30 @@
+From 68ac9f6727ee2604ce4fcdc8aec3ef4082eb7170 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Tue, 4 Oct 2016 17:15:00 +0200
+Subject: [PATCH 4/6] skia: UserConfig: set SK_RELEASE
+
+* We always want to build Skia
+  in Performance mode.
+
+Change-Id: I12456d1cadf2062a1ac64f1362d3383b5290e0b0
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ include/core/SkUserConfig.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/core/SkUserConfig.h b/include/core/SkUserConfig.h
+index 0cf628c..bbd33ab 100644
+--- a/include/core/SkUserConfig.h
++++ b/include/core/SkUserConfig.h
+@@ -57,7 +57,7 @@
+     here.
+  */
+ //#define SK_DEBUG
+-//#define SK_RELEASE
++#define SK_RELEASE
+ 
+ /*  Skia has certain debug-only code that is extremely intensive even for debug
+     builds.  This code is useful for diagnosing specific issues, but is not
+-- 
+2.10.0
+
