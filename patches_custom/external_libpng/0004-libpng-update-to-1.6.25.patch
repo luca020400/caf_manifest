@@ -1,0 +1,2719 @@
+From 995ba3312f22e7ed853ce07f36cd96dd9bbb651f Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Sat, 1 Oct 2016 12:24:08 +0200
+Subject: [PATCH 4/4] libpng: update to 1.6.25
+
+Change-Id: I45dfbb6a782592f200760ad842c07850ada664e5
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ ANNOUNCE                      |  83 +----
+ CHANGES                       |  28 ++
+ CMakeLists.txt                |   4 +-
+ INSTALL                       |  82 +++--
+ LICENSE                       |   4 +-
+ Makefile.am                   |  11 +-
+ README                        |   5 +-
+ README.android                |   2 +-
+ TODO                          |   4 +-
+ configure.ac                  |  55 ++-
+ contrib/intel/intel_sse.patch |  95 ++---
+ contrib/mips-msa/README       |  83 +++++
+ contrib/mips-msa/linux.c      |  64 ++++
+ libpng-manual.txt             |   6 +-
+ libpng.3                      |  18 +-
+ libpngpf.3                    |   4 +-
+ mips/filter_msa_intrinsics.c  | 807 ++++++++++++++++++++++++++++++++++++++++++
+ mips/mips_init.c              | 129 +++++++
+ png.5                         |   2 +-
+ png.c                         |  50 ++-
+ png.h                         |  28 +-
+ pngconf.h                     |   2 +-
+ pnglibconf.h                  |   4 +-
+ pngmem.c                      |   2 +-
+ pngpriv.h                     |  57 ++-
+ pngrutil.c                    |   4 +-
+ pngtest.c                     |  75 ++--
+ projects/vstudio/README.txt   |   2 +-
+ projects/vstudio/zlib.props   |   2 +-
+ scripts/README.txt            |  10 +-
+ scripts/def.c                 |   2 +-
+ scripts/libpng-config-head.in |   2 +-
+ scripts/libpng.pc.in          |   2 +-
+ scripts/makefile.cegcc        |   2 +-
+ scripts/makefile.linux        |   2 +-
+ scripts/makefile.msys         |   2 +-
+ scripts/makefile.ne12bsd      |   2 +-
+ scripts/makefile.netbsd       |   2 +-
+ scripts/makefile.openbsd      |   2 +-
+ scripts/pnglibconf.h.prebuilt |   4 +-
+ scripts/symbols.def           |   2 +-
+ 41 files changed, 1488 insertions(+), 258 deletions(-)
+ create mode 100644 contrib/mips-msa/README
+ create mode 100644 contrib/mips-msa/linux.c
+ create mode 100644 mips/filter_msa_intrinsics.c
+ create mode 100644 mips/mips_init.c
+
+diff --git a/ANNOUNCE b/ANNOUNCE
+index bca4250..330fd10 100644
+--- a/ANNOUNCE
++++ b/ANNOUNCE
+@@ -1,4 +1,4 @@
+-Libpng 1.6.24 - August 4, 2016
++Libpng 1.6.25 - September 1, 2016
+ 
+ This is a public release of libpng, intended for use in production codes.
+ 
+@@ -7,78 +7,29 @@ Files available for download:
+ Source files with LF line endings (for Unix/Linux) and with a
+ "configure" script
+ 
+-   libpng-1.6.24.tar.xz (LZMA-compressed, recommended)
+-   libpng-1.6.24.tar.gz
++   libpng-1.6.25.tar.xz (LZMA-compressed, recommended)
++   libpng-1.6.25.tar.gz
+ 
+ Source files with CRLF line endings (for Windows), without the
+ "configure" script
+ 
+-   lpng1624.7z  (LZMA-compressed, recommended)
+-   lpng1624.zip
++   lpng1625.7z  (LZMA-compressed, recommended)
++   lpng1625.zip
+ 
+ Other information:
+ 
+-   libpng-1.6.24-README.txt
+-   libpng-1.6.24-LICENSE.txt
+-   libpng-1.6.24-*.asc (armored detached GPG signatures)
+-
+-Changes since the last public release (1.6.23):
+-  Avoid potential overflow of the PNG_IMAGE_SIZE macro.  This macro
+-    is not used within libpng, but is used in some of the examples.
+-  Correct filter heuristic overflow handling. This was broken when the
+-    write filter code was moved out-of-line; if there is a single filter and
+-    the heuristic sum overflows the calculation of the filtered line is not
+-    completed.  In versions prior to 1.6 the code was duplicated in-line
+-    and the check not performed, so the filter operation completed; however,
+-    in the multi-filter case where the sum is performed the 'none' filter would
+-    be selected if all the sums overflowed, even if it wasn't in the filter
+-    list.  The fix to the first problem is simply to provide PNG_SIZE_MAX as
+-    the current lmins sum value; this means the sum can never exceed it and
+-    overflows silently.  A reasonable compiler that does choose to inline
+-    the code will simply eliminate the sum check.
+-  The fix to the second problem is to use high precision arithmetic (this is
+-    implemented in 1.7), however a simple safe fix here is to chose the lowest
+-    numbered filter in the list from png_set_filter (this only works if the
+-    first problem is also fixed) (John Bowler).
+-  Use a more efficient absolute value calculation on SSE2 (Matthieu Darbois).
+-  Fixed the case where PNG_IMAGE_BUFFER_SIZE can overflow in the application
+-    as a result of the application using an increased 'row_stride'; previously
+-    png_image_finish_read only checked for overflow on the base calculation of
+-    components.  (I.e. it checked for overflow of a 32-bit number on the total
+-    number of pixel components in the output format, not the possibly padded row
+-    length and not the number of bytes, which for linear formats is twice the
+-    number of components.)
+-  MSVC does not like '-(unsigned)', so replaced it with 0U-(unsigned)
+-  MSVC does not like (uInt) = -(unsigned) (i.e. as an initializer), unless
+-    the conversion is explicitly invoked by a cast.
+-  Put the SKIP definition in the correct place. It needs to come after the
+-    png.h include (see all the other .c files in contrib/libtests) because it
+-    depends on PNG_LIBPNG_VER.
+-  Removed the three compile warning options from the individual project
+-    files into the zlib.props globals.  It increases the warning level from 4
+-    to All and adds a list of the warnings that need to be turned off.  This is
+-    semi-documentary; the intent is to tell libpng users which warnings have
+-    been examined and judged non-fixable at present.  The warning about
+-    structure padding is fixable, but it would be a signficant change (moving
+-    structure members around).
+-  Optimized absolute value calculation in filter selection, similar to
+-    code in the PAETH decoder in pngrutil.c. Build with PNG_USE_ABS to
+-    use this.
+-  Added pngcp to the build together with a pngcp.dfa configuration test.
+-  Added high resolution timing to pngcp.
+-  Added "Common linking failures" section to INSTALL.
+-  Relocated misplaced #endif in png.c sRGB profile checking.
+-  Fixed two Coverity issues in pngcp.c.
+-  Avoid filter-selection heuristic sum calculations in cases where only one
+-    filter is a candidate for selection. This trades off code size (added
+-    private png_setup_*_row_only() functions) for speed.
+-  Fixed some indentation to comply with our coding style.
+-  Added contrib/tools/reindent.
+-  Eliminated unnecessary tests of boolean png_isaligned() vs 0.
+-  Conditionally compile SSE2 headers in contrib/intel/intel_sse.patch
+-  Conditionally compile png_decompress_chunk().
+-  Conditionally compile ARM_NEON headers in pngpriv.h
+-  Updated contrib/intel/intel_sse.patch
++   libpng-1.6.25-README.txt
++   libpng-1.6.25-LICENSE.txt
++   libpng-1.6.25-*.asc (armored detached GPG signatures)
++
++Changes since the last public release (1.6.24):
++  Reject oversized iCCP profile immediately.
++  Cleaned up PNG_DEBUG compile of pngtest.c.
++  Conditionally compile png_inflate().
++  Don't install pngcp; it conflicts with pngcp in the pngtools package.
++  Minor editing of INSTALL, (whitespace, added copyright line)
++  Added MIPS support (Mandar Sahastrabuddhe <Mandar.Sahastrabuddhe@imgtec.com>).
++  Rebased contrib/intel/intel_sse.patch after the MIPS implementation.
+ 
+ (subscription required; visit
+ https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+diff --git a/CHANGES b/CHANGES
+index d4f0c8b..923fc50 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -5675,6 +5675,34 @@ Version 1.6.24rc03 [August 2, 2016]
+ Version 1.6.24[August 4, 2016]
+   No changes.
+ 
++Version 1.6.25beta01 [August 12, 2016]
++  Reject oversized iCCP profile immediately.
++  Cleaned up PNG_DEBUG compile of pngtest.c.
++  Conditionally compile png_inflate().
++
++Version 1.6.25beta02 [August 18, 2016]
++  Don't install pngcp; it conflicts with pngcp in the pngtools package.
++  Minor editing of INSTALL, (whitespace, added copyright line)
++
++Version 1.6.25rc01 [August 24, 2016]
++  No changes.
++
++Version 1.6.25rc02 [August 29, 2016]
++  Added MIPS support (Mandar Sahastrabuddhe <Mandar.Sahastrabuddhe@imgtec.com>).
++  Only the UP filter is currently implemented.
++
++Version 1.6.25rc03 [August 29, 2016]
++  Rebased contrib/intel/intel_sse.patch after the MIPS implementation.
++
++Version 1.6.25rc04 [August 30, 2016]
++  Added MIPS support for SUB, AVG, and PAETH filters (Mandar Sahastrabuddhe).
++
++Version 1.6.25rc05 [August 30, 2016]
++  Rebased contrib/intel/intel_sse.patch after the MIPS implementation update..
++
++Version 1.6.25 [September 1, 2016]
++  No changes.
++
+ Send comments/corrections/commendations to png-mng-implement at lists.sf.net
+ (subscription required; visit
+ https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 186b65a..eb63b2b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -35,7 +35,7 @@ enable_testing()
+ 
+ set(PNGLIB_MAJOR 1)
+ set(PNGLIB_MINOR 6)
+-set(PNGLIB_RELEASE 24)
++set(PNGLIB_RELEASE 25)
+ set(PNGLIB_NAME libpng${PNGLIB_MAJOR}${PNGLIB_MINOR})
+ set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
+ 
+@@ -696,7 +696,7 @@ endif(NOT WIN32 OR CYGWIN OR MINGW)
+ # SET UP LINKS
+ if(PNG_SHARED)
+   set_target_properties(png PROPERTIES
+-#   VERSION 16.${PNGLIB_RELEASE}.1.6.24
++#   VERSION 16.${PNGLIB_RELEASE}.1.6.25
+     VERSION 16.${PNGLIB_RELEASE}.0
+     SOVERSION 16
+     CLEAN_DIRECT_OUTPUT 1)
+diff --git a/INSTALL b/INSTALL
+index eed4dc8..58ec0b6 100644
+--- a/INSTALL
++++ b/INSTALL
+@@ -1,25 +1,25 @@
+ 
+-Installing libpng
++    Installing libpng
+ 
+ Contents
+ 
+-   I. Simple installation
+-  II. Rebuilding the configure scripts
+- III. Using scripts/makefile*
+-  IV. Using cmake
+-   V. Directory structure
+-  VI. Building with project files
+- VII. Building with makefiles
+-VIII. Configuring libpng for 16-bit platforms
+-  IX. Configuring for DOS
+-   X. Configuring for Medium Model
+-  XI. Prepending a prefix to exported symbols
+- XII. Configuring for compiler xxx:
+-XIII. Removing unwanted object code
+- XIV. Changes to the build and configuration of libpng in libpng-1.5.x
+-  XV. Setjmp/longjmp issues
+- XVI. Common linking failures
+-XVII. Other sources of information about libpng
++       I. Simple installation
++      II. Rebuilding the configure scripts
++     III. Using scripts/makefile*
++      IV. Using cmake
++       V. Directory structure
++      VI. Building with project files
++     VII. Building with makefiles
++    VIII. Configuring libpng for 16-bit platforms
++      IX. Configuring for DOS
++       X. Configuring for Medium Model
++      XI. Prepending a prefix to exported symbols
++     XII. Configuring for compiler xxx:
++    XIII. Removing unwanted object code
++     XIV. Changes to the build and configuration of libpng in libpng-1.5.x
++      XV. Setjmp/longjmp issues
++     XVI. Common linking failures
++    XVII. Other sources of information about libpng
+ 
+ I. Simple installation
+ 
+@@ -90,22 +90,24 @@ standard library search path, put ZLIBLIB, ZLIBINC, CPPFLAGS, LDFLAGS,
+ and LD_LIBRARY_PATH in your environment before running "make test"
+ or "make distcheck":
+ 
+-ZLIBLIB=/path/to/lib export ZLIBLIB
+-ZLIBINC=/path/to/include export ZLIBINC
+-CPPFLAGS="-I$ZLIBINC" export CPPFLAGS
+-LDFLAGS="-L$ZLIBLIB" export LDFLAGS
+-LD_LIBRARY_PATH="$ZLIBLIB:$LD_LIBRARY_PATH" export LD_LIBRARY_PATH
++    ZLIBLIB=/path/to/lib export ZLIBLIB
++    ZLIBINC=/path/to/include export ZLIBINC
++    CPPFLAGS="-I$ZLIBINC" export CPPFLAGS
++    LDFLAGS="-L$ZLIBLIB" export LDFLAGS
++    LD_LIBRARY_PATH="$ZLIBLIB:$LD_LIBRARY_PATH" export LD_LIBRARY_PATH
+ 
+ If you are using one of the makefile scripts, put ZLIBLIB and ZLIBINC
+-in your environment and type "make ZLIBLIB=$ZLIBLIB ZLIBINC=$ZLIBINC test".
++in your environment and type
++
++    make ZLIBLIB=$ZLIBLIB ZLIBINC=$ZLIBINC test
+ 
+ IV. Using cmake
+ 
+ If you want to use "cmake" (see www.cmake.org), type
+ 
+-   cmake . -DCMAKE_INSTALL_PREFIX=/path
+-   make
+-   make install
++    cmake . -DCMAKE_INSTALL_PREFIX=/path
++    make
++    make install
+ 
+ As when using the simple configure method described above, "/path" points to
+ the installation directory where you want to put the libpng "lib", "include",
+@@ -119,7 +121,7 @@ or "zlib128") so that you have directories called "zlib" and "libpng".
+ 
+ Your directory structure should look like this:
+ 
+-   .. (the parent directory)
++    .. (the parent directory)
+       libpng (this directory)
+           INSTALL (this file)
+           README
+@@ -163,10 +165,15 @@ VII. Building with makefiles
+ Copy the file (or files) that you need from the
+ scripts directory into this directory, for example
+ 
+-   MSDOS example: copy scripts\makefile.msc makefile
+-                  copy scripts\pnglibconf.h.prebuilt pnglibconf.h
+-   UNIX example:  cp scripts/makefile.std makefile
+-                  cp scripts/pnglibconf.h.prebuilt pnglibconf.h
++MSDOS example:
++
++    copy scripts\makefile.msc makefile
++    copy scripts\pnglibconf.h.prebuilt pnglibconf.h
++
++UNIX example:
++
++    cp scripts/makefile.std makefile
++    cp scripts/pnglibconf.h.prebuilt pnglibconf.h
+ 
+ Read the makefile to see if you need to change any source or
+ target directories to match your preferences.
+@@ -242,7 +249,7 @@ libpng are compiled.  All the defines end in _SUPPORTED.  If you are
+ never going to use a capability, you can change the #define to #undef
+ before recompiling libpng and save yourself code and data space, or
+ you can turn off individual capabilities with defines that begin with
+-PNG_NO_.
++"PNG_NO_".
+ 
+ In libpng-1.5.0 and later, the #define's are in pnglibconf.h instead.
+ 
+@@ -310,7 +317,7 @@ only png_longjmp_ptr, which must match the C longjmp function.)  The new
+ approach is documented in pngconf.h
+ 
+ Despite these changes, libpng 1.5.0 only supports the native C function
+-calling standard on those platforms tested so far (__cdecl on Microsoft
++calling standard on those platforms tested so far ("__cdecl" on Microsoft
+ Windows).  This is because the support requirements for alternative
+ calling conventions seem to no longer exist.  Developers who find it
+ necessary to set PNG_API_RULE to 1 should advise the mailing list
+@@ -374,7 +381,7 @@ your application is going to be using multiple threads, you should
+ configure libpng with PNG_NO_SETJMP in your pngusr.dfa file, with
+ -DPNG_NO_SETJMP on your compile line, or with
+ 
+-  #undef PNG_SETJMP_SUPPORTED
++    #undef PNG_SETJMP_SUPPORTED
+ 
+ in your pnglibconf.h or pngusr.h.
+ 
+@@ -400,3 +407,8 @@ XVII. Other sources of information about libpng:
+ Further information can be found in the README and libpng-manual.txt
+ files, in the individual makefiles, in png.h, and the manual pages
+ libpng.3 and png.5.
++
++Copyright (c) 1998-2002,2006-2016 Glenn Randers-Pehrson
++This document is released under the libpng license.
++For conditions of distribution and use, see the disclaimer
++and license in png.h.
+diff --git a/LICENSE b/LICENSE
+index d20f39e..d48a293 100644
+--- a/LICENSE
++++ b/LICENSE
+@@ -10,7 +10,7 @@ this sentence.
+ 
+ This code is released under the libpng license.
+ 
+-libpng versions 1.0.7, July 1, 2000 through 1.6.24, August 4, 2016 are
++libpng versions 1.0.7, July 1, 2000 through 1.6.25, September 1, 2016 are
+ Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+ derived from libpng-1.0.6, and are distributed according to the same
+ disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -127,4 +127,4 @@ any encryption software.  See the EAR, paragraphs 734.3(b)(3) and
+ 
+ Glenn Randers-Pehrson
+ glennrp at users.sourceforge.net
+-August 4, 2016
++September 1, 2016
+diff --git a/Makefile.am b/Makefile.am
+index 39e9bde..fb209ed 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -1,7 +1,7 @@
+ # Makefile.am, the source file for Makefile.in (and hence Makefile), is
+ #
+ # Copyright (c) 2004-2016 Glenn Randers-Pehrson
+-# Last changed in libpng 1.6.22 [(PENDING RELEASE)]
++# Last changed in libpng 1.6.25 [September 1, 2016]
+ #
+ # This code is released under the libpng license.
+ # For conditions of distribution and use, see the disclaimer
+@@ -12,13 +12,13 @@ PNGLIB_BASENAME= libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@
+ ACLOCAL_AMFLAGS = -I scripts
+ 
+ # test programs - run on make check, make distcheck
+-check_PROGRAMS= pngtest pngunknown pngstest pngvalid pngimage
++check_PROGRAMS= pngtest pngunknown pngstest pngvalid pngimage pngcp
+ if HAVE_CLOCK_GETTIME
+ check_PROGRAMS += timepng
+ endif
+ 
+ # Utilities - installed
+-bin_PROGRAMS= pngcp pngfix png-fix-itxt
++bin_PROGRAMS= pngfix png-fix-itxt
+ 
+ # This ensures that pnglibconf.h gets built at the start of 'make all' or
+ # 'make check', but it does not add dependencies to the individual programs,
+@@ -97,6 +97,11 @@ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += arm/arm_init.c\
+ 	arm/filter_neon.S arm/filter_neon_intrinsics.c
+ endif
+ 
++if PNG_MIPS_MSA
++libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += mips/mips_init.c\
++	mips/filter_msa_intrinsics.c
++endif
++
+ nodist_libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES = pnglibconf.h
+ 
+ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_LDFLAGS = -no-undefined -export-dynamic \
+diff --git a/README b/README
+index a8fba91..17bca9a 100644
+--- a/README
++++ b/README
+@@ -1,4 +1,4 @@
+-README for libpng version 1.6.24 - August 4, 2016 (shared library 16.0)
++README for libpng version 1.6.25 - September 1, 2016 (shared library 16.0)
+ See the note about version numbers near the top of png.h
+ 
+ See INSTALL for instructions on how to install libpng.
+@@ -180,15 +180,18 @@ Files in this distribution:
+       pngwutil.c    =>  Write utility functions
+       arm           =>  Contains optimized code for the ARM platform
+       contrib       =>  Contributions
++       arm-neon         =>  Optimized code for ARM-NEON platform
+        examples         =>  Example programs
+        gregbook         =>  source code for PNG reading and writing, from
+                             Greg Roelofs' "PNG: The Definitive Guide",
+                             O'Reilly, 1999
++       intel            =>  Optimized code for INTEL-SSE2 platform
+        libtests         =>  Test programs
+        pngminim         =>  Minimal decoder, encoder, and progressive decoder
+                             programs demonstrating use of pngusr.dfa
+        pngminus         =>  Simple pnm2png and png2pnm programs
+        pngsuite         =>  Test images
++       testpngs
+        tools            =>  Various tools
+        visupng          =>  Contains a MSVC workspace for VisualPng
+       projects      =>  Contains project files and workspaces for
+diff --git a/README.android b/README.android
+index 190d454..b5b7147 100644
+--- a/README.android
++++ b/README.android
+@@ -1,4 +1,4 @@
+-Any Android specific modifications to upstream libpng (1.6.22beta) should
++Any Android specific modifications to upstream libpng (1.6.25) should
+ be listed here:
+ 
+ (1) Android has added the following files.
+diff --git a/TODO b/TODO
+index 0b3b651..cdb9e1f 100644
+--- a/TODO
++++ b/TODO
+@@ -5,7 +5,9 @@ Final bug fixes.
+ Better C++ wrapper/full C++ implementation?
+ Fix problem with C++ and EXTERN "C".
+ cHRM transformation.
+-Remove setjmp/longjmp usage in favor of returning error codes.
++Remove setjmp/longjmp usage in favor of returning error codes. As a start on
++  this, minimize the use of png_error(), replacing them with
++  png_warning(); return(0; or similar.
+ Palette creation.
+ Add "grayscale->palette" transformation and "palette->grayscale" detection.
+ Improved dithering.
+diff --git a/configure.ac b/configure.ac
+index 3a3d208..83c5fc2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1,7 +1,7 @@
+ # configure.ac
+ 
+-# Copyright (c) 2004-2015 Glenn Randers-Pehrson
+-# Last changed in libpng 1.6.22 [May 26, 2016]
++# Copyright (c) 2004-2016 Glenn Randers-Pehrson
++# Last changed in libpng 1.6.25 [September 1, 2016]
+ 
+ # This code is released under the libpng license.
+ # For conditions of distribution and use, see the disclaimer
+@@ -25,7 +25,7 @@ AC_PREREQ([2.68])
+ 
+ dnl Version number stuff here:
+ 
+-AC_INIT([libpng],[1.6.24],[png-mng-implement@lists.sourceforge.net])
++AC_INIT([libpng],[1.6.25],[png-mng-implement@lists.sourceforge.net])
+ AC_CONFIG_MACRO_DIR([scripts])
+ 
+ # libpng does not follow GNU file name conventions (hence 'foreign')
+@@ -46,10 +46,10 @@ dnl automake, so the following is not necessary (and is not defined anyway):
+ dnl AM_PREREQ([1.11.2])
+ dnl stop configure from automagically running automake
+ 
+-PNGLIB_VERSION=1.6.24
++PNGLIB_VERSION=1.6.25
+ PNGLIB_MAJOR=1
+ PNGLIB_MINOR=6
+-PNGLIB_RELEASE=24
++PNGLIB_RELEASE=25
+ 
+ dnl End of version number stuff
+ 
+@@ -346,6 +346,51 @@ AM_CONDITIONAL([PNG_ARM_NEON],
+       *)    test "$enable_arm_neon" != '';;
+     esac])
+ 
++# MIPS
++# ===
++#
++# MIPS MSA (SIMD) support.
++
++AC_ARG_ENABLE([mips-msa],
++   AS_HELP_STRING([[[--enable-mips-msa]]],
++      [Enable MIPS MSA optimizations: =no/off, check, api, yes/on:]
++      [no/off: disable the optimizations; check: use internal checking code]
++      [(deprecated and poorly supported); api: disable by default, enable by]
++      [a call to png_set_option; yes/on: turn on unconditionally.]
++      [If not specified: determined by the compiler.]),
++   [case "$enableval" in
++      no|off)
++         # disable the default enabling on __mips_msa systems:
++         AC_DEFINE([PNG_MIPS_MSA_OPT], [0],
++                   [Disable MIPS MSA optimizations])
++         # Prevent inclusion of the assembler files below:
++         enable_mips_msa=no;;
++      check)
++         AC_DEFINE([PNG_MIPS_MSA_CHECK_SUPPORTED], [],
++                   [Check for MIPS MSA support at run-time]);;
++      api)
++         AC_DEFINE([PNG_MIPS_MSA_API_SUPPORTED], [],
++                   [Turn on MIPS MSA optimizations at run-time]);;
++      yes|on)
++         AC_DEFINE([PNG_MIPS_MSA_OPT], [2],
++                   [Enable MIPS MSA optimizations])
++         AC_MSG_WARN([--enable-mips-msa: please specify 'check' or 'api', if]
++            [you want the optimizations unconditionally pass '-mmsa -mfp64']
++            [to the compiler.]);;
++      *)
++         AC_MSG_ERROR([--enable-mips-msa=${enable_mips_msa}: invalid value])
++   esac])
++
++# Add MIPS specific files to all builds where the host_cpu is mips ('mips*') or
++# where MIPS optimizations were explicitly requested (this allows a fallback if a
++# future host CPU does not match 'mips*')
++
++AM_CONDITIONAL([PNG_MIPS_MSA],
++   [test "$enable_mips_msa" != 'no' &&
++    case "$host_cpu" in
++      mipsel*|mips64el*) :;;
++    esac])
++
+ AC_MSG_NOTICE([[Extra options for compiler: $PNG_COPTS]])
+ 
+ # Config files, substituting as above
+diff --git a/contrib/intel/intel_sse.patch b/contrib/intel/intel_sse.patch
+index c5579e3..a852538 100644
+--- a/contrib/intel/intel_sse.patch
++++ b/contrib/intel/intel_sse.patch
+@@ -1,13 +1,13 @@
+ diff --git a/configure.ac b/configure.ac
+---- a/configure.ac	2016-05-25 18:59:10.000000000 -0400
+-+++ b/configure.ac	2016-05-25 19:48:10.631751170 -0400
+-@@ -341,16 +341,50 @@ AC_ARG_ENABLE([arm-neon],
++--- a/configure.ac	2016-08-29 11:46:27.000000000 -0400
+++++ b/configure.ac	2016-08-29 16:57:03.866355018 -0400
++@@ -386,16 +386,51 @@ AC_ARG_ENABLE([mips-msa],
++ # future host CPU does not match 'mips*')
+  
+- AM_CONDITIONAL([PNG_ARM_NEON],
+-    [test "$enable_arm_neon" != 'no' &&
++ AM_CONDITIONAL([PNG_MIPS_MSA],
++    [test "$enable_mips_msa" != 'no' &&
+      case "$host_cpu" in
+-       arm*|aarch64*) :;;
+-       *)    test "$enable_arm_neon" != '';;
++       mipsel*|mips64el*) :;;
+      esac])
+  
+ +# INTEL
+@@ -44,6 +44,7 @@ diff --git a/configure.ac b/configure.ac
+ +      i?86|x86_64) :;;
+ +      *)    test "$enable_intel_sse" != '';;
+ +    esac])
+++
+  AC_MSG_NOTICE([[Extra options for compiler: $PNG_COPTS]])
+  
+  # Config files, substituting as above
+@@ -53,21 +54,22 @@ diff --git a/configure.ac b/configure.ac
+  
+  AC_OUTPUT
+ diff --git a/Makefile.am b/Makefile.am
+---- a/Makefile.am	2016-05-17 18:15:12.000000000 -0400
+-+++ b/Makefile.am	2016-05-25 19:48:10.631751170 -0400
+-@@ -92,16 +92,20 @@ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SO
+- 	pngset.c pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c\
+- 	png.h pngconf.h pngdebug.h pnginfo.h pngpriv.h pngstruct.h pngusr.dfa
+- 
+- if PNG_ARM_NEON
+- libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += arm/arm_init.c\
++--- a/Makefile.am	2016-08-29 11:46:27.000000000 -0400
+++++ b/Makefile.am	2016-08-29 16:57:45.955528215 -0400
++@@ -97,16 +97,21 @@ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SO
+  	arm/filter_neon.S arm/filter_neon_intrinsics.c
+  endif
+  
++ if PNG_MIPS_MSA
++ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += mips/mips_init.c\
++ 	mips/filter_msa_intrinsics.c
++ endif
++ 
+ +if PNG_INTEL_SSE
+ +libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += contrib/intel/intel_init.c\
+ +    contrib/intel/filter_sse2_intrinsics.c
+ +endif
+++
+  nodist_libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES = pnglibconf.h
+  
+  libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_LDFLAGS = -no-undefined -export-dynamic \
+@@ -77,16 +79,16 @@ diff --git a/Makefile.am b/Makefile.am
+  #   Versioned symbols and restricted exports
+  if HAVE_SOLARIS_LD
+ diff --git a/pngpriv.h b/pngpriv.h
+---- a/pngpriv.h	2016-08-01 18:13:38.770128810 -0500
+-+++ b/pngpriv.h	2016-08-01 18:50:19.130179017 -0500
+-@@ -177,16 +177,52 @@
+- #  endif /* !PNG_ARM_NEON_IMPLEMENTATION */
+- 
+- #  ifndef PNG_ARM_NEON_IMPLEMENTATION
+-       /* Use the intrinsics code by default. */
+- #     define PNG_ARM_NEON_IMPLEMENTATION 1
++--- debug16/pngpriv.h	2016-08-30 10:46:36.000000000 -0400
+++++ libpng16/pngpriv.h	2016-08-30 11:57:25.672280202 -0400
++@@ -185,16 +185,52 @@
++ #ifndef PNG_MIPS_MSA_OPT
++ #  if defined(__mips_msa) && (__mips_isa_rev >= 5) && defined(PNG_ALIGNED_MEMORY_SUPPORTED)
++ #     define PNG_MIPS_MSA_OPT 2
++ #  else
++ #     define PNG_MIPS_MSA_OPT 0
+  #  endif
+- #endif /* PNG_ARM_NEON_OPT > 0 */
++ #endif
+  
+ +#ifndef PNG_INTEL_SSE_OPT
+ +#   ifdef PNG_INTEL_SSE
+@@ -124,24 +126,23 @@ diff --git a/pngpriv.h b/pngpriv.h
+ +#   endif
+ +#endif
+ +
+- /* Is this a build of a DLL where compilation of the object modules requires
+-  * different preprocessor settings to those required for a simple library?  If
+-  * so PNG_BUILD_DLL must be set.
+-  *
+-  * If libpng is used inside a DLL but that DLL does not export the libpng APIs
+-  * PNG_BUILD_DLL must not be set.  To avoid the code below kicking in build a
+-  * static library of libpng then link the DLL against that.
+-  */
+-@@ -1185,16 +1221,31 @@ PNG_INTERNAL_FUNCTION(void,png_read_filt
++ #if PNG_MIPS_MSA_OPT > 0
++ #  define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_msa
++ #  ifndef PNG_MIPS_MSA_IMPLEMENTATION
++ #     if defined(__mips_msa)
++ #        if defined(__clang__)
++ #        elif defined(__GNUC__)
++ #           if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
++ #              define PNG_MIPS_MSA_IMPLEMENTATION 2
++@@ -1232,16 +1268,31 @@ PNG_INTERNAL_FUNCTION(void,png_read_filt
++ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_msa,(png_row_infop
+      row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+- PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_neon,(png_row_infop
++ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_msa,(png_row_infop
+      row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+- PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_neon,(png_row_infop
+-     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+- PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_neon,(png_row_infop
++ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_msa,(png_row_infop
+      row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+  #endif
+-+ 
++ 
+ +#if PNG_INTEL_SSE_IMPLEMENTATION > 0
+ +PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_sse2,(png_row_infop
+ +    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+@@ -156,7 +157,7 @@ diff --git a/pngpriv.h b/pngpriv.h
+ +PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_sse2,(png_row_infop
+ +    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+ +#endif
+- 
+++
+  /* Choose the best filter to use and filter the row data */
+  PNG_INTERNAL_FUNCTION(void,png_write_find_filter,(png_structrp png_ptr,
+      png_row_infop row_info),PNG_EMPTY);
+@@ -164,15 +165,17 @@ diff --git a/pngpriv.h b/pngpriv.h
+  #ifdef PNG_SEQUENTIAL_READ_SUPPORTED
+  PNG_INTERNAL_FUNCTION(void,png_read_IDAT_data,(png_structrp png_ptr,
+     png_bytep output, png_alloc_size_t avail_out),PNG_EMPTY);
+-@@ -1914,16 +1965,20 @@ PNG_INTERNAL_FUNCTION(void, PNG_FILTER_O
+-    /* List *all* the possible optimizations here - this branch is required if
+-     * the builder of libpng passes the definition of PNG_FILTER_OPTIMIZATIONS in
+-     * CFLAGS in place of CPPFLAGS *and* uses symbol prefixing.
+-     */
+- #  if PNG_ARM_NEON_OPT > 0
++    /* Read 'avail_out' bytes of data from the IDAT stream.  If the output buffer
++@@ -1967,16 +2018,21 @@ PNG_INTERNAL_FUNCTION(void, PNG_FILTER_O
+  PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_neon,
+     (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+- #  endif
++ #endif
++ 
++ #if PNG_MIPS_MSA_OPT > 0
++ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_msa,
++    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
++ #endif
+++
+ +#  if PNG_INTEL_SSE_IMPLEMENTATION > 0
+ +PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_sse2,
+ +   (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+diff --git a/contrib/mips-msa/README b/contrib/mips-msa/README
+new file mode 100644
+index 0000000..10acc93
+--- /dev/null
++++ b/contrib/mips-msa/README
+@@ -0,0 +1,83 @@
++OPERATING SYSTEM SPECIFIC MIPS MSA DETECTION
++--------------------------------------------
++
++Detection of the ability to execute MIPS MSA on an MIPS processor requires
++operating system support.  (The information is not available in user mode.)
++
++HOW TO USE THIS
++---------------
++
++This directory contains C code fragments that can be included in mips/mips_init.c
++by setting the macro PNG_MIPS_MSA_FILE to the file name in "" or <> at build
++time.  This setting is not recorded in pnglibconf.h and can be changed simply by
++rebuilding mips/msa_init.o with the required macro definition.
++
++For any of this code to be used the MIPS MSA code must be enabled and run time
++checks must be supported.  I.e.:
++
++#if PNG_MIPS_MSA_OPT > 0
++#ifdef PNG_MIPS_MSA_CHECK_SUPPORTED
++
++This is done in a 'configure' build by passing configure the argument:
++
++   --enable-mips-msa=check
++
++Apart from the basic Linux implementation in contrib/mips-msa/linux.c this code
++is unsupported.  That means that it is not even compiled on a regular basis and
++may be broken in any given minor release.
++
++FILE FORMAT
++-----------
++
++Each file documents its testing status as of the last time it was tested (which
++may have been a long time ago):
++
++STATUS: one of:
++   SUPPORTED: This indicates that the file is included in the regularly
++         performed test builds and bugs are fixed when discovered.
++   COMPILED: This indicates that the code did compile at least once.  See the
++         more detailed description for the extent to which the result was
++         successful.
++   TESTED: This means the code was fully compiled into the libpng test programs
++         and these were run at least once.
++
++BUG REPORTS: an email address to which to send reports of problems
++
++The file is a fragment of C code. It should not define any 'extern' symbols;
++everything should be static.  It must define the function:
++
++static int png_have_msa(png_structp png_ptr);
++
++That function must return 1 if MIPS MSA instructions are supported, 0 if not.
++It must not execute png_error unless it detects a bug.  A png_error will prevent
++the reading of the PNG and in the future, writing too.
++
++BUG REPORTS
++-----------
++
++If you mail a bug report for any file that is not SUPPORTED there may only be
++limited response.  Consider fixing it and sending a patch to fix the problem -
++this is more likely to result in action.
++
++CONTRIBUTIONS
++-------------
++
++You may send contributions of new implementations to
++png-mng-implement@sourceforge.net.  Please write code in strict C90 C where
++possible.  Obviously OS dependencies are to be expected.  If you submit code you
++must have the authors permission and it must have a license that is acceptable
++to the current maintainer; in particular that license must permit modification
++and redistribution.
++
++Please try to make the contribution a single file and give the file a clear and
++unambiguous name that identifies the target OS.  If multiple files really are
++required put them all in a sub-directory.
++
++You must also be prepared to handle bug reports from users of the code, either
++by joining the png-mng-implement mailing list or by providing an email for the
++"BUG REPORTS" entry or both.  Please make sure that the header of the file
++contains the STATUS and BUG REPORTS fields as above.
++
++Please list the OS requirements as precisely as possible.  Ideally you should
++also list the environment in which the code has been tested and certainly list
++any environments where you suspect it might not work.
+diff --git a/contrib/mips-msa/linux.c b/contrib/mips-msa/linux.c
+new file mode 100644
+index 0000000..140215c
+--- /dev/null
++++ b/contrib/mips-msa/linux.c
+@@ -0,0 +1,64 @@
++/* contrib/mips-msa/linux.c
++ *
++ * Copyright (c) 2016 Glenn Randers-Pehrson
++ * Written by Mandar Sahastrabuddhe, 2016.
++ * Last changed in libpng 1.6.25beta03 [August 29, 2016]
++ *
++ * This code is released under the libpng license.
++ * For conditions of distribution and use, see the disclaimer
++ * and license in png.h
++ *
++ * SEE contrib/mips-msa/README before reporting bugs
++ *
++ * STATUS: SUPPORTED
++ * BUG REPORTS: png-mng-implement@sourceforge.net
++ *
++ * png_have_msa implemented for Linux by reading the widely available
++ * pseudo-file /proc/cpuinfo.
++ *
++ * This code is strict ANSI-C and is probably moderately portable; it does
++ * however use <stdio.h> and it assumes that /proc/cpuinfo is never localized.
++ */
++
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++
++static int
++png_have_msa(png_structp png_ptr)
++{
++   FILE *f = fopen("/proc/cpuinfo", "rb");
++
++   char *string = "msa";
++   char word[10];
++
++   if (f != NULL)
++   {
++      while(!feof(f))
++      {
++         int ch = fgetc(f);
++         static int i = 0;
++
++         while(!(ch <= 32))
++         {
++            word[i++] = ch;
++            ch = fgetc(f);
++         }
++
++         int val = strcmp(string, word);
++
++         if (val == 0)
++            return 1;
++
++         i = 0;
++         memset(word, 0, 10);
++      }
++
++      fclose(f);
++   }
++#ifdef PNG_WARNINGS_SUPPORTED
++   else
++      png_warning(png_ptr, "/proc/cpuinfo open failed");
++#endif
++   return 0;
++}
+diff --git a/libpng-manual.txt b/libpng-manual.txt
+index 98ac4b1..d969f96 100644
+--- a/libpng-manual.txt
++++ b/libpng-manual.txt
+@@ -1,6 +1,6 @@
+ libpng-manual.txt - A description on how to use and modify libpng
+ 
+- libpng version 1.6.24 - August 4, 2016
++ libpng version 1.6.25 - September 1, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  <glennrp at users.sourceforge.net>
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+@@ -11,7 +11,7 @@ libpng-manual.txt - A description on how to use and modify libpng
+ 
+  Based on:
+ 
+- libpng versions 0.97, January 1998, through 1.6.24 - August 4, 2016
++ libpng versions 0.97, January 1998, through 1.6.25 - September 1, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+ 
+@@ -5350,7 +5350,7 @@ Since the PNG Development group is an ad-hoc body, we can't make
+ an official declaration.
+ 
+ This is your unofficial assurance that libpng from version 0.71 and
+-upward through 1.6.24 are Y2K compliant.  It is my belief that earlier
++upward through 1.6.25 are Y2K compliant.  It is my belief that earlier
+ versions were also Y2K compliant.
+ 
+ Libpng only has two year fields.  One is a 2-byte unsigned integer
+diff --git a/libpng.3 b/libpng.3
+index 9162df6..4893dc9 100644
+--- a/libpng.3
++++ b/libpng.3
+@@ -1,6 +1,6 @@
+-.TH LIBPNG 3 "August 4, 2016"
++.TH LIBPNG 3 "September 1, 2016"
+ .SH NAME
+-libpng \- Portable Network Graphics (PNG) Reference Library 1.6.24
++libpng \- Portable Network Graphics (PNG) Reference Library 1.6.25
+ .SH SYNOPSIS
+ \fB
+ #include <png.h>\fP
+@@ -510,7 +510,7 @@ Following is a copy of the libpng-manual.txt file that accompanies libpng.
+ .SH LIBPNG.TXT
+ libpng-manual.txt - A description on how to use and modify libpng
+ 
+- libpng version 1.6.24 - August 4, 2016
++ libpng version 1.6.25 - September 1, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  <glennrp at users.sourceforge.net>
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+@@ -521,7 +521,7 @@ libpng-manual.txt - A description on how to use and modify libpng
+ 
+  Based on:
+ 
+- libpng versions 0.97, January 1998, through 1.6.24 - August 4, 2016
++ libpng versions 0.97, January 1998, through 1.6.25 - September 1, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+ 
+@@ -5860,7 +5860,7 @@ Since the PNG Development group is an ad-hoc body, we can't make
+ an official declaration.
+ 
+ This is your unofficial assurance that libpng from version 0.71 and
+-upward through 1.6.24 are Y2K compliant.  It is my belief that earlier
++upward through 1.6.25 are Y2K compliant.  It is my belief that earlier
+ versions were also Y2K compliant.
+ 
+ Libpng only has two year fields.  One is a 2-byte unsigned integer
+@@ -5962,7 +5962,7 @@ the first widely used release:
+  ...
+  1.5.27                  15    10527  15.so.15.27[.0]
+  ...
+- 1.6.24                  16    10624  16.so.16.24[.0]
++ 1.6.25                  16    10625  16.so.16.25[.0]
+ 
+ Henceforth the source version will match the shared-library minor
+ and patch numbers; the shared-library major version number will be
+@@ -6018,7 +6018,7 @@ possible without all of you.
+ 
+ Thanks to Frank J. T. Wojcik for helping with the documentation.
+ 
+-Libpng version 1.6.24 - August 4, 2016:
++Libpng version 1.6.25 - September 1, 2016:
+ Initially created in 1995 by Guy Eric Schalnat, then of Group 42, Inc.
+ Currently maintained by Glenn Randers-Pehrson (glennrp at users.sourceforge.net).
+ 
+@@ -6043,7 +6043,7 @@ this sentence.
+ 
+ This code is released under the libpng license.
+ 
+-libpng versions 1.0.7, July 1, 2000 through 1.6.24, August 4, 2016 are
++libpng versions 1.0.7, July 1, 2000 through 1.6.25, September 1, 2016 are
+ Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+ derived from libpng-1.0.6, and are distributed according to the same
+ disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -6168,7 +6168,7 @@ files "pngbar.png" and "pngbar.jpg (88x31) and "pngnow.png" (98x31).
+ 
+ Glenn Randers-Pehrson
+ glennrp at users.sourceforge.net
+-August 4, 2016
++September 1, 2016
+ 
+ .\" end of man page
+ 
+diff --git a/libpngpf.3 b/libpngpf.3
+index 4e8e6ed..3d6eab5 100644
+--- a/libpngpf.3
++++ b/libpngpf.3
+@@ -1,6 +1,6 @@
+-.TH LIBPNGPF 3 "August 4, 2016"
++.TH LIBPNGPF 3 "September 1, 2016"
+ .SH NAME
+-libpng \- Portable Network Graphics (PNG) Reference Library 1.6.24
++libpng \- Portable Network Graphics (PNG) Reference Library 1.6.25
+ (private functions)
+ .SH SYNOPSIS
+ \fB#include \fI"pngpriv.h"
+diff --git a/mips/filter_msa_intrinsics.c b/mips/filter_msa_intrinsics.c
+new file mode 100644
+index 0000000..943bb3d
+--- /dev/null
++++ b/mips/filter_msa_intrinsics.c
+@@ -0,0 +1,807 @@
++
++/* filter_msa_intrinsics.c - MSA optimised filter functions
++ *
++ * Copyright (c) 2016 Glenn Randers-Pehrson
++ * Written by Mandar Sahastrabuddhe, August 2016.
++ * Last changed in libpng 1.6.25 [September 1, 2016]
++ *
++ * This code is released under the libpng license.
++ * For conditions of distribution and use, see the disclaimer
++ * and license in png.h
++ */
++#include <stdio.h>
++#include <stdint.h>
++#include "../pngpriv.h"
++
++#ifdef PNG_READ_SUPPORTED
++
++/* This code requires -mfpu=msa on the command line: */
++#if PNG_MIPS_MSA_IMPLEMENTATION == 1 /* intrinsics code from pngpriv.h */
++
++#include <msa.h>
++
++/* libpng row pointers are not necessarily aligned to any particular boundary,
++ * however this code will only work with appropriate alignment. mips/mips_init.c
++ * checks for this (and will not compile unless it is done). This code uses
++ * variants of png_aligncast to avoid compiler warnings.
++ */
++#define png_ptr(type,pointer) png_aligncast(type *,pointer)
++#define png_ptrc(type,pointer) png_aligncastconst(const type *,pointer)
++
++/* The following relies on a variable 'temp_pointer' being declared with type
++ * 'type'.  This is written this way just to hide the GCC strict aliasing
++ * warning; note that the code is safe because there never is an alias between
++ * the input and output pointers.
++ */
++#define png_ldr(type,pointer)\
++   (temp_pointer = png_ptr(type,pointer), *temp_pointer)
++
++#if PNG_MIPS_MSA_OPT > 0
++
++#ifdef CLANG_BUILD
++   #define MSA_SRLI_B(a, b)   __msa_srli_b((v16i8) a, b)
++
++   #define LW(psrc)                              \
++   ( {                                           \
++       uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
++       uint32_t val_m;                           \
++                                                 \
++       asm volatile (                            \
++           "lw  %[val_m],  %[psrc_lw_m]  \n\t"   \
++                                                 \
++           : [val_m] "=r" (val_m)                \
++           : [psrc_lw_m] "m" (*psrc_lw_m)        \
++       );                                        \
++                                                 \
++       val_m;                                    \
++   } )
++
++   #define SH(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
++       uint16_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "sh  %[val_m],  %[pdst_sh_m]  \n\t"   \
++                                                 \
++           : [pdst_sh_m] "=m" (*pdst_sh_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++   #define SW(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
++       uint32_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "sw  %[val_m],  %[pdst_sw_m]  \n\t"   \
++                                                 \
++           : [pdst_sw_m] "=m" (*pdst_sw_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++       #if (__mips == 64)
++        #define SD(val, pdst)                         \
++        {                                             \
++            uint8_t *pdst_sd_m = (uint8_t *) (pdst);  \
++            uint64_t val_m = (val);                   \
++                                                      \
++            asm volatile (                            \
++                "sd  %[val_m],  %[pdst_sd_m]  \n\t"   \
++                                                      \
++                : [pdst_sd_m] "=m" (*pdst_sd_m)       \
++                : [val_m] "r" (val_m)                 \
++            );                                        \
++        }
++    #else
++        #define SD(val, pdst)                                          \
++        {                                                              \
++            uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
++            uint32_t val0_m, val1_m;                                   \
++                                                                       \
++            val0_m = (uint32_t) ((val) & 0x00000000FFFFFFFF);          \
++            val1_m = (uint32_t) (((val) >> 32) & 0x00000000FFFFFFFF);  \
++                                                                       \
++            SW(val0_m, pdst_sd_m);                                     \
++            SW(val1_m, pdst_sd_m + 4);                                 \
++        }
++    #endif
++#else
++   #define MSA_SRLI_B(a, b)   (a >> b)
++
++#if (__mips_isa_rev >= 6)
++   #define LW(psrc)                              \
++   ( {                                           \
++       uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
++       uint32_t val_m;                           \
++                                                 \
++       asm volatile (                            \
++           "lw  %[val_m],  %[psrc_lw_m]  \n\t"   \
++                                                 \
++           : [val_m] "=r" (val_m)                \
++           : [psrc_lw_m] "m" (*psrc_lw_m)        \
++       );                                        \
++                                                 \
++       val_m;                                    \
++   } )
++
++   #define SH(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
++       uint16_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "sh  %[val_m],  %[pdst_sh_m]  \n\t"   \
++                                                 \
++           : [pdst_sh_m] "=m" (*pdst_sh_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++   #define SW(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
++       uint32_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "sw  %[val_m],  %[pdst_sw_m]  \n\t"   \
++                                                 \
++           : [pdst_sw_m] "=m" (*pdst_sw_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++   #if (__mips == 64)
++        #define SD(val, pdst)                         \
++        {                                             \
++            uint8_t *pdst_sd_m = (uint8_t *) (pdst);  \
++            uint64_t val_m = (val);                   \
++                                                      \
++            asm volatile (                            \
++                "sd  %[val_m],  %[pdst_sd_m]  \n\t"   \
++                                                      \
++                : [pdst_sd_m] "=m" (*pdst_sd_m)       \
++                : [val_m] "r" (val_m)                 \
++            );                                        \
++        }
++    #else
++        #define SD(val, pdst)                                          \
++        {                                                              \
++            uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
++            uint32_t val0_m, val1_m;                                   \
++                                                                       \
++            val0_m = (uint32_t) ((val) & 0x00000000FFFFFFFF);          \
++            val1_m = (uint32_t) (((val) >> 32) & 0x00000000FFFFFFFF);  \
++                                                                       \
++            SW(val0_m, pdst_sd_m);                                     \
++            SW(val1_m, pdst_sd_m + 4);                                 \
++        }
++    #endif
++#else  // !(__mips_isa_rev >= 6)
++   #define LW(psrc)                              \
++   ( {                                           \
++       uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
++       uint32_t val_m;                           \
++                                                 \
++       asm volatile (                            \
++           "ulw  %[val_m],  %[psrc_lw_m]  \n\t"  \
++                                                 \
++           : [val_m] "=r" (val_m)                \
++           : [psrc_lw_m] "m" (*psrc_lw_m)        \
++       );                                        \
++                                                 \
++       val_m;                                    \
++   } )
++
++   #define SH(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
++       uint16_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "ush  %[val_m],  %[pdst_sh_m]  \n\t"  \
++                                                 \
++           : [pdst_sh_m] "=m" (*pdst_sh_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++   #define SW(val, pdst)                         \
++   {                                             \
++       uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
++       uint32_t val_m = (val);                   \
++                                                 \
++       asm volatile (                            \
++           "usw  %[val_m],  %[pdst_sw_m]  \n\t"  \
++                                                 \
++           : [pdst_sw_m] "=m" (*pdst_sw_m)       \
++           : [val_m] "r" (val_m)                 \
++       );                                        \
++   }
++
++   #define SD(val, pdst)                                          \
++    {                                                              \
++        uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
++        uint32_t val0_m, val1_m;                                   \
++                                                                   \
++        val0_m = (uint32_t) ((val) & 0x00000000FFFFFFFF);          \
++        val1_m = (uint32_t) (((val) >> 32) & 0x00000000FFFFFFFF);  \
++                                                                   \
++        SW(val0_m, pdst_sd_m);                                     \
++        SW(val1_m, pdst_sd_m + 4);                                 \
++    }
++
++    #define SW_ZERO(pdst)                      \
++    {                                          \
++        uint8_t *pdst_m = (uint8_t *) (pdst);  \
++                                               \
++        asm volatile (                         \
++            "usw  $0,  %[pdst_m]  \n\t"        \
++                                               \
++            : [pdst_m] "=m" (*pdst_m)          \
++            :                                  \
++        );                                     \
++    }
++#endif  // (__mips_isa_rev >= 6)
++#endif
++
++#define LD_B(RTYPE, psrc) *((RTYPE *) (psrc))
++#define LD_UB(...) LD_B(v16u8, __VA_ARGS__)
++#define LD_B2(RTYPE, psrc, stride, out0, out1)  \
++{                                               \
++    out0 = LD_B(RTYPE, (psrc));                 \
++    out1 = LD_B(RTYPE, (psrc) + stride);        \
++}
++#define LD_UB2(...) LD_B2(v16u8, __VA_ARGS__)
++#define LD_B4(RTYPE, psrc, stride, out0, out1, out2, out3)   \
++{                                                            \
++    LD_B2(RTYPE, (psrc), stride, out0, out1);                \
++    LD_B2(RTYPE, (psrc) + 2 * stride , stride, out2, out3);  \
++}
++#define LD_UB4(...) LD_B4(v16u8, __VA_ARGS__)
++
++#define ST_B(RTYPE, in, pdst) *((RTYPE *) (pdst)) = (in)
++#define ST_UB(...) ST_B(v16u8, __VA_ARGS__)
++#define ST_B2(RTYPE, in0, in1, pdst, stride)  \
++{                                             \
++    ST_B(RTYPE, in0, (pdst));                 \
++    ST_B(RTYPE, in1, (pdst) + stride);        \
++}
++#define ST_UB2(...) ST_B2(v16u8, __VA_ARGS__)
++#define ST_B4(RTYPE, in0, in1, in2, in3, pdst, stride)    \
++{                                                         \
++    ST_B2(RTYPE, in0, in1, (pdst), stride);               \
++    ST_B2(RTYPE, in2, in3, (pdst) + 2 * stride, stride);  \
++}
++#define ST_UB4(...) ST_B4(v16u8, __VA_ARGS__)
++
++#define ADD2(in0, in1, in2, in3, out0, out1)  \
++{                                             \
++    out0 = in0 + in1;                         \
++    out1 = in2 + in3;                         \
++}
++#define ADD3(in0, in1, in2, in3, in4, in5,  \
++             out0, out1, out2)              \
++{                                           \
++    ADD2(in0, in1, in2, in3, out0, out1);   \
++    out2 = in4 + in5;                       \
++}
++#define ADD4(in0, in1, in2, in3, in4, in5, in6, in7,  \
++             out0, out1, out2, out3)                  \
++{                                                     \
++    ADD2(in0, in1, in2, in3, out0, out1);             \
++    ADD2(in4, in5, in6, in7, out2, out3);             \
++}
++
++#define ILVR_B2(RTYPE, in0, in1, in2, in3, out0, out1)      \
++{                                                           \
++    out0 = (RTYPE) __msa_ilvr_b((v16i8) in0, (v16i8) in1);  \
++    out1 = (RTYPE) __msa_ilvr_b((v16i8) in2, (v16i8) in3);  \
++}
++#define ILVR_B2_SH(...) ILVR_B2(v8i16, __VA_ARGS__)
++
++#define HSUB_UB2(RTYPE, in0, in1, out0, out1)                 \
++{                                                             \
++    out0 = (RTYPE) __msa_hsub_u_h((v16u8) in0, (v16u8) in0);  \
++    out1 = (RTYPE) __msa_hsub_u_h((v16u8) in1, (v16u8) in1);  \
++}
++#define HSUB_UB2_SH(...) HSUB_UB2(v8i16, __VA_ARGS__)
++
++#define SLDI_B2_0(RTYPE, in0, in1, out0, out1, slide_val)                 \
++{                                                                         \
++    v16i8 zero_m = { 0 };                                                 \
++    out0 = (RTYPE) __msa_sldi_b((v16i8) zero_m, (v16i8) in0, slide_val);  \
++    out1 = (RTYPE) __msa_sldi_b((v16i8) zero_m, (v16i8) in1, slide_val);  \
++}
++#define SLDI_B2_0_UB(...) SLDI_B2_0(v16u8, __VA_ARGS__)
++
++#define SLDI_B3_0(RTYPE, in0, in1, in2, out0, out1, out2,  slide_val)     \
++{                                                                         \
++    v16i8 zero_m = { 0 };                                                 \
++    SLDI_B2_0(RTYPE, in0, in1, out0, out1, slide_val);                    \
++    out2 = (RTYPE) __msa_sldi_b((v16i8) zero_m, (v16i8) in2, slide_val);  \
++}
++#define SLDI_B3_0_UB(...) SLDI_B3_0(v16u8, __VA_ARGS__)
++
++#define ILVEV_W2(RTYPE, in0, in1, in2, in3, out0, out1)      \
++{                                                            \
++    out0 = (RTYPE) __msa_ilvev_w((v4i32) in1, (v4i32) in0);  \
++    out1 = (RTYPE) __msa_ilvev_w((v4i32) in3, (v4i32) in2);  \
++}
++#define ILVEV_W2_UB(...) ILVEV_W2(v16u8, __VA_ARGS__)
++
++#define ADD_ABS_H3(RTYPE, in0, in1, in2, out0, out1, out2)  \
++{                                                           \
++    RTYPE zero = {0};                                       \
++                                                            \
++    out0 = __msa_add_a_h((v8i16) zero, in0);                \
++    out1 = __msa_add_a_h((v8i16) zero, in1);                \
++    out2 = __msa_add_a_h((v8i16) zero, in2);                \
++}
++#define ADD_ABS_H3_SH(...) ADD_ABS_H3(v8i16, __VA_ARGS__)
++
++#define VSHF_B2(RTYPE, in0, in1, in2, in3, mask0, mask1, out0, out1)       \
++{                                                                          \
++    out0 = (RTYPE) __msa_vshf_b((v16i8) mask0, (v16i8) in1, (v16i8) in0);  \
++    out1 = (RTYPE) __msa_vshf_b((v16i8) mask1, (v16i8) in3, (v16i8) in2);  \
++}
++#define VSHF_B2_UB(...) VSHF_B2(v16u8, __VA_ARGS__)
++
++#define CMP_AND_SELECT(inp0, inp1, inp2, inp3, inp4, inp5, out0)              \
++{                                                                             \
++   v8i16 _sel_h0, _sel_h1;                                                    \
++   v16u8 _sel_b0, _sel_b1;                                                    \
++   _sel_h0 = (v8i16) __msa_clt_u_h((v8u16) inp1, (v8u16) inp0);               \
++   _sel_b0 = (v16u8) __msa_pckev_b((v16i8) _sel_h0, (v16i8) _sel_h0);         \
++   inp0 = (v8i16) __msa_bmnz_v((v16u8) inp0, (v16u8) inp1, (v16u8) _sel_h0);  \
++   inp4 = (v16u8) __msa_bmnz_v(inp3, inp4, _sel_b0);                          \
++   _sel_h1 = (v8i16) __msa_clt_u_h((v8u16) inp2, (v8u16) inp0);               \
++   _sel_b1 = (v16u8) __msa_pckev_b((v16i8) _sel_h1, (v16i8) _sel_h1);         \
++   inp4 = (v16u8) __msa_bmnz_v(inp4, inp5, _sel_b1);                          \
++   out0 += inp4;                                                              \
++}
++
++void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
++                                png_const_bytep prev_row)
++{
++   png_size_t i, cnt, cnt16, cnt32;
++   png_size_t istop = row_info->rowbytes;
++   png_bytep rp = row;
++   png_const_bytep pp = prev_row;
++   v16u8 src0, src1, src2, src3, src4, src5, src6, src7;
++
++   for (i = 0; i < (istop >> 6); i++)
++   {
++      LD_UB4(rp, 16, src0, src1, src2, src3);
++      LD_UB4(pp, 16, src4, src5, src6, src7);
++      pp += 64;
++
++	  ADD4(src0, src4, src1, src5, src2, src6, src3, src7,
++	       src0, src1, src2, src3);
++
++      ST_UB4(src0, src1, src2, src3, rp, 16);
++      rp += 64;
++   }
++
++   if (istop & 0x3F)
++   {
++      cnt32 = istop & 0x20;
++      cnt16 = istop & 0x10;
++      cnt = istop & 0xF;
++
++      if(cnt32)
++      {
++         if (cnt16 && cnt)
++         {
++            LD_UB4(rp, 16, src0, src1, src2, src3);
++            LD_UB4(pp, 16, src4, src5, src6, src7);
++
++            ADD4(src0, src4, src1, src5, src2, src6, src3, src7,
++	             src0, src1, src2, src3);
++
++            ST_UB4(src0, src1, src2, src3, rp, 16);
++            rp += 64;
++         }
++         else if (cnt16 || cnt)
++         {
++            LD_UB2(rp, 16, src0, src1);
++            LD_UB2(pp, 16, src4, src5);
++            pp += 32;
++            src2 = LD_UB(rp + 32);
++            src6 = LD_UB(pp);
++
++            ADD3(src0, src4, src1, src5, src2, src6, src0, src1, src2);
++
++            ST_UB2(src0, src1, rp, 16);
++            rp += 32;
++            ST_UB(src2, rp);
++            rp += 16;
++         }
++         else
++         {
++            LD_UB2(rp, 16, src0, src1);
++            LD_UB2(pp, 16, src4, src5);
++
++			ADD2(src0, src4, src1, src5, src0, src1);
++
++            ST_UB2(src0, src1, rp, 16);
++            rp += 32;
++         }
++      }
++      else if (cnt16 && cnt)
++      {
++         LD_UB2(rp, 16, src0, src1);
++         LD_UB2(pp, 16, src4, src5);
++
++         ADD2(src0, src4, src1, src5, src0, src1);
++
++         ST_UB2(src0, src1, rp, 16);
++         rp += 32;
++      }
++      else if (cnt16 || cnt)
++      {
++         src0 = LD_UB(rp);
++         src4 = LD_UB(pp);
++         pp += 16;
++
++         src0 += src4;
++
++         ST_UB(src0, rp);
++         rp += 16;
++      }
++   }
++}
++
++void png_read_filter_row_sub4_msa(png_row_infop row_info, png_bytep row,
++                                  png_const_bytep prev_row)
++{
++   png_size_t count;
++   png_size_t istop = row_info->rowbytes;
++   png_bytep src = row;
++   png_bytep nxt = row + 4;
++   int32_t inp0;
++   v16u8 src0, src1, src2, src3, src4;
++   v16u8 dst0, dst1;
++   v16u8 zero = { 0 };
++
++   istop -= 4;
++
++   inp0 = LW(src);
++   src += 4;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++
++   for (count = 0; count < istop; count += 16)
++   {
++      src1 = LD_UB(src);
++      src += 16;
++
++      src2 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 4);
++      src3 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 8);
++      src4 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 12);
++      src1 += src0;
++      src2 += src1;
++      src3 += src2;
++      src4 += src3;
++      src0 = src4;
++      ILVEV_W2_UB(src1, src2, src3, src4, dst0, dst1);
++      dst0 = (v16u8) __msa_pckev_d((v2i64) dst1, (v2i64) dst0);
++
++      ST_UB(dst0, nxt);
++      nxt += 16;
++   }
++}
++
++void png_read_filter_row_sub3_msa(png_row_infop row_info, png_bytep row,
++                                  png_const_bytep prev_row)
++{
++   png_size_t count;
++   png_size_t istop = row_info->rowbytes;
++   png_bytep src = row;
++   png_bytep nxt = row + 3;
++   int64_t out0;
++   int32_t inp0, out1;
++   v16u8 src0, src1, src2, src3, src4, dst0, dst1;
++   v16u8 zero = { 0 };
++   v16i8 mask0 = { 0, 1, 2, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
++   v16i8 mask1 = { 0, 1, 2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 0, 0, 0, 0 };
++
++   istop -= 3;
++
++   inp0 = LW(src);
++   src += 3;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++
++   for (count = 0; count < istop; count += 12)
++   {
++      src1 = LD_UB(src);
++      src += 12;
++
++      src2 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 3);
++      src3 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 6);
++      src4 = (v16u8) __msa_sldi_b((v16i8) zero, (v16i8) src1, 9);
++      src1 += src0;
++      src2 += src1;
++      src3 += src2;
++      src4 += src3;
++      src0 = src4;
++      VSHF_B2_UB(src1, src2, src3, src4, mask0, mask0, dst0, dst1);
++      dst0 = (v16u8) __msa_vshf_b(mask1, (v16i8) dst1, (v16i8) dst0);
++      out0 = __msa_copy_s_d((v2i64) dst0, 0);
++      out1 = __msa_copy_s_w((v4i32) dst0, 2);
++
++      SD(out0, nxt);
++      nxt += 8;
++      SW(out1, nxt);
++      nxt += 4;
++   }
++}
++
++void png_read_filter_row_avg4_msa(png_row_infop row_info, png_bytep row,
++                                  png_const_bytep prev_row)
++{
++   png_size_t i;
++   png_bytep src = row;
++   png_bytep nxt = row;
++   png_const_bytep pp = prev_row;
++   png_size_t istop = row_info->rowbytes - 4;
++   int32_t inp0, inp1, out0;
++   v16u8 src0, src1, src2, src3, src4, src5, src6, src7, src8, src9, dst0, dst1;
++   v16u8 zero = { 0 };
++
++   inp0 = LW(pp);
++   pp += 4;
++   inp1 = LW(src);
++   src += 4;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++   src1 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp1);
++   src0 = (v16u8) MSA_SRLI_B(src0, 1);
++   src1 += src0;
++   out0 = __msa_copy_s_w((v4i32) src1, 0);
++   SW(out0, nxt);
++   nxt += 4;
++
++   for (i = 0; i < istop; i += 16)
++   {
++      src2 = LD_UB(pp);
++      pp += 16;
++      src6 = LD_UB(src);
++      src += 16;
++
++      SLDI_B2_0_UB(src2, src6, src3, src7, 4);
++      SLDI_B2_0_UB(src2, src6, src4, src8, 8);
++      SLDI_B2_0_UB(src2, src6, src5, src9, 12);
++      src2 = __msa_ave_u_b(src2, src1);
++      src6 += src2;
++      src3 = __msa_ave_u_b(src3, src6);
++      src7 += src3;
++      src4 = __msa_ave_u_b(src4, src7);
++      src8 += src4;
++      src5 = __msa_ave_u_b(src5, src8);
++      src9 += src5;
++      src1 = src9;
++      ILVEV_W2_UB(src6, src7, src8, src9, dst0, dst1);
++      dst0 = (v16u8) __msa_pckev_d((v2i64) dst1, (v2i64) dst0);
++
++      ST_UB(dst0, nxt);
++      nxt += 16;
++   }
++}
++
++void png_read_filter_row_avg3_msa(png_row_infop row_info, png_bytep row,
++                                  png_const_bytep prev_row)
++{
++   png_size_t i;
++   png_bytep src = row;
++   png_bytep nxt = row;
++   png_const_bytep pp = prev_row;
++   png_size_t istop = row_info->rowbytes - 3;
++   int64_t out0;
++   int32_t inp0, inp1, out1;
++   int16_t out2;
++   v16u8 src0, src1, src2, src3, src4, src5, src6, src7, src8, src9, dst0, dst1;
++   v16u8 zero = { 0 };
++   v16i8 mask0 = { 0, 1, 2, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
++   v16i8 mask1 = { 0, 1, 2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 0, 0, 0, 0 };
++
++   inp0 = LW(pp);
++   pp += 3;
++   inp1 = LW(src);
++   src += 3;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++   src1 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp1);
++   src0 = (v16u8) MSA_SRLI_B(src0, 1);
++   src1 += src0;
++   out2 = __msa_copy_s_h((v8i16) src1, 0);
++   SH(out2, nxt);
++   nxt += 2;
++   nxt[0] = src1[2];
++   nxt++;
++
++   for (i = 0; i < istop; i += 12)
++   {
++      src2 = LD_UB(pp);
++      pp += 12;
++      src6 = LD_UB(src);
++      src += 12;
++
++      SLDI_B2_0_UB(src2, src6, src3, src7, 3);
++      SLDI_B2_0_UB(src2, src6, src4, src8, 6);
++      SLDI_B2_0_UB(src2, src6, src5, src9, 9);
++      src2 = __msa_ave_u_b(src2, src1);
++      src6 += src2;
++      src3 = __msa_ave_u_b(src3, src6);
++      src7 += src3;
++      src4 = __msa_ave_u_b(src4, src7);
++      src8 += src4;
++      src5 = __msa_ave_u_b(src5, src8);
++      src9 += src5;
++      src1 = src9;
++      VSHF_B2_UB(src6, src7, src8, src9, mask0, mask0, dst0, dst1);
++      dst0 = (v16u8) __msa_vshf_b(mask1, (v16i8) dst1, (v16i8) dst0);
++      out0 = __msa_copy_s_d((v2i64) dst0, 0);
++      out1 = __msa_copy_s_w((v4i32) dst0, 2);
++
++      SD(out0, nxt);
++      nxt += 8;
++      SW(out1, nxt);
++      nxt += 4;
++   }
++}
++
++void png_read_filter_row_paeth4_msa(png_row_infop row_info,
++                                    png_bytep row,
++                                    png_const_bytep prev_row)
++{
++   int32_t count, rp_end;
++   png_bytep nxt;
++   png_const_bytep prev_nxt;
++   int32_t inp0, inp1, res0;
++   v16u8 src0, src1, src2, src3, src4, src5, src6, src7, src8, src9;
++   v16u8 src10, src11, src12, src13, dst0, dst1;
++   v8i16 vec0, vec1, vec2;
++   v16u8 zero = { 0 };
++
++   nxt = row;
++   prev_nxt = prev_row;
++
++   inp0 = LW(nxt);
++   inp1 = LW(prev_nxt);
++   prev_nxt += 4;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++   src1 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp1);
++
++   src1 += src0;
++   res0 = __msa_copy_s_w((v4i32) src1, 0);
++
++   SW(res0, nxt);
++   nxt += 4;
++
++   /* Remainder */
++   rp_end = row_info->rowbytes - 4;
++
++   for (count = 0; count < rp_end; count += 16)
++   {
++      src2 = LD_UB(prev_nxt);
++      prev_nxt += 16;
++      src6 = LD_UB(prev_row);
++      prev_row += 16;
++      src10 = LD_UB(nxt);
++
++      SLDI_B3_0_UB(src2, src6, src10, src3, src7, src11, 4);
++      SLDI_B3_0_UB(src2, src6, src10, src4, src8, src12, 8);
++      SLDI_B3_0_UB(src2, src6, src10, src5, src9, src13, 12);
++      ILVR_B2_SH(src2, src6, src1, src6, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src1, src2, src6, src10);
++      ILVR_B2_SH(src3, src7, src10, src7, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src10, src3, src7, src11);
++      ILVR_B2_SH(src4, src8, src11, src8, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src11, src4, src8, src12);
++      ILVR_B2_SH(src5, src9, src12, src9, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src12, src5, src9, src13);
++      src1 = src13;
++      ILVEV_W2_UB(src10, src11, src12, src1, dst0, dst1);
++      dst0 = (v16u8) __msa_pckev_d((v2i64) dst1, (v2i64) dst0);
++
++      ST_UB(dst0, nxt);
++      nxt += 16;
++   }
++}
++
++void png_read_filter_row_paeth3_msa(png_row_infop row_info,
++                                    png_bytep row,
++                                    png_const_bytep prev_row)
++{
++   int32_t count, rp_end;
++   png_bytep nxt;
++   png_const_bytep prev_nxt;
++   int64_t out0;
++   int32_t inp0, inp1, out1;
++   int16_t out2;
++   v16u8 src0, src1, src2, src3, src4, src5, src6, src7, src8, src9, dst0, dst1;
++   v16u8 src10, src11, src12, src13;
++   v8i16 vec0, vec1, vec2;
++   v16u8 zero = { 0 };
++   v16i8 mask0 = { 0, 1, 2, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
++   v16i8 mask1 = { 0, 1, 2, 3, 4, 5, 16, 17, 18, 19, 20, 21, 0, 0, 0, 0 };
++
++   nxt = row;
++   prev_nxt = prev_row;
++
++   inp0 = LW(nxt);
++   inp1 = LW(prev_nxt);
++   prev_nxt += 3;
++   src0 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp0);
++   src1 = (v16u8) __msa_insert_w((v4i32) zero, 0, inp1);
++
++   src1 += src0;
++   out2 = __msa_copy_s_h((v8i16) src1, 0);
++
++   SH(out2, nxt);
++   nxt += 2;
++   nxt[0] = src1[2];
++   nxt++;
++
++   /* Remainder */
++   rp_end = row_info->rowbytes - 3;
++
++   for (count = 0; count < rp_end; count += 12)
++   {
++      src2 = LD_UB(prev_nxt);
++      prev_nxt += 12;
++      src6 = LD_UB(prev_row);
++      prev_row += 12;
++      src10 = LD_UB(nxt);
++
++      SLDI_B3_0_UB(src2, src6, src10, src3, src7, src11, 3);
++      SLDI_B3_0_UB(src2, src6, src10, src4, src8, src12, 6);
++      SLDI_B3_0_UB(src2, src6, src10, src5, src9, src13, 9);
++      ILVR_B2_SH(src2, src6, src1, src6, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src1, src2, src6, src10);
++      ILVR_B2_SH(src3, src7, src10, src7, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src10, src3, src7, src11);
++      ILVR_B2_SH(src4, src8, src11, src8, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src11, src4, src8, src12);
++      ILVR_B2_SH(src5, src9, src12, src9, vec0, vec1);
++      HSUB_UB2_SH(vec0, vec1, vec0, vec1);
++      vec2 = vec0 + vec1;
++      ADD_ABS_H3_SH(vec0, vec1, vec2, vec0, vec1, vec2);
++      CMP_AND_SELECT(vec0, vec1, vec2, src12, src5, src9, src13);
++      src1 = src13;
++      VSHF_B2_UB(src10, src11, src12, src13, mask0, mask0, dst0, dst1);
++      dst0 = (v16u8) __msa_vshf_b(mask1, (v16i8) dst1, (v16i8) dst0);
++      out0 = __msa_copy_s_d((v2i64) dst0, 0);
++      out1 = __msa_copy_s_w((v4i32) dst0, 2);
++
++      SD(out0, nxt);
++      nxt += 8;
++      SW(out1, nxt);
++      nxt += 4;
++   }
++}
++
++#endif /* PNG_MIPS_MSA_OPT > 0 */
++#endif /* PNG_MIPS_MSA_IMPLEMENTATION == 1 (intrinsics) */
++#endif /* READ */
+diff --git a/mips/mips_init.c b/mips/mips_init.c
+new file mode 100644
+index 0000000..0bfb7a3
+--- /dev/null
++++ b/mips/mips_init.c
+@@ -0,0 +1,129 @@
++
++/* mips_init.c - MSA optimised filter functions
++ *
++ * Copyright (c) 2016 Glenn Randers-Pehrson
++ * Written by Mandar Sahastrabuddhe, 2016.
++ * Last changed in libpng 1.6.25 [September 1, 2016]
++ *
++ * This code is released under the libpng license.
++ * For conditions of distribution and use, see the disclaimer
++ * and license in png.h
++ */
++/* Below, after checking __linux__, various non-C90 POSIX 1003.1 functions are
++ * called.
++ */
++#define _POSIX_SOURCE 1
++
++#include <stdio.h>
++#include "../pngpriv.h"
++
++#ifdef PNG_READ_SUPPORTED
++
++#if PNG_MIPS_MSA_OPT > 0
++#ifdef PNG_MIPS_MSA_CHECK_SUPPORTED /* Do run-time checks */
++/* WARNING: it is strongly recommended that you do not build libpng with
++ * run-time checks for CPU features if at all possible.  In the case of the MIPS
++ * MSA instructions there is no processor-specific way of detecting the
++ * presence of the required support, therefore run-time detection is extremely
++ * OS specific.
++ *
++ * You may set the macro PNG_MIPS_MSA_FILE to the file name of file containing
++ * a fragment of C source code which defines the png_have_msa function.  There
++ * are a number of implementations in contrib/mips-msa, but the only one that
++ * has partial support is contrib/mips-msa/linux.c - a generic Linux
++ * implementation which reads /proc/cpufino.
++ */
++#ifndef PNG_MIPS_MSA_FILE
++#  ifdef __linux__
++#     define PNG_MIPS_MSA_FILE "contrib/mips-msa/linux.c"
++#  endif
++#endif
++
++#ifdef PNG_MIPS_MSA_FILE
++
++#include <signal.h> /* for sig_atomic_t */
++static int png_have_msa(png_structp png_ptr);
++#include PNG_MIPS_MSA_FILE
++
++#else  /* PNG_MIPS_MSA_FILE */
++#  error "PNG_MIPS_MSA_FILE undefined: no support for run-time MIPS MSA checks"
++#endif /* PNG_MIPS_MSA_FILE */
++#endif /* PNG_MIPS_MSA_CHECK_SUPPORTED */
++
++#ifndef PNG_ALIGNED_MEMORY_SUPPORTED
++#  error "ALIGNED_MEMORY is required; set: -DPNG_ALIGNED_MEMORY_SUPPORTED"
++#endif
++
++void
++png_init_filter_functions_msa(png_structp pp, unsigned int bpp)
++{
++   /* The switch statement is compiled in for MIPS_MSA_API, the call to
++    * png_have_msa is compiled in for MIPS_MSA_CHECK. If both are defined
++    * the check is only performed if the API has not set the MSA option on
++    * or off explicitly. In this case the check controls what happens.
++    */
++
++#ifdef PNG_MIPS_MSA_API_SUPPORTED
++   switch ((pp->options >> PNG_MIPS_MSA) & 3)
++   {
++      case PNG_OPTION_UNSET:
++         /* Allow the run-time check to execute if it has been enabled -
++          * thus both API and CHECK can be turned on.  If it isn't supported
++          * this case will fall through to the 'default' below, which just
++          * returns.
++          */
++#endif /* PNG_MIPS_MSA_API_SUPPORTED */
++#ifdef PNG_MIPS_MSA_CHECK_SUPPORTED
++         {
++            static volatile sig_atomic_t no_msa = -1; /* not checked */
++
++            if (no_msa < 0)
++               no_msa = !png_have_msa(pp);
++
++            if (no_msa)
++               return;
++         }
++#ifdef PNG_MIPS_MSA_API_SUPPORTED
++         break;
++#endif
++#endif /* PNG_MIPS_MSA_CHECK_SUPPORTED */
++
++#ifdef PNG_MIPS_MSA_API_SUPPORTED
++      default: /* OFF or INVALID */
++         return;
++
++      case PNG_OPTION_ON:
++         /* Option turned on */
++         break;
++   }
++#endif
++
++   /* IMPORTANT: any new external functions used here must be declared using
++    * PNG_INTERNAL_FUNCTION in ../pngpriv.h.  This is required so that the
++    * 'prefix' option to configure works:
++    *
++    *    ./configure --with-libpng-prefix=foobar_
++    *
++    * Verify you have got this right by running the above command, doing a build
++    * and examining pngprefix.h; it must contain a #define for every external
++    * function you add.  (Notice that this happens automatically for the
++    * initialization function.)
++    */
++   pp->read_filter[PNG_FILTER_VALUE_UP-1] = png_read_filter_row_up_msa;
++
++   if (bpp == 3)
++   {
++      pp->read_filter[PNG_FILTER_VALUE_SUB-1] = png_read_filter_row_sub3_msa;
++      pp->read_filter[PNG_FILTER_VALUE_AVG-1] = png_read_filter_row_avg3_msa;
++      pp->read_filter[PNG_FILTER_VALUE_PAETH-1] = png_read_filter_row_paeth3_msa;
++   }
++
++   else if (bpp == 4)
++   {
++      pp->read_filter[PNG_FILTER_VALUE_SUB-1] = png_read_filter_row_sub4_msa;
++      pp->read_filter[PNG_FILTER_VALUE_AVG-1] = png_read_filter_row_avg4_msa;
++      pp->read_filter[PNG_FILTER_VALUE_PAETH-1] = png_read_filter_row_paeth4_msa;
++   }
++}
++#endif /* PNG_MIPS_MSA_OPT > 0 */
++#endif /* READ */
+diff --git a/png.5 b/png.5
+index 0df6f9a..16d213c 100644
+--- a/png.5
++++ b/png.5
+@@ -1,4 +1,4 @@
+-.TH PNG 5 "August 4, 2016"
++.TH PNG 5 "September 1, 2016"
+ .SH NAME
+ png \- Portable Network Graphics (PNG) format
+ .SH DESCRIPTION
+diff --git a/png.c b/png.c
+index 0843ebb..33e8c8f 100644
+--- a/png.c
++++ b/png.c
+@@ -1,8 +1,8 @@
+ 
+ /* png.c - location for general purpose libpng functions
+  *
+- * Last changed in libpng 1.6.24 [August 4, 2016]
+- * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
++ * Last changed in libpng 1.6.25 [September 1, 2016]
++ * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+  *
+@@ -14,7 +14,7 @@
+ #include "pngpriv.h"
+ 
+ /* Generate a compiler error if there is an old png.h in the search path. */
+-typedef png_libpng_version_1_6_24 Your_png_h_is_not_version_1_6_24;
++typedef png_libpng_version_1_6_25 Your_png_h_is_not_version_1_6_25;
+ 
+ /* Tells libpng that we have already handled the first "num_bytes" bytes
+  * of the PNG file signature.  If the PNG data is embedded into another
+@@ -775,14 +775,14 @@ png_get_copyright(png_const_structrp png_ptr)
+ #else
+ #  ifdef __STDC__
+    return PNG_STRING_NEWLINE \
+-      "libpng version 1.6.24 - August 4, 2016" PNG_STRING_NEWLINE \
++      "libpng version 1.6.25 - September 1, 2016" PNG_STRING_NEWLINE \
+       "Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson" \
+       PNG_STRING_NEWLINE \
+       "Copyright (c) 1996-1997 Andreas Dilger" PNG_STRING_NEWLINE \
+       "Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc." \
+       PNG_STRING_NEWLINE;
+ #  else
+-   return "libpng version 1.6.24 - August 4, 2016\
++   return "libpng version 1.6.25 - September 1, 2016\
+       Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson\
+       Copyright (c) 1996-1997 Andreas Dilger\
+       Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.";
+@@ -1931,8 +1931,8 @@ png_colorspace_set_sRGB(png_const_structrp png_ptr, png_colorspacerp colorspace,
+ static const png_byte D50_nCIEXYZ[12] =
+    { 0x00, 0x00, 0xf6, 0xd6, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0xd3, 0x2d };
+ 
+-int /* PRIVATE */
+-png_icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
++static int /* bool */
++icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
+     png_const_charp name, png_uint_32 profile_length)
+ {
+    if (profile_length < 132)
+@@ -1942,6 +1942,40 @@ png_icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
+    return 1;
+ }
+ 
++#ifdef PNG_READ_iCCP_SUPPORTED
++int /* PRIVATE */
++png_icc_check_length(png_const_structrp png_ptr, png_colorspacerp colorspace,
++    png_const_charp name, png_uint_32 profile_length)
++{
++   if (!icc_check_length(png_ptr, colorspace, name, profile_length))
++      return 0;
++
++   /* This needs to be here because the 'normal' check is in
++    * png_decompress_chunk, yet this happens after the attempt to
++    * png_malloc_base the required data.  We only need this on read; on write
++    * the caller supplies the profile buffer so libpng doesn't allocate it.  See
++    * the call to icc_check_length below (the write case).
++    */
++#  ifdef PNG_SET_USER_LIMITS_SUPPORTED
++      else if (png_ptr->user_chunk_malloc_max > 0 &&
++               png_ptr->user_chunk_malloc_max < profile_length)
++         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
++             "exceeds application limits");
++#  elif PNG_USER_CHUNK_MALLOC_MAX > 0
++      else if (PNG_USER_CHUNK_MALLOC_MAX < profile_length)
++         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
++             "exceeds libpng limits");
++#  else /* !SET_USER_LIMITS */
++      /* This will get compiled out on all 32-bit and better systems. */
++      else if (PNG_SIZE_MAX < profile_length)
++         return png_icc_profile_error(png_ptr, colorspace, name, profile_length,
++             "exceeds system limits");
++#  endif /* !SET_USER_LIMITS */
++
++   return 1;
++}
++#endif /* READ_iCCP */
++
+ int /* PRIVATE */
+ png_icc_check_header(png_const_structrp png_ptr, png_colorspacerp colorspace,
+     png_const_charp name, png_uint_32 profile_length,
+@@ -2377,7 +2411,7 @@ png_colorspace_set_ICC(png_const_structrp png_ptr, png_colorspacerp colorspace,
+    if ((colorspace->flags & PNG_COLORSPACE_INVALID) != 0)
+       return 0;
+ 
+-   if (png_icc_check_length(png_ptr, colorspace, name, profile_length) != 0 &&
++   if (icc_check_length(png_ptr, colorspace, name, profile_length) != 0 &&
+        png_icc_check_header(png_ptr, colorspace, name, profile_length, profile,
+            color_type) != 0 &&
+        png_icc_check_tag_table(png_ptr, colorspace, name, profile_length,
+diff --git a/png.h b/png.h
+index ebfb3dd..e1f59c3 100644
+--- a/png.h
++++ b/png.h
+@@ -1,7 +1,7 @@
+ 
+ /* png.h - header file for PNG reference library
+  *
+- * libpng version 1.6.24, August 4, 2016
++ * libpng version 1.6.25, September 1, 2016
+  *
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+@@ -12,7 +12,7 @@
+  * Authors and maintainers:
+  *   libpng versions 0.71, May 1995, through 0.88, January 1996: Guy Schalnat
+  *   libpng versions 0.89, June 1996, through 0.96, May 1997: Andreas Dilger
+- *   libpng versions 0.97, January 1998, through 1.6.24, August 4, 2016:
++ *   libpng versions 0.97, January 1998, through 1.6.25, September 1, 2016:
+  *     Glenn Randers-Pehrson.
+  *   See also "Contributing Authors", below.
+  */
+@@ -29,7 +29,7 @@
+  * files that are distributed with libpng have other copyright owners and
+  * are released under other open source licenses.
+  *
+- * libpng versions 1.0.7, July 1, 2000 through 1.6.24, August 4, 2016 are
++ * libpng versions 1.0.7, July 1, 2000 through 1.6.25, September 1, 2016 are
+  * Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+  * derived from libpng-1.0.6, and are distributed according to the same
+  * disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -41,6 +41,7 @@
+  *    Cosmin Truta
+  *    Gilles Vollant
+  *    James Yu
++ *    Mandar Sahastrabuddhe
+  *
+  * and with the following additions to the disclaimer:
+  *
+@@ -217,7 +218,7 @@
+  *    ...
+  *    1.5.27                  15    10527  15.so.15.27[.0]
+  *    ...
+- *    1.6.24                  16    10624  16.so.16.24[.0]
++ *    1.6.25                  16    10625  16.so.16.25[.0]
+  *
+  *    Henceforth the source version will match the shared-library major
+  *    and minor numbers; the shared-library major version number will be
+@@ -245,13 +246,13 @@
+  * Y2K compliance in libpng:
+  * =========================
+  *
+- *    August 4, 2016
++ *    September 1, 2016
+  *
+  *    Since the PNG Development group is an ad-hoc body, we can't make
+  *    an official declaration.
+  *
+  *    This is your unofficial assurance that libpng from version 0.71 and
+- *    upward through 1.6.24 are Y2K compliant.  It is my belief that
++ *    upward through 1.6.25 are Y2K compliant.  It is my belief that
+  *    earlier versions were also Y2K compliant.
+  *
+  *    Libpng only has two year fields.  One is a 2-byte unsigned integer
+@@ -313,8 +314,8 @@
+  */
+ 
+ /* Version information for png.h - this should match the version in png.c */
+-#define PNG_LIBPNG_VER_STRING "1.6.24"
+-#define PNG_HEADER_VERSION_STRING " libpng version 1.6.24 - August 4, 2016\n"
++#define PNG_LIBPNG_VER_STRING "1.6.25"
++#define PNG_HEADER_VERSION_STRING " libpng version 1.6.25 - September 1, 2016\n"
+ 
+ #define PNG_LIBPNG_VER_SONUM   16
+ #define PNG_LIBPNG_VER_DLLNUM  16
+@@ -322,7 +323,7 @@
+ /* These should match the first 3 components of PNG_LIBPNG_VER_STRING: */
+ #define PNG_LIBPNG_VER_MAJOR   1
+ #define PNG_LIBPNG_VER_MINOR   6
+-#define PNG_LIBPNG_VER_RELEASE 24
++#define PNG_LIBPNG_VER_RELEASE 25
+ 
+ /* This should match the numeric part of the final component of
+  * PNG_LIBPNG_VER_STRING, omitting any leading zero:
+@@ -353,7 +354,7 @@
+  * version 1.0.0 was mis-numbered 100 instead of 10000).  From
+  * version 1.0.1 it's    xxyyzz, where x=major, y=minor, z=release
+  */
+-#define PNG_LIBPNG_VER 10624 /* 1.6.24 */
++#define PNG_LIBPNG_VER 10625 /* 1.6.25 */
+ 
+ /* Library configuration: these options cannot be changed after
+  * the library has been built.
+@@ -463,7 +464,7 @@ extern "C" {
+ /* This triggers a compiler error in png.c, if png.c and png.h
+  * do not agree upon the version number.
+  */
+-typedef char* png_libpng_version_1_6_24;
++typedef char* png_libpng_version_1_6_25;
+ 
+ /* Basic control structions.  Read libpng-manual.txt or libpng.3 for more info.
+  *
+@@ -3226,7 +3227,10 @@ PNG_EXPORT(245, int, png_image_write_to_memory, (png_imagep image, void *memory,
+ #endif
+ #define PNG_MAXIMUM_INFLATE_WINDOW 2 /* SOFTWARE: force maximum window */
+ #define PNG_SKIP_sRGB_CHECK_PROFILE 4 /* SOFTWARE: Check ICC profile for sRGB */
+-#define PNG_OPTION_NEXT  6 /* Next option - numbers must be even */
++#ifdef PNG_MIPS_MSA_API_SUPPORTED
++#  define PNG_MIPS_MSA   6 /* HARDWARE: MIPS Msa SIMD instructions supported */
++#endif
++#define PNG_OPTION_NEXT  8 /* Next option - numbers must be even */
+ 
+ /* Return values: NOTE: there are four values and 'off' is *not* zero */
+ #define PNG_OPTION_UNSET   0 /* Unset - defaults to off */
+diff --git a/pngconf.h b/pngconf.h
+index 9da691d..08b4239 100644
+--- a/pngconf.h
++++ b/pngconf.h
+@@ -1,7 +1,7 @@
+ 
+ /* pngconf.h - machine configurable file for libpng
+  *
+- * libpng version 1.6.24, August 4, 2016
++ * libpng version 1.6.25, September 1, 2016
+  *
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+diff --git a/pnglibconf.h b/pnglibconf.h
+index 657452d..741608d 100644
+--- a/pnglibconf.h
++++ b/pnglibconf.h
+@@ -1,8 +1,8 @@
+-/* libpng 1.6.22beta03 STANDARD API DEFINITION */
++/* libpng 1.6.25 STANDARD API DEFINITION */
+ 
+ /* pnglibconf.h - library build configuration */
+ 
+-/* Libpng version 1.6.22beta03 - February 8, 2016 */
++/* Libpng version 1.6.25 - September 1, 2016 */
+ 
+ /* Copyright (c) 1998-2015 Glenn Randers-Pehrson */
+ 
+diff --git a/pngmem.c b/pngmem.c
+index 6033bf2..7053ec9 100644
+--- a/pngmem.c
++++ b/pngmem.c
+@@ -1,7 +1,7 @@
+ 
+ /* pngmem.c - stub functions for memory allocation
+  *
+- * Last changed in libpng 1.6.24 [August 4, 2016]
++ * Last changed in libpng 1.6.24 [August 4, 2016%]
+  * Copyright (c) 1998-2002,2004,2006-2014,2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+diff --git a/pngpriv.h b/pngpriv.h
+index fe3355d..bed1cab 100644
+--- a/pngpriv.h
++++ b/pngpriv.h
+@@ -1,7 +1,7 @@
+ 
+ /* pngpriv.h - private declarations for use inside libpng
+  *
+- * Last changed in libpng 1.6.24 [August 4, 2016]
++ * Last changed in libpng 1.6.25 [September 1, 2016]
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+@@ -182,6 +182,35 @@
+ #  endif
+ #endif /* PNG_ARM_NEON_OPT > 0 */
+ 
++#ifndef PNG_MIPS_MSA_OPT
++#  if defined(__mips_msa) && (__mips_isa_rev >= 5) && defined(PNG_ALIGNED_MEMORY_SUPPORTED)
++#     define PNG_MIPS_MSA_OPT 2
++#  else
++#     define PNG_MIPS_MSA_OPT 0
++#  endif
++#endif
++
++#if PNG_MIPS_MSA_OPT > 0
++#  define PNG_FILTER_OPTIMIZATIONS png_init_filter_functions_msa
++#  ifndef PNG_MIPS_MSA_IMPLEMENTATION
++#     if defined(__mips_msa)
++#        if defined(__clang__)
++#        elif defined(__GNUC__)
++#           if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
++#              define PNG_MIPS_MSA_IMPLEMENTATION 2
++#           endif /* no GNUC support */
++#        endif /* __GNUC__ */
++#     else /* !defined __mips_msa */
++#        define PNG_MIPS_MSA_IMPLEMENTATION 2
++#     endif /* __mips_msa */
++#  endif /* !PNG_MIPS_MSA_IMPLEMENTATION */
++
++#  ifndef PNG_MIPS_MSA_IMPLEMENTATION
++#     define PNG_MIPS_MSA_IMPLEMENTATION 1
++#  endif
++#endif /* PNG_MIPS_MSA_OPT > 0 */
++
++
+ /* Is this a build of a DLL where compilation of the object modules requires
+  * different preprocessor settings to those required for a simple library?  If
+  * so PNG_BUILD_DLL must be set.
+@@ -1191,6 +1220,23 @@ PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_neon,(png_row_infop
+     row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
+ #endif
+ 
++#if PNG_MIPS_MSA_OPT > 0
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_up_msa,(png_row_infop row_info,
++    png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub3_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_sub4_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg3_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_avg4_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth3_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++PNG_INTERNAL_FUNCTION(void,png_read_filter_row_paeth4_msa,(png_row_infop
++    row_info, png_bytep row, png_const_bytep prev_row),PNG_EMPTY);
++#endif
++
+ /* Choose the best filter to use and filter the row data */
+ PNG_INTERNAL_FUNCTION(void,png_write_find_filter,(png_structrp png_ptr,
+     png_row_infop row_info),PNG_EMPTY);
+@@ -1494,9 +1540,11 @@ PNG_INTERNAL_FUNCTION(int,png_colorspace_set_ICC,(png_const_structrp png_ptr,
+    /* The 'name' is used for information only */
+ 
+ /* Routines for checking parts of an ICC profile. */
++#ifdef PNG_READ_iCCP_SUPPORTED
+ PNG_INTERNAL_FUNCTION(int,png_icc_check_length,(png_const_structrp png_ptr,
+    png_colorspacerp colorspace, png_const_charp name,
+    png_uint_32 profile_length), PNG_EMPTY);
++#endif /* READ_iCCP */
+ PNG_INTERNAL_FUNCTION(int,png_icc_check_header,(png_const_structrp png_ptr,
+    png_colorspacerp colorspace, png_const_charp name,
+    png_uint_32 profile_length,
+@@ -1918,7 +1966,12 @@ PNG_INTERNAL_FUNCTION(void, PNG_FILTER_OPTIMIZATIONS, (png_structp png_ptr,
+ #  if PNG_ARM_NEON_OPT > 0
+ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_neon,
+    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+-#  endif
++#endif
++
++#if PNG_MIPS_MSA_OPT > 0
++PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_msa,
++   (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
++#endif
+ #endif
+ 
+ PNG_INTERNAL_FUNCTION(png_uint_32, png_check_keyword, (png_structrp png_ptr,
+diff --git a/pngrutil.c b/pngrutil.c
+index 1c8a179..3eaa635 100644
+--- a/pngrutil.c
++++ b/pngrutil.c
+@@ -1,7 +1,7 @@
+ 
+ /* pngrutil.c - utilities to read a PNG file
+  *
+- * Last changed in libpng 1.6.24 [August 4, 2016]
++ * Last changed in libpng 1.6.25 [September 1, 2016]
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+@@ -461,6 +461,7 @@ png_zlib_inflate(png_structrp png_ptr, int flush)
+ #endif /* Zlib >= 1.2.4 */
+ 
+ #ifdef PNG_READ_COMPRESSED_TEXT_SUPPORTED
++#if defined(PNG_READ_zTXt_SUPPORTED) || defined (PNG_READ_iTXt_SUPPORTED)
+ /* png_inflate now returns zlib error codes including Z_OK and Z_STREAM_END to
+  * allow the caller to do multiple calls if required.  If the 'finish' flag is
+  * set Z_FINISH will be passed to the final inflate() call and Z_STREAM_END must
+@@ -590,7 +591,6 @@ png_inflate(png_structrp png_ptr, png_uint_32 owner, int finish,
+    }
+ }
+ 
+-#if defined(PNG_READ_zTXt_SUPPORTED) || defined (PNG_READ_iTXt_SUPPORTED)
+ /*
+  * Decompress trailing data in a chunk.  The assumption is that read_buffer
+  * points at an allocated area holding the contents of a chunk with a
+diff --git a/pngtest.c b/pngtest.c
+index dd222a6..9034d16 100644
+--- a/pngtest.c
++++ b/pngtest.c
+@@ -1,7 +1,7 @@
+ 
+ /* pngtest.c - a simple test program to test libpng
+  *
+- * Last changed in libpng 1.6.24 [August 4, 2016]
++ * Last changed in libpng 1.6.25 [September 1, 2016]
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+@@ -514,10 +514,10 @@ typedef struct memory_information
+ typedef memory_information *memory_infop;
+ 
+ static memory_infop pinformation = NULL;
+-static int current_allocation = 0;
+-static int maximum_allocation = 0;
+-static int total_allocation = 0;
+-static int num_allocations = 0;
++static png_alloc_size_t current_allocation = 0;
++static png_alloc_size_t maximum_allocation = 0;
++static png_alloc_size_t total_allocation = 0;
++static png_alloc_size_t num_allocations = 0;
+ 
+ png_voidp PNGCBAPI png_debug_malloc PNGARG((png_structp png_ptr,
+     png_alloc_size_t size));
+@@ -604,9 +604,10 @@ png_debug_free(png_structp png_ptr, png_voidp ptr)
+          if (pinfo->pointer == ptr)
+          {
+             *ppinfo = pinfo->next;
+-            current_allocation -= pinfo->size;
+-            if (current_allocation < 0)
++            if (current_allocation < pinfo->size)
+                fprintf(STDERR, "Duplicate free of memory\n");
++            else
++               current_allocation -= pinfo->size;
+             /* We must free the list element too, but first kill
+                the memory that is to be freed. */
+             memset(ptr, 0x55, pinfo->size);
+@@ -938,6 +939,12 @@ test_one_file(PNG_CONST char *inname, PNG_CONST char *outname)
+        read_user_chunk_callback);
+ #endif
+ 
++#ifdef PNG_SET_USER_LIMITS_SUPPORTED
++#  ifdef CHUNK_LIMIT /* from the build, for testing */
++      png_set_chunk_malloc_max(read_ptr, CHUNK_LIMIT);
++#  endif /* CHUNK_LIMIT */
++#endif
++
+ #ifdef PNG_SETJMP_SUPPORTED
+    pngtest_debug("Setting jmpbuf for read struct");
+    if (setjmp(png_jmpbuf(read_ptr)))
+@@ -1876,7 +1883,7 @@ main(int argc, char *argv[])
+    {
+       int i;
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+-      int allocation_now = current_allocation;
++      png_alloc_size_t allocation_now = current_allocation;
+ #endif
+       for (i=2; i<argc; ++i)
+       {
+@@ -1909,15 +1916,15 @@ main(int argc, char *argv[])
+          }
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+          if (allocation_now != current_allocation)
+-            fprintf(STDERR, "MEMORY ERROR: %d bytes lost\n",
+-                current_allocation - allocation_now);
++            fprintf(STDERR, "MEMORY ERROR: %lu bytes lost\n",
++                (unsigned long)(current_allocation - allocation_now));
+ 
+          if (current_allocation != 0)
+          {
+             memory_infop pinfo = pinformation;
+ 
+-            fprintf(STDERR, "MEMORY ERROR: %d bytes still allocated\n",
+-                current_allocation);
++            fprintf(STDERR, "MEMORY ERROR: %lu bytes still allocated\n",
++                (unsigned long)current_allocation);
+ 
+             while (pinfo != NULL)
+             {
+@@ -1930,14 +1937,14 @@ main(int argc, char *argv[])
+ #endif
+       }
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+-         fprintf(STDERR, " Current memory allocation: %10d bytes\n",
+-             current_allocation);
+-         fprintf(STDERR, " Maximum memory allocation: %10d bytes\n",
+-             maximum_allocation);
+-         fprintf(STDERR, " Total   memory allocation: %10d bytes\n",
+-             total_allocation);
+-         fprintf(STDERR, "     Number of allocations: %10d\n",
+-             num_allocations);
++         fprintf(STDERR, " Current memory allocation: %20lu bytes\n",
++             (unsigned long)current_allocation);
++         fprintf(STDERR, " Maximum memory allocation: %20lu bytes\n",
++             (unsigned long) maximum_allocation);
++         fprintf(STDERR, " Total   memory allocation: %20lu bytes\n",
++             (unsigned long)total_allocation);
++         fprintf(STDERR, "     Number of allocations: %20lu\n",
++             (unsigned long)num_allocations);
+ #endif
+    }
+ 
+@@ -1948,7 +1955,7 @@ main(int argc, char *argv[])
+       {
+          int kerror;
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+-         int allocation_now = current_allocation;
++         png_alloc_size_t allocation_now = current_allocation;
+ #endif
+          if (i == 1)
+             status_dots_requested = 1;
+@@ -1998,15 +2005,15 @@ main(int argc, char *argv[])
+          }
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+          if (allocation_now != current_allocation)
+-             fprintf(STDERR, "MEMORY ERROR: %d bytes lost\n",
+-                 current_allocation - allocation_now);
++             fprintf(STDERR, "MEMORY ERROR: %lu bytes lost\n",
++                 (unsigned long)(current_allocation - allocation_now));
+ 
+          if (current_allocation != 0)
+          {
+              memory_infop pinfo = pinformation;
+ 
+-             fprintf(STDERR, "MEMORY ERROR: %d bytes still allocated\n",
+-                 current_allocation);
++             fprintf(STDERR, "MEMORY ERROR: %lu bytes still allocated\n",
++                 (unsigned long)current_allocation);
+ 
+              while (pinfo != NULL)
+              {
+@@ -2018,14 +2025,14 @@ main(int argc, char *argv[])
+ #endif
+        }
+ #if defined(PNG_USER_MEM_SUPPORTED) && PNG_DEBUG
+-       fprintf(STDERR, " Current memory allocation: %10d bytes\n",
+-           current_allocation);
+-       fprintf(STDERR, " Maximum memory allocation: %10d bytes\n",
+-           maximum_allocation);
+-       fprintf(STDERR, " Total   memory allocation: %10d bytes\n",
+-           total_allocation);
+-       fprintf(STDERR, "     Number of allocations: %10d\n",
+-           num_allocations);
++       fprintf(STDERR, " Current memory allocation: %20lu bytes\n",
++           (unsigned long)current_allocation);
++       fprintf(STDERR, " Maximum memory allocation: %20lu bytes\n",
++           (unsigned long)maximum_allocation);
++       fprintf(STDERR, " Total   memory allocation: %20lu bytes\n",
++           (unsigned long)total_allocation);
++       fprintf(STDERR, "     Number of allocations: %20lu\n",
++           (unsigned long)num_allocations);
+ #endif
+    }
+ 
+@@ -2081,4 +2088,4 @@ main(void)
+ #endif
+ 
+ /* Generate a compiler error if there is an old png.h in the search path. */
+-typedef png_libpng_version_1_6_24 Your_png_h_is_not_version_1_6_24;
++typedef png_libpng_version_1_6_25 Your_png_h_is_not_version_1_6_25;
+diff --git a/projects/vstudio/README.txt b/projects/vstudio/README.txt
+index 0aabdb7..0457c2d 100644
+--- a/projects/vstudio/README.txt
++++ b/projects/vstudio/README.txt
+@@ -1,7 +1,7 @@
+ 
+ VisualStudio instructions
+ 
+-libpng version 1.6.24 - August 4, 2016
++libpng version 1.6.25 - September 1, 2016
+ 
+ Copyright (c) 2010,2013,2015 Glenn Randers-Pehrson
+ 
+diff --git a/projects/vstudio/zlib.props b/projects/vstudio/zlib.props
+index 8d370b2..8adbd1e 100644
+--- a/projects/vstudio/zlib.props
++++ b/projects/vstudio/zlib.props
+@@ -2,7 +2,7 @@
+ <!--
+  * zlib.props - location of zlib source
+  *
+- * libpng version 1.6.24 - August 4, 2016
++ * libpng version 1.6.25 - September 1, 2016
+  *
+  * Copyright (c) 1998-2011 Glenn Randers-Pehrson
+  *
+diff --git a/scripts/README.txt b/scripts/README.txt
+index 56933f2..242da14 100644
+--- a/scripts/README.txt
++++ b/scripts/README.txt
+@@ -1,9 +1,9 @@
+ 
+-Makefiles for  libpng version 1.6.24 - August 4, 2016
++Makefiles for  libpng version 1.6.25 - September 1, 2016
+ 
+ pnglibconf.h.prebuilt       =>  Stores configuration settings
+  makefile.linux    =>  Linux/ELF makefile
+-                       (gcc, creates libpng16.so.16.1.6.24)
++                       (gcc, creates libpng16.so.16.1.6.25)
+  makefile.gcc      =>  Generic makefile (gcc, creates static libpng.a)
+  makefile.knr      =>  Archaic UNIX Makefile that converts files with
+                        ansi2knr (Requires ansi2knr.c from
+@@ -33,12 +33,12 @@ pnglibconf.h.prebuilt       =>  Stores configuration settings
+  makefile.os2      =>  OS/2 Makefile (gcc and emx, requires libpng.def)
+  makefile.sco      =>  For SCO OSr5  ELF and Unixware 7 with Native cc
+  makefile.sggcc    =>  Silicon Graphics (gcc,
+-                       creates libpng16.so.16.1.6.24)
++                       creates libpng16.so.16.1.6.25)
+  makefile.sgi      =>  Silicon Graphics IRIX makefile (cc, creates static lib)
+  makefile.solaris  =>  Solaris 2.X makefile (gcc,
+-                       creates libpng16.so.16.1.6.24)
++                       creates libpng16.so.16.1.6.25)
+  makefile.so9      =>  Solaris 9 makefile (gcc,
+-                       creates libpng16.so.16.1.6.24)
++                       creates libpng16.so.16.1.6.25)
+  makefile.std      =>  Generic UNIX makefile (cc, creates static libpng.a)
+  makefile.sunos    =>  Sun makefile
+  makefile.32sunu   =>  Sun Ultra 32-bit makefile
+diff --git a/scripts/def.c b/scripts/def.c
+index 7c04875..9aaa56e 100644
+--- a/scripts/def.c
++++ b/scripts/def.c
+@@ -21,7 +21,7 @@ PNG_DFN "OS2 DESCRIPTION "PNG image compression library""
+ PNG_DFN "OS2 CODE PRELOAD MOVEABLE DISCARDABLE"
+ PNG_DFN ""
+ PNG_DFN "EXPORTS"
+-PNG_DFN ";Version 1.6.24"
++PNG_DFN ";Version 1.6.25"
+ 
+ #define PNG_EXPORTA(ordinal, type, name, args, attributes)\
+         PNG_DFN "@" SYMBOL_PREFIX "@@" name "@"
+diff --git a/scripts/libpng-config-head.in b/scripts/libpng-config-head.in
+index b0c6e38..d889518 100644
+--- a/scripts/libpng-config-head.in
++++ b/scripts/libpng-config-head.in
+@@ -11,7 +11,7 @@
+ 
+ # Modeled after libxml-config.
+ 
+-version=1.6.24
++version=1.6.25
+ prefix=""
+ libdir=""
+ libs=""
+diff --git a/scripts/libpng.pc.in b/scripts/libpng.pc.in
+index bed81d3..8263f8c 100644
+--- a/scripts/libpng.pc.in
++++ b/scripts/libpng.pc.in
+@@ -5,6 +5,6 @@ includedir=@includedir@/libpng16
+ 
+ Name: libpng
+ Description: Loads and saves PNG files
+-Version: 1.6.24
++Version: 1.6.25
+ Libs: -L${libdir} -lpng16
+ Cflags: -I${includedir}
+diff --git a/scripts/makefile.cegcc b/scripts/makefile.cegcc
+index fb1361b..d723658 100644
+--- a/scripts/makefile.cegcc
++++ b/scripts/makefile.cegcc
+@@ -23,7 +23,7 @@
+ 
+ VERMAJ = 1
+ VERMIN = 6
+-VERMIC = 24
++VERMIC = 25
+ VER = $(VERMAJ).$(VERMIN).$(VERMIC)
+ NAME = libpng
+ PACKAGE = $(NAME)-$(VER)
+diff --git a/scripts/makefile.linux b/scripts/makefile.linux
+index af0d65e..c2bfac6 100644
+--- a/scripts/makefile.linux
++++ b/scripts/makefile.linux
+@@ -10,7 +10,7 @@
+ # Library name:
+ LIBNAME = libpng16
+ PNGMAJ = 16
+-RELEASE = 24
++RELEASE = 25
+ 
+ # Shared library names:
+ LIBSO=$(LIBNAME).so
+diff --git a/scripts/makefile.msys b/scripts/makefile.msys
+index ddbd88c..b0c0e3c 100644
+--- a/scripts/makefile.msys
++++ b/scripts/makefile.msys
+@@ -18,7 +18,7 @@ exec_prefix=$(prefix)
+ # Library name:
+ LIBNAME = libpng16
+ PNGMAJ = 16
+-RELEASE = 24
++RELEASE = 25
+ 
+ # Shared library names:
+ LIBSO=$(LIBNAME).dll
+diff --git a/scripts/makefile.ne12bsd b/scripts/makefile.ne12bsd
+index d18bdb1..21ffe56 100644
+--- a/scripts/makefile.ne12bsd
++++ b/scripts/makefile.ne12bsd
+@@ -17,7 +17,7 @@ INCSDIR=${LOCALBASE}/include/libpng16
+ 
+ LIB=	png16
+ SHLIB_MAJOR=	0
+-SHLIB_MINOR=	1.6.24
++SHLIB_MINOR=	1.6.25
+ SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
+ 	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
+ 	pngwtran.c pngmem.c pngerror.c pngpread.c
+diff --git a/scripts/makefile.netbsd b/scripts/makefile.netbsd
+index 85c2ea4..0046f69 100644
+--- a/scripts/makefile.netbsd
++++ b/scripts/makefile.netbsd
+@@ -17,7 +17,7 @@ INCSDIR=${LOCALBASE}/include
+ 
+ LIB=	png
+ SHLIB_MAJOR=	16
+-SHLIB_MINOR=	1.6.24
++SHLIB_MINOR=	1.6.25
+ SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
+ 	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
+ 	pngwtran.c pngmem.c pngerror.c pngpread.c
+diff --git a/scripts/makefile.openbsd b/scripts/makefile.openbsd
+index 07b8183..756759f 100644
+--- a/scripts/makefile.openbsd
++++ b/scripts/makefile.openbsd
+@@ -11,7 +11,7 @@ LIBDIR=	${PREFIX}/lib
+ MANDIR= ${PREFIX}/man/cat
+ 
+ SHLIB_MAJOR=	16
+-SHLIB_MINOR=	1.6.24
++SHLIB_MINOR=	1.6.25
+ 
+ LIB=	png
+ SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
+diff --git a/scripts/pnglibconf.h.prebuilt b/scripts/pnglibconf.h.prebuilt
+index d91d9f4..d7d21b2 100644
+--- a/scripts/pnglibconf.h.prebuilt
++++ b/scripts/pnglibconf.h.prebuilt
+@@ -1,8 +1,8 @@
+-/* libpng 1.6.24 STANDARD API DEFINITION */
++/* libpng 1.6.25 STANDARD API DEFINITION */
+ 
+ /* pnglibconf.h - library build configuration */
+ 
+-/* Libpng version 1.6.24 - August 4, 2016 */
++/* Libpng version 1.6.25 - September 1, 2016 */
+ 
+ /* Copyright (c) 1998-2015 Glenn Randers-Pehrson */
+ 
+diff --git a/scripts/symbols.def b/scripts/symbols.def
+index d3851f5..cdf7896 100644
+--- a/scripts/symbols.def
++++ b/scripts/symbols.def
+@@ -1,4 +1,4 @@
+-;Version 1.6.24
++;Version 1.6.25
+ ;--------------------------------------------------------------
+ ; LIBPNG symbol list as a Win32 DEF file
+ ; Contains all the symbols that can be exported from libpng
+-- 
+2.10.0
+

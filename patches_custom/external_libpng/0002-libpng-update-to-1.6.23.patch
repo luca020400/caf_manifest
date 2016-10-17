@@ -1,0 +1,1855 @@
+From a40507df66af529761aef3d251e36ee67023663f Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Sat, 1 Oct 2016 12:23:35 +0200
+Subject: [PATCH 2/4] libpng: update to 1.6.23
+
+Change-Id: I61eaaaf56e925993d88cdafc1cff0da5d74e216d
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ ANNOUNCE                      |  95 ++------
+ CHANGES                       |  23 ++
+ CMakeLists.txt                |   4 +-
+ LICENSE                       |   4 +-
+ README                        |   2 +-
+ arm/arm_init.c                |   2 +-
+ arm/filter_neon_intrinsics.c  |   2 +-
+ configure.ac                  |   8 +-
+ contrib/intel/intel_sse.patch |  37 ++-
+ contrib/libtests/pngvalid.c   | 545 +++++++++++++++++++++++++++++++++++-------
+ libpng-manual.txt             |   6 +-
+ libpng.3                      |  18 +-
+ libpngpf.3                    |   4 +-
+ png.5                         |   4 +-
+ png.c                         |   6 +-
+ png.h                         |  22 +-
+ pngconf.h                     |   2 +-
+ pngerror.c                    |   2 +-
+ pngpread.c                    |  19 +-
+ pngpriv.h                     |   2 -
+ pngread.c                     |  26 +-
+ pngset.c                      |  14 +-
+ pngtest.c                     |   2 +-
+ projects/vstudio/README.txt   |   2 +-
+ projects/vstudio/zlib.props   |   2 +-
+ scripts/README.txt            |  10 +-
+ scripts/def.c                 |   2 +-
+ scripts/libpng-config-head.in |   2 +-
+ scripts/libpng.pc.in          |   2 +-
+ scripts/makefile.cegcc        |   2 +-
+ scripts/makefile.linux        |   2 +-
+ scripts/makefile.msys         |   2 +-
+ scripts/makefile.ne12bsd      |   2 +-
+ scripts/makefile.netbsd       |   2 +-
+ scripts/makefile.openbsd      |   2 +-
+ scripts/pnglibconf.h.prebuilt |   4 +-
+ scripts/symbols.def           |   2 +-
+ 37 files changed, 637 insertions(+), 250 deletions(-)
+
+diff --git a/ANNOUNCE b/ANNOUNCE
+index fb14840..366ace5 100644
+--- a/ANNOUNCE
++++ b/ANNOUNCE
+@@ -1,4 +1,4 @@
+-Libpng 1.6.22 - May 26, 2016
++Libpng 1.6.23 - June 9, 2016
+ 
+ This is a public release of libpng, intended for use in production codes.
+ 
+@@ -7,81 +7,38 @@ Files available for download:
+ Source files with LF line endings (for Unix/Linux) and with a
+ "configure" script
+ 
+-   libpng-1.6.22.tar.xz (LZMA-compressed, recommended)
+-   libpng-1.6.22.tar.gz
++   libpng-1.6.23.tar.xz (LZMA-compressed, recommended)
++   libpng-1.6.23.tar.gz
+ 
+ Source files with CRLF line endings (for Windows), without the
+ "configure" script
+ 
+-   lpng1622.7z  (LZMA-compressed, recommended)
+-   lpng1622.zip
++   lpng1623.7z  (LZMA-compressed, recommended)
++   lpng1623.zip
+ 
+ Other information:
+ 
+-   libpng-1.6.22-README.txt
+-   libpng-1.6.22-LICENSE.txt
+-   libpng-1.6.22-*.asc (armored detached GPG signatures)
+-
+-Changes since the last public release (1.6.21):
+-  Changed PNG_USE_MKSTEMP to __COVERITY__ to select alternate
+-    "tmpfile()" implementation in contrib/libtests/pngstest.c
+-  Fixed NO_STDIO build of pngunknown.c to skip calling png_init_io()
+-    if there is no stdio.h support.
+-  Added a png_image_write_to_memory() API and a number of assist macros
+-    to allow an application that uses the simplified API write to bypass
+-    stdio and write directly to memory.
+-  Added some warnings (png.h) and some check code to detect *possible*
+-    overflow in the ROW_STRIDE and simplified image SIZE macros.  This
+-    disallows image width/height/format that *might* overflow.  This is
+-    a quiet API change that limits in-memory image size (uncompressed) to
+-    less than 4GByte and image row size (stride) to less than 2GByte.
+-  Revised workaround for false-positive Coverity issue in pngvalid.c.
+-  Only use exit(77) in configure builds.
+-  Updated CMakeLists.txt, added supporting scripts/gen*.cmake.in
+-    and test.cmake.in (Roger Leigh).
+-  Relaxed limit checks on gamma values in pngrtran.c. As suggested in
+-    the comments gamma values outside the range currently permitted
+-    by png_set_alpha_mode are useful for HDR data encoding.  These values
+-    are already permitted by png_set_gamma so it is reasonable caution to
+-    extend the png_set_alpha_mode range as HDR imaging systems are starting
+-    to emerge.
+-  Added a common-law trademark notice and export control information
+-    to the LICENSE file, png.h, and the man page.
+-  Restored "& 0xff" in png_save_uint_16() and png_save_uint_32() that
+-    were accidentally removed from libpng-1.6.17. 
+-  Changed PNG_INFO_cHNK and PNG_FREE_cHNK from 0xnnnn to 0xnnnnU in png.h
+-    (Robert C. Seacord).
+-  Removed dubious "#if INT_MAX" test from png.h that was added to
+-    libpng-1.6.19 (John Bowler).
+-  Add ${INCLUDES} in scripts/genout.cmake.in (Bug report by Nixon Kwok).
+-  Updated LICENSE to say files in the contrib directory are not
+-    necessarily under the libpng license, and that some makefiles have
+-    other copyright owners.
+-  Added INTEL-SSE2 support (Mike Klein and Matt Sarett, Google, Inc.).
+-  Made contrib/libtests/timepng more robust.  The code no longer gives
+-    up/fails on invalid PNG data, it just skips it (with error messages).
+-    The code no longer fails on PNG files with data beyond IEND.  Options
+-    exist to use png_read_png (reading the whole image, not by row) and, in
+-    that case, to apply any of the supported transforms.  This makes for
+-    more realistic testing; the decoded data actually gets used in a
+-    meaningful fashion (John Bowler).
+-  Fixed some misleading indentation (Krishnaraj Bhat).
+-  Force GCC compilation to C89 if needed (Dagobert Michelsen).
+-  SSE filter speed improvements for bpp=3:
+-    memcpy-free implementations of load3() / store3().
+-    call load3() only when needed at the end of a scanline.
+-  Added PNG_FAST_FILTERS macro (defined as
+-    PNG_FILTER_NONE|PNG_FILTER_SUB|PNG_FILTER_UP).
+-  Various fixes for contrib/libtests/timepng.c
+-  Fixed typo (missing underscore) in #define PNG_READ_16_TO_8_SUPPORTED
+-    (Bug report by Y.Ohashik).
+-  Quieted two Coverity issues in contrib/libtests/timepng.c.
+-  Fixed issues with scripts/genout.cmake.in (David Capello, Nixon Kwok):
+-    Added support to use multiple directories in ZLIBINCDIR variable,
+-    Fixed CMAKE_C_FLAGS with multiple values when genout is compiled on MSVC,
+-    Fixed pnglibconf.c compilation on OS X including the sysroot path.
+-  Check for CLOCK_PROCESS_CPUTIME_ID when building /contrib/libtests/timepng.
+-  Check for the presence of clock_gettime() in configure.ac and Makefile.am.
++   libpng-1.6.23-README.txt
++   libpng-1.6.23-LICENSE.txt
++   libpng-1.6.23-*.asc (armored detached GPG signatures)
++
++Changes since the last public release (1.6.22):
++
++  Stop a potential memory leak in png_set_tRNS() (Bug report by Ted Ying).
++  Fixed the progressive reader to handle empty first IDAT chunk properly
++    (patch by Timothy Nikkel).  This bug was introduced in libpng-1.6.0 and
++    only affected the libpng16 branch.
++  Added tests in pngvalid.c to check zero-length IDAT chunks in various
++    positions.  Fixed the sequential reader to handle these more robustly
++    (John Bowler).
++  Corrected progressive read input buffer in pngvalid.c. The previous version
++    the code invariably passed just one byte at a time to libpng.  The intent
++    was to pass a random number of bytes in the range 0..511.
++  Moved sse2 prototype from pngpriv.h to contrib/intel/intel_sse.patch.
++  Added missing ")" in pngerror.c (Matt Sarrett).
++  Fixed undefined behavior in png_push_save_buffer(). Do not call
++    memcpy() with a null source, even if count is zero (Leon Scroggins III).
++  Fixed bad link to RFC2083 in png.5 (Nikola Forro).
+ 
+ (subscription required; visit
+ https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+diff --git a/CHANGES b/CHANGES
+index 5327b30..0d6180f 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -5573,6 +5573,29 @@ Version 1.6.22rc03 [May 17, 2016]
+ Version 1.6.22 [May 26, 2016]
+   No changes.
+ 
++Version 1.6.23beta01 [May 29, 2016]
++  Stop a potential memory leak in png_set_tRNS() (Bug report by Ted Ying).
++  Fixed the progressive reader to handle empty first IDAT chunk properly
++    (patch by Timothy Nikkel).  This bug was introduced in libpng-1.6.0 and
++    only affected the libpng16 branch.
++  Added tests in pngvalid.c to check zero-length IDAT chunks in various
++    positions.  Fixed the sequential reader to handle these more robustly
++    (John Bowler).
++
++Version 1.6.23rc01 [June 2, 2016]
++  Corrected progressive read input buffer in pngvalid.c. The previous version
++    the code invariably passed just one byte at a time to libpng.  The intent
++    was to pass a random number of bytes in the range 0..511.
++  Moved sse2 prototype from pngpriv.h to contrib/intel/intel_sse.patch.
++  Added missing ")" in pngerror.c (Matt Sarrett).
++
++Version 1.6.23rc02 [June 4, 2016]
++  Fixed undefined behavior in png_push_save_buffer(). Do not call
++    memcpy() with a null source, even if count is zero (Leon Scroggins III).
++
++Version 1.6.23 [June 9, 2016]
++  Fixed bad link to RFC2083 in png.5 (Nikola Forro).
++
+ Send comments/corrections/commendations to png-mng-implement at lists.sf.net
+ (subscription required; visit
+ https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index bb2d6d1..6eb3781 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -35,7 +35,7 @@ enable_testing()
+ 
+ set(PNGLIB_MAJOR 1)
+ set(PNGLIB_MINOR 6)
+-set(PNGLIB_RELEASE 22)
++set(PNGLIB_RELEASE 23)
+ set(PNGLIB_NAME libpng${PNGLIB_MAJOR}${PNGLIB_MINOR})
+ set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
+ 
+@@ -696,7 +696,7 @@ endif(NOT WIN32 OR CYGWIN OR MINGW)
+ # SET UP LINKS
+ if(PNG_SHARED)
+   set_target_properties(png PROPERTIES
+-#   VERSION 16.${PNGLIB_RELEASE}.1.6.22
++#   VERSION 16.${PNGLIB_RELEASE}.1.6.23
+     VERSION 16.${PNGLIB_RELEASE}.0
+     SOVERSION 16
+     CLEAN_DIRECT_OUTPUT 1)
+diff --git a/LICENSE b/LICENSE
+index 0e4bd84..b7ad4b9 100644
+--- a/LICENSE
++++ b/LICENSE
+@@ -10,7 +10,7 @@ this sentence.
+ 
+ This code is released under the libpng license.
+ 
+-libpng versions 1.0.7, July 1, 2000 through 1.6.22, May 26, 2016 are
++libpng versions 1.0.7, July 1, 2000 through 1.6.23, June 9, 2016 are
+ Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+ derived from libpng-1.0.6, and are distributed according to the same
+ disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -127,4 +127,4 @@ any encryption software.  See the EAR, paragraphs 734.3(b)(3) and
+ 
+ Glenn Randers-Pehrson
+ glennrp at users.sourceforge.net
+-May 26, 2016
++June 9, 2016
+diff --git a/README b/README
+index dc5b52c..38e9a14 100644
+--- a/README
++++ b/README
+@@ -1,4 +1,4 @@
+-README for libpng version 1.6.22 - May 26, 2016 (shared library 16.0)
++README for libpng version 1.6.23 - June 9, 2016 (shared library 16.0)
+ See the note about version numbers near the top of png.h
+ 
+ See INSTALL for instructions on how to install libpng.
+diff --git a/arm/arm_init.c b/arm/arm_init.c
+index 02df812..52c3f31 100644
+--- a/arm/arm_init.c
++++ b/arm/arm_init.c
+@@ -3,7 +3,7 @@
+  *
+  * Copyright (c) 2014,2016 Glenn Randers-Pehrson
+  * Written by Mans Rullgard, 2011.
+- * Last changed in libpng 1.6.22 [May 26, 2016]
++ * Last changed in libpng 1.6.22 [June 9, 2016]
+  *
+  * This code is released under the libpng license.
+  * For conditions of distribution and use, see the disclaimer
+diff --git a/arm/filter_neon_intrinsics.c b/arm/filter_neon_intrinsics.c
+index ea7e356..be5ccc7 100644
+--- a/arm/filter_neon_intrinsics.c
++++ b/arm/filter_neon_intrinsics.c
+@@ -5,7 +5,7 @@
+  * Written by James Yu <james.yu at linaro.org>, October 2013.
+  * Based on filter_neon.S, written by Mans Rullgard, 2011.
+  *
+- * Last changed in libpng 1.6.22 [May 26, 2016]
++ * Last changed in libpng 1.6.22 [June 9, 2016]
+  *
+  * This code is released under the libpng license.
+  * For conditions of distribution and use, see the disclaimer
+diff --git a/configure.ac b/configure.ac
+index d4121b1..82a4097 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1,7 +1,7 @@
+ # configure.ac
+ 
+ # Copyright (c) 2004-2015 Glenn Randers-Pehrson
+-# Last changed in libpng 1.6.22 [May 26, 2016]
++# Last changed in libpng 1.6.22 [June 9, 2016]
+ 
+ # This code is released under the libpng license.
+ # For conditions of distribution and use, see the disclaimer
+@@ -25,7 +25,7 @@ AC_PREREQ([2.68])
+ 
+ dnl Version number stuff here:
+ 
+-AC_INIT([libpng],[1.6.22],[png-mng-implement@lists.sourceforge.net])
++AC_INIT([libpng],[1.6.23],[png-mng-implement@lists.sourceforge.net])
+ AC_CONFIG_MACRO_DIR([scripts])
+ 
+ # libpng does not follow GNU file name conventions (hence 'foreign')
+@@ -46,10 +46,10 @@ dnl automake, so the following is not necessary (and is not defined anyway):
+ dnl AM_PREREQ([1.11.2])
+ dnl stop configure from automagically running automake
+ 
+-PNGLIB_VERSION=1.6.22
++PNGLIB_VERSION=1.6.23
+ PNGLIB_MAJOR=1
+ PNGLIB_MINOR=6
+-PNGLIB_RELEASE=22
++PNGLIB_RELEASE=23
+ 
+ dnl End of version number stuff
+ 
+diff --git a/contrib/intel/intel_sse.patch b/contrib/intel/intel_sse.patch
+index d9d02bb..f000c11 100644
+--- a/contrib/intel/intel_sse.patch
++++ b/contrib/intel/intel_sse.patch
+@@ -1,6 +1,6 @@
+-diff --git libpng-1.6.22-orig/configure.ac libpng-1.6.22/configure.ac
+---- libpng-1.6.22-orig/configure.ac	2016-05-25 18:59:10.000000000 -0400
+-+++ libpng-1.6.22/configure.ac	2016-05-25 19:48:10.631751170 -0400
++diff --git a/configure.ac b/configure.ac
++--- a/configure.ac	2016-05-25 18:59:10.000000000 -0400
+++++ b/configure.ac	2016-05-25 19:48:10.631751170 -0400
+ @@ -341,16 +341,50 @@ AC_ARG_ENABLE([arm-neon],
+  
+  AM_CONDITIONAL([PNG_ARM_NEON],
+@@ -52,9 +52,9 @@ diff --git libpng-1.6.22-orig/configure.ac libpng-1.6.22/configure.ac
+     [chmod +x libpng-config])
+  
+  AC_OUTPUT
+-diff --git libpng-1.6.22-orig/Makefile.am libpng-1.6.22/Makefile.am
+---- libpng-1.6.22-orig/Makefile.am	2016-05-17 18:15:12.000000000 -0400
+-+++ libpng-1.6.22/Makefile.am	2016-05-25 19:48:10.631751170 -0400
++diff --git a/Makefile.am b/Makefile.am
++--- a/Makefile.am	2016-05-17 18:15:12.000000000 -0400
+++++ b/Makefile.am	2016-05-25 19:48:10.631751170 -0400
+ @@ -89,16 +89,20 @@ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SO
+  	pngset.c pngtrans.c pngwio.c pngwrite.c pngwtran.c pngwutil.c\
+  	png.h pngconf.h pngdebug.h pnginfo.h pngpriv.h pngstruct.h pngusr.dfa
+@@ -76,9 +76,9 @@ diff --git libpng-1.6.22-orig/Makefile.am libpng-1.6.22/Makefile.am
+  if HAVE_LD_VERSION_SCRIPT
+  #   Versioned symbols and restricted exports
+  if HAVE_SOLARIS_LD
+-diff --git libpng-1.6.22-orig/pngpriv.h libpng-1.6.22/pngpriv.h
+---- libpng-1.6.22-orig/pngpriv.h	2016-05-25 18:59:10.000000000 -0400
+-+++ libpng-1.6.22/pngpriv.h	2016-05-25 19:48:10.635751171 -0400
++diff --git a/pngpriv.h b/pngpriv.h
++--- a/pngpriv.h	2016-05-31 09:20:34.442885047 -0500
+++++ b/pngpriv.h	2016-05-31 09:14:54.583492341 -0500
+ @@ -177,16 +177,52 @@
+  #  endif /* !PNG_ARM_NEON_IMPLEMENTATION */
+  
+@@ -162,3 +162,22 @@ diff --git libpng-1.6.22-orig/pngpriv.h libpng-1.6.22/pngpriv.h
+  PNG_INTERNAL_FUNCTION(void,png_read_IDAT_data,(png_structrp png_ptr,
+     png_bytep output, png_alloc_size_t avail_out),PNG_EMPTY);
+     /* Read 'avail_out' bytes of data from the IDAT stream.  If the output buffer
++@@ -1910,16 +1959,18 @@ PNG_INTERNAL_FUNCTION(void, PNG_FILTER_O
++    /* Just declare the optimization that will be used */
++ #else
++    /* List *all* the possible optimizations here - this branch is required if
++     * the builder of libpng passes the definition of PNG_FILTER_OPTIMIZATIONS in
++     * CFLAGS in place of CPPFLAGS *and* uses symbol prefixing.
++     */
++ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_neon,
++    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+++PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_sse2,
+++   (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
++ #endif
++ 
++ PNG_INTERNAL_FUNCTION(png_uint_32, png_check_keyword, (png_structrp png_ptr,
++    png_const_charp key, png_bytep new_key), PNG_EMPTY);
++ 
++ /* Maintainer: Put new private prototypes here ^ */
++ 
++ #include "pngdebug.h"
+diff --git a/contrib/libtests/pngvalid.c b/contrib/libtests/pngvalid.c
+index ce409b1..7a42d13 100644
+--- a/contrib/libtests/pngvalid.c
++++ b/contrib/libtests/pngvalid.c
+@@ -1,7 +1,7 @@
+ 
+ /* pngvalid.c - validate libpng by constructing then reading png files.
+  *
+- * Last changed in libpng 1.6.22 [May 26, 2016]
++ * Last changed in libpng 1.6.23 [June 9, 2016]
+  * Copyright (c) 2014-2016 Glenn Randers-Pehrson
+  * Written by John Cunningham Bowler
+  *
+@@ -131,6 +131,17 @@ typedef png_byte *png_const_bytep;
+ #include <string.h> /* For memcpy, memset */
+ #include <math.h>   /* For floor */
+ 
++/* Convenience macros. */
++#define CHUNK(a,b,c,d) (((a)<<24)+((b)<<16)+((c)<<8)+(d))
++#define CHUNK_IHDR CHUNK(73,72,68,82)
++#define CHUNK_PLTE CHUNK(80,76,84,69)
++#define CHUNK_IDAT CHUNK(73,68,65,84)
++#define CHUNK_IEND CHUNK(73,69,78,68)
++#define CHUNK_cHRM CHUNK(99,72,82,77)
++#define CHUNK_gAMA CHUNK(103,65,77,65)
++#define CHUNK_sBIT CHUNK(115,66,73,84)
++#define CHUNK_sRGB CHUNK(115,82,71,66)
++
+ /* Unused formal parameter errors are removed using the following macro which is
+  * expected to have no bad effects on performance.
+  */
+@@ -297,38 +308,33 @@ randomize(void *pv, size_t size)
+ 
+ #define R8(this) randomize(&(this), sizeof (this))
+ 
+-static void r16(png_uint_16p p16, size_t count)
++#ifdef PNG_READ_SUPPORTED
++static png_byte
++random_byte(void)
+ {
+-   size_t i;
+-
+-   for (i=0; i<count; ++i)
+-   {
+-      unsigned char b2[2];
+-      randomize(b2, sizeof b2);
+-      *p16++ = png_get_uint_16(b2);
+-   }
++   unsigned char b1[1];
++   randomize(b1, sizeof b1);
++   return b1[0];
+ }
++#endif /* READ */
+ 
+-#define R16(this) r16(&(this), (sizeof (this))/(sizeof (png_uint_16)))
+-#define R16_1(this) r16(&(this), (size_t) 1U)
++static png_uint_16
++random_u16(void)
++{
++   unsigned char b2[2];
++   randomize(b2, sizeof b2);
++   return png_get_uint_16(b2);
++}
+ 
+ #if defined PNG_READ_RGB_TO_GRAY_SUPPORTED ||\
+     defined PNG_READ_FILLER_SUPPORTED
+-static void r32(png_uint_32p p32, size_t count)
++static png_uint_32
++random_u32(void)
+ {
+-   size_t i;
+-
+-   for (i=0; i<count; ++i)
+-   {
+-      unsigned char b4[4];
+-      randomize(b4, sizeof b4);
+-      *p32++ = png_get_uint_32(b4);
+-   }
++   unsigned char b4[4];
++   randomize(b4, sizeof b4);
++   return png_get_uint_32(b4);
+ }
+-
+-#define R32(this) r32(&(this), (sizeof (this))/(sizeof (png_uint_32)))
+-#define R32_1(this) r32(&(this), (size_t) 1U)
+-
+ #endif /* READ_FILLER || READ_RGB_TO_GRAY */
+ 
+ #endif /* READ || WRITE_tRNS || WRITE_FILTER */
+@@ -338,11 +344,7 @@ static void r32(png_uint_32p p32, size_t count)
+ static unsigned int
+ random_mod(unsigned int max)
+ {
+-   png_uint_16 x;
+-
+-   R16_1(x);
+-
+-   return x % max; /* 0 .. max-1 */
++   return random_u16() % max; /* 0 .. max-1 */
+ }
+ #endif /* READ_TRANSFORMS || WRITE_FILTER */
+ 
+@@ -351,11 +353,7 @@ random_mod(unsigned int max)
+ static int
+ random_choice(void)
+ {
+-   unsigned char x;
+-
+-   R8(x);
+-
+-   return x & 1;
++   return random_byte() & 1;
+ }
+ #endif /* READ_RGB_TO_GRAY || READ_FILLER */
+ 
+@@ -711,6 +709,8 @@ typedef struct png_store_file
+ {
+    struct png_store_file*  next;      /* as many as you like... */
+    char                    name[FILE_NAME_SIZE];
++   unsigned int            IDAT_bits; /* Number of bits in IDAT size */
++   png_uint_32             IDAT_size; /* Total size of IDAT data */
+    png_uint_32             id;        /* must be correct (see FILEID) */
+    png_size_t              datacount; /* In this (the last) buffer */
+    png_store_buffer        data;      /* Last buffer in file */
+@@ -766,6 +766,13 @@ typedef struct png_store
+    char               test[128];      /* Name of test */
+    char               error[256];
+ 
++   /* Share fields */
++   png_uint_32        chunklen; /* Length of chunk+overhead (chunkpos >= 8) */
++   png_uint_32        chunktype;/* Type of chunk (valid if chunkpos >= 4) */
++   png_uint_32        chunkpos; /* Position in chunk */
++   png_uint_32        IDAT_size;/* Accumulated IDAT size in .new */
++   unsigned int       IDAT_bits;/* Cache of the file store value */
++
+    /* Read fields */
+    png_structp        pread;    /* Used to read a saved file */
+    png_infop          piread;
+@@ -775,6 +782,9 @@ typedef struct png_store
+    png_byte*          image;    /* Buffer for reading interlaced images */
+    png_size_t         cb_image; /* Size of this buffer */
+    png_size_t         cb_row;   /* Row size of the image(s) */
++   uLong              IDAT_crc;
++   png_uint_32        IDAT_len; /* Used when re-chunking IDAT chunks */
++   png_uint_32        IDAT_pos; /* Used when re-chunking IDAT chunks */
+    png_uint_32        image_h;  /* Number of rows in a single image */
+    store_pool         read_memory_pool;
+ 
+@@ -861,6 +871,11 @@ store_init(png_store* ps)
+    ps->pwrite = NULL;
+    ps->piwrite = NULL;
+    ps->writepos = 0;
++   ps->chunkpos = 8;
++   ps->chunktype = 0;
++   ps->chunklen = 16;
++   ps->IDAT_size = 0;
++   ps->IDAT_bits = 0;
+    ps->new.prev = NULL;
+    ps->palette = NULL;
+    ps->npalette = 0;
+@@ -883,6 +898,11 @@ store_freenew(png_store *ps)
+ {
+    store_freebuffer(&ps->new);
+    ps->writepos = 0;
++   ps->chunkpos = 8;
++   ps->chunktype = 0;
++   ps->chunklen = 16;
++   ps->IDAT_size = 0;
++   ps->IDAT_bits = 0;
+    if (ps->palette != NULL)
+    {
+       free(ps->palette);
+@@ -896,9 +916,6 @@ store_storenew(png_store *ps)
+ {
+    png_store_buffer *pb;
+ 
+-   if (ps->writepos != STORE_BUFFER_SIZE)
+-      png_error(ps->pwrite, "invalid store call");
+-
+    pb = voidcast(png_store_buffer*, malloc(sizeof *pb));
+ 
+    if (pb == NULL)
+@@ -929,21 +946,52 @@ store_freefile(png_store_file **ppf)
+    }
+ }
+ 
++static unsigned int
++bits_of(png_uint_32 num)
++{
++   /* Return the number of bits in 'num' */
++   unsigned int b = 0;
++
++   if (num & 0xffff0000U)  b += 16U, num >>= 16;
++   if (num & 0xff00U)      b += 8U, num >>= 8;
++   if (num & 0xf0U)        b += 4U, num >>= 4;
++   if (num & 0xcU)         b += 2U, num >>= 2;
++   if (num & 0x2U)         ++b, num >>= 1;
++   if (num)                ++b;
++
++   return b; /* 0..32 */
++}
++
+ /* Main interface to file storeage, after writing a new PNG file (see the API
+  * below) call store_storefile to store the result with the given name and id.
+  */
+ static void
+ store_storefile(png_store *ps, png_uint_32 id)
+ {
+-   png_store_file *pf = voidcast(png_store_file*, malloc(sizeof *pf));
++   png_store_file *pf;
++
++   if (ps->chunkpos != 0U || ps->chunktype != 0U || ps->chunklen != 0U ||
++       ps->IDAT_size == 0)
++      png_error(ps->pwrite, "storefile: incomplete write");
++
++   pf = voidcast(png_store_file*, malloc(sizeof *pf));
+    if (pf == NULL)
+       png_error(ps->pwrite, "storefile: OOM");
+    safecat(pf->name, sizeof pf->name, 0, ps->wname);
+    pf->id = id;
+    pf->data = ps->new;
+    pf->datacount = ps->writepos;
++   pf->IDAT_size = ps->IDAT_size;
++   pf->IDAT_bits = bits_of(ps->IDAT_size);
++   /* Because the IDAT always has zlib header stuff this must be true: */
++   if (pf->IDAT_bits == 0U)
++      png_error(ps->pwrite, "storefile: 0 sized IDAT");
+    ps->new.prev = NULL;
+    ps->writepos = 0;
++   ps->chunkpos = 8;
++   ps->chunktype = 0;
++   ps->chunklen = 16;
++   ps->IDAT_size = 0;
+    pf->palette = ps->palette;
+    pf->npalette = ps->npalette;
+    ps->palette = 0;
+@@ -1067,7 +1115,7 @@ store_warning(png_structp ppIn, png_const_charp message)
+    if (!ps->expect_warning)
+       store_log(ps, pp, message, 0 /* warning */);
+    else
+-      ps->saw_warning = 1;
++     ps->saw_warning = 1;
+ }
+ 
+ /* These somewhat odd functions are used when reading an image to ensure that
+@@ -1209,32 +1257,119 @@ store_image_check(const png_store* ps, png_const_structp pp, int iImage)
+ }
+ #endif /* PNG_READ_SUPPORTED */
+ 
++static int
++valid_chunktype(png_uint_32 chunktype)
++{
++   /* Each byte in the chunk type must be in one of the ranges 65..90, 97..122
++    * (both inclusive), so:
++    */
++   unsigned int i;
++
++   for (i=0; i<4; ++i)
++   {
++      unsigned int c = chunktype & 0xffU;
++
++      if (!((c >= 65U && c <= 90U) || (c >= 97U && c <= 122U)))
++         return 0;
++
++      chunktype >>= 8;
++   }
++
++   return 1; /* It's valid */
++}
++
+ static void PNGCBAPI
+ store_write(png_structp ppIn, png_bytep pb, png_size_t st)
+ {
+    png_const_structp pp = ppIn;
+    png_store *ps = voidcast(png_store*, png_get_io_ptr(pp));
++   size_t writepos = ps->writepos;
++   png_uint_32 chunkpos = ps->chunkpos;
++   png_uint_32 chunktype = ps->chunktype;
++   png_uint_32 chunklen = ps->chunklen;
+ 
+    if (ps->pwrite != pp)
+       png_error(pp, "store state damaged");
+ 
++   /* Technically this is legal, but in practice libpng never writes more than
++    * the maximum chunk size at once so if it happens something weird has
++    * changed inside libpng (probably).
++    */
++   if (st > 0x7fffffffU)
++      png_error(pp, "unexpected write size");
++
++   /* Now process the bytes to be written.  Do this in units of the space in the
++    * output (write) buffer or, at the start 4 bytes for the chunk type and
++    * length limited in any case by the amount of data.
++    */
+    while (st > 0)
+    {
+-      size_t cb;
++      if (writepos >= STORE_BUFFER_SIZE)
++         store_storenew(ps), writepos = 0;
+ 
+-      if (ps->writepos >= STORE_BUFFER_SIZE)
+-         store_storenew(ps);
++      if (chunkpos < 4)
++      {
++         png_byte b = *pb++;
++         --st;
++         chunklen = (chunklen << 8) + b;
++         ps->new.buffer[writepos++] = b;
++         ++chunkpos;
++      }
+ 
+-      cb = st;
++      else if (chunkpos < 8)
++      {
++         png_byte b = *pb++;
++         --st;
++         chunktype = (chunktype << 8) + b;
++         ps->new.buffer[writepos++] = b;
+ 
+-      if (cb > STORE_BUFFER_SIZE - ps->writepos)
+-         cb = STORE_BUFFER_SIZE - ps->writepos;
++         if (++chunkpos == 8)
++         {
++            chunklen &= 0xffffffffU;
++            if (chunklen > 0x7fffffffU)
++               png_error(pp, "chunk length too great");
+ 
+-      memcpy(ps->new.buffer + ps->writepos, pb, cb);
+-      pb += cb;
+-      st -= cb;
+-      ps->writepos += cb;
+-   }
++            chunktype &= 0xffffffffU;
++            if (chunktype == CHUNK_IDAT)
++            {
++               if (chunklen > ~ps->IDAT_size)
++                  png_error(pp, "pngvalid internal image too large");
++
++               ps->IDAT_size += chunklen;
++            }
++
++            else if (!valid_chunktype(chunktype))
++               png_error(pp, "invalid chunk type");
++
++            chunklen += 12; /* for header and CRC */
++         }
++      }
++
++      else /* chunkpos >= 8 */
++      {
++         png_size_t cb = st;
++
++         if (cb > STORE_BUFFER_SIZE - writepos)
++            cb = STORE_BUFFER_SIZE - writepos;
++
++         if (cb  > chunklen - chunkpos/* bytes left in chunk*/)
++            cb = (png_size_t)/*SAFE*/(chunklen - chunkpos);
++
++         memcpy(ps->new.buffer + writepos, pb, cb);
++         chunkpos += (png_uint_32)/*SAFE*/cb;
++         pb += cb;
++         writepos += cb;
++         st -= cb;
++
++         if (chunkpos >= chunklen) /* must be equal */
++            chunkpos = chunktype = chunklen = 0;
++      }
++   } /* while (st > 0) */
++
++   ps->writepos = writepos;
++   ps->chunkpos = chunkpos;
++   ps->chunktype = chunktype;
++   ps->chunklen = chunklen;
+ }
+ 
+ static void PNGCBAPI
+@@ -1254,7 +1389,6 @@ store_read_buffer_size(png_store *ps)
+    return ps->current->datacount;
+ }
+ 
+-#ifdef PNG_READ_TRANSFORMS_SUPPORTED
+ /* Return total bytes available for read. */
+ static size_t
+ store_read_buffer_avail(png_store *ps)
+@@ -1279,7 +1413,6 @@ store_read_buffer_avail(png_store *ps)
+ 
+    return 0;
+ }
+-#endif
+ 
+ static int
+ store_read_buffer_next(png_store *ps)
+@@ -1331,6 +1464,240 @@ store_read_imp(png_store *ps, png_bytep pb, png_size_t st)
+    }
+ }
+ 
++static png_size_t
++store_read_chunk(png_store *ps, png_bytep pb, const png_size_t max,
++      const png_size_t min)
++{
++   png_uint_32 chunklen = ps->chunklen;
++   png_uint_32 chunktype = ps->chunktype;
++   png_uint_32 chunkpos = ps->chunkpos;
++   png_size_t st = max;
++
++   if (st > 0) do
++   {
++      if (chunkpos >= chunklen) /* end of last chunk */
++      {
++         png_byte buffer[8];
++
++         /* Read the header of the next chunk: */
++         store_read_imp(ps, buffer, 8U);
++         chunklen = png_get_uint_32(buffer) + 12U;
++         chunktype = png_get_uint_32(buffer+4U);
++         chunkpos = 0U; /* Position read so far */
++      }
++
++      if (chunktype == CHUNK_IDAT)
++      {
++         png_uint_32 IDAT_pos = ps->IDAT_pos;
++         png_uint_32 IDAT_len = ps->IDAT_len;
++         png_uint_32 IDAT_size = ps->IDAT_size;
++
++         /* The IDAT headers are constructed here; skip the input header. */
++         if (chunkpos < 8U)
++            chunkpos = 8U;
++
++         if (IDAT_pos == IDAT_len)
++         {
++            png_byte random = random_byte();
++
++            /* Make a new IDAT chunk, if IDAT_len is 0 this is the first IDAT,
++             * if IDAT_size is 0 this is the end.  At present this is set up
++             * using a random number so that there is a 25% chance before
++             * the start of the first IDAT chunk being 0 length.
++             */
++            if (IDAT_len == 0U) /* First IDAT */
++            {
++               switch (random & 3U)
++               {
++                  case 0U: IDAT_len = 12U; break; /* 0 bytes */
++                  case 1U: IDAT_len = 13U; break; /* 1 byte */
++                  default: IDAT_len = random_u32();
++                           IDAT_len %= IDAT_size;
++                           IDAT_len += 13U; /* 1..IDAT_size bytes */
++                           break;
++               }
++            }
++
++            else if (IDAT_size == 0U) /* all IDAT data read */
++            {
++               /* The last (IDAT) chunk should be positioned at the CRC now: */
++               if (chunkpos != chunklen-4U)
++                  png_error(ps->pread, "internal: IDAT size mismatch");
++
++               /* The only option here is to add a zero length IDAT, this
++                * happens 25% of the time.  Because of the check above
++                * chunklen-4U-chunkpos must be zero, we just need to skip the
++                * CRC now.
++                */
++               if ((random & 3U) == 0U)
++                  IDAT_len = 12U; /* Output another 0 length IDAT */
++
++               else
++               {
++                  /* End of IDATs, skip the CRC to make the code above load the
++                   * next chunk header next time round.
++                   */
++                  png_byte buffer[4];
++
++                  store_read_imp(ps, buffer, 4U);
++                  chunkpos += 4U;
++                  ps->IDAT_pos = IDAT_pos;
++                  ps->IDAT_len = IDAT_len;
++                  ps->IDAT_size = 0U;
++                  continue; /* Read the next chunk */
++               }
++            }
++
++            else
++            {
++               /* Middle of IDATs, use 'random' to determine the number of bits
++                * to use in the IDAT length.
++                */
++               IDAT_len = random_u32();
++               IDAT_len &= (1U << (1U + random % ps->IDAT_bits)) - 1U;
++               if (IDAT_len > IDAT_size)
++                  IDAT_len = IDAT_size;
++               IDAT_len += 12U; /* zero bytes may occur */
++            }
++
++            IDAT_pos = 0U;
++            ps->IDAT_crc = 0x35af061e; /* Ie: crc32(0UL, "IDAT", 4) */
++         } /* IDAT_pos == IDAT_len */
++
++         if (IDAT_pos < 8U) /* Return the header */ do
++         {
++            png_uint_32 b;
++            unsigned int shift;
++
++            if (IDAT_pos < 4U)
++               b = IDAT_len - 12U;
++
++            else
++               b = CHUNK_IDAT;
++
++            shift = 3U & IDAT_pos;
++            ++IDAT_pos;
++
++            if (shift < 3U)
++               b >>= 8U*(3U-shift);
++
++            *pb++ = 0xffU & b;
++         }
++         while (--st > 0 && IDAT_pos < 8);
++
++         else if (IDAT_pos < IDAT_len - 4U) /* I.e not the CRC */
++         {
++            if (chunkpos < chunklen-4U)
++            {
++               uInt avail = -1;
++
++               if (avail > (IDAT_len-4U) - IDAT_pos)
++                  avail = (uInt)/*SAFE*/((IDAT_len-4U) - IDAT_pos);
++
++               if (avail > st)
++                  avail = (uInt)/*SAFE*/st;
++
++               if (avail > (chunklen-4U) - chunkpos)
++                  avail = (uInt)/*SAFE*/((chunklen-4U) - chunkpos);
++
++               store_read_imp(ps, pb, avail);
++               ps->IDAT_crc = crc32(ps->IDAT_crc, pb, avail);
++               pb += (png_size_t)/*SAFE*/avail;
++               st -= (png_size_t)/*SAFE*/avail;
++               chunkpos += (png_uint_32)/*SAFE*/avail;
++               IDAT_size -= (png_uint_32)/*SAFE*/avail;
++               IDAT_pos += (png_uint_32)/*SAFE*/avail;
++            }
++
++            else /* skip the input CRC */
++            {
++               png_byte buffer[4];
++
++               store_read_imp(ps, buffer, 4U);
++               chunkpos += 4U;
++            }
++         }
++
++         else /* IDAT crc */ do
++         {
++            uLong b = ps->IDAT_crc;
++            unsigned int shift = (IDAT_len - IDAT_pos); /* 4..1 */
++            ++IDAT_pos;
++
++            if (shift > 1U)
++               b >>= 8U*(shift-1U);
++
++            *pb++ = 0xffU & b;
++         }
++         while (--st > 0 && IDAT_pos < IDAT_len);
++
++         ps->IDAT_pos = IDAT_pos;
++         ps->IDAT_len = IDAT_len;
++         ps->IDAT_size = IDAT_size;
++      }
++
++      else /* !IDAT */
++      {
++         /* If there is still some pending IDAT data after the IDAT chunks have
++          * been processed there is a problem:
++          */
++         if (ps->IDAT_len > 0 && ps->IDAT_size > 0)
++            png_error(ps->pread, "internal: missing IDAT data");
++
++         if (chunktype == CHUNK_IEND && ps->IDAT_len == 0U)
++            png_error(ps->pread, "internal: missing IDAT");
++
++         if (chunkpos < 8U) /* Return the header */ do
++         {
++            png_uint_32 b;
++            unsigned int shift;
++
++            if (chunkpos < 4U)
++               b = chunklen - 12U;
++
++            else
++               b = chunktype;
++
++            shift = 3U & chunkpos;
++            ++chunkpos;
++
++            if (shift < 3U)
++               b >>= 8U*(3U-shift);
++
++            *pb++ = 0xffU & b;
++         }
++         while (--st > 0 && chunkpos < 8);
++
++         else /* Return chunk bytes, including the CRC */
++         {
++            png_size_t avail = st;
++
++            if (avail > chunklen - chunkpos)
++               avail = (png_size_t)/*SAFE*/(chunklen - chunkpos);
++
++            store_read_imp(ps, pb, avail);
++            pb += avail;
++            st -= avail;
++            chunkpos += (png_uint_32)/*SAFE*/avail;
++
++            /* Check for end of chunk and end-of-file; don't try to read a new
++             * chunk header at this point unless instructed to do so by 'min'.
++             */
++            if (chunkpos >= chunklen && max-st >= min &&
++                     store_read_buffer_avail(ps) == 0)
++               break;
++         }
++      } /* !IDAT */
++   }
++   while (st > 0);
++
++   ps->chunklen = chunklen;
++   ps->chunktype = chunktype;
++   ps->chunkpos = chunkpos;
++
++   return st; /* space left */
++}
++
+ static void PNGCBAPI
+ store_read(png_structp ppIn, png_bytep pb, png_size_t st)
+ {
+@@ -1340,26 +1707,33 @@ store_read(png_structp ppIn, png_bytep pb, png_size_t st)
+    if (ps == NULL || ps->pread != pp)
+       png_error(pp, "bad store read call");
+ 
+-   store_read_imp(ps, pb, st);
++   store_read_chunk(ps, pb, st, st);
+ }
+ 
+ static void
+ store_progressive_read(png_store *ps, png_structp pp, png_infop pi)
+ {
+-   /* Notice that a call to store_read will cause this function to fail because
+-    * readpos will be set.
+-    */
+    if (ps->pread != pp || ps->current == NULL || ps->next == NULL)
+       png_error(pp, "store state damaged (progressive)");
+ 
+-   do
++   /* This is another Horowitz and Hill random noise generator.  In this case
++    * the aim is to stress the progressive reader with truly horrible variable
++    * buffer sizes in the range 1..500, so a sequence of 9 bit random numbers
++    * is generated.  We could probably just count from 1 to 32767 and get as
++    * good a result.
++    */
++   while (store_read_buffer_avail(ps) > 0)
+    {
+-      if (ps->readpos != 0)
+-         png_error(pp, "store_read called during progressive read");
++      static png_uint_32 noise = 2;
++      png_size_t cb;
++      png_byte buffer[512];
+ 
+-      png_process_data(pp, pi, ps->next->buffer, store_read_buffer_size(ps));
++      /* Generate 15 more bits of stuff: */
++      noise = (noise << 9) | ((noise ^ (noise >> (9-5))) & 0x1ff);
++      cb = noise & 0x1ff;
++      cb -= store_read_chunk(ps, buffer, cb, 1);
++      png_process_data(pp, pi, buffer, cb);
+    }
+-   while (store_read_buffer_next(ps));
+ }
+ #endif /* PNG_READ_SUPPORTED */
+ 
+@@ -1730,6 +2104,11 @@ store_read_reset(png_store *ps)
+    ps->next = NULL;
+    ps->readpos = 0;
+    ps->validated = 0;
++
++   ps->chunkpos = 8;
++   ps->chunktype = 0;
++   ps->chunklen = 16;
++   ps->IDAT_size = 0;
+ }
+ 
+ #ifdef PNG_READ_SUPPORTED
+@@ -1744,6 +2123,11 @@ store_read_set(png_store *ps, png_uint_32 id)
+       {
+          ps->current = pf;
+          ps->next = NULL;
++         ps->IDAT_size = pf->IDAT_size;
++         ps->IDAT_bits = pf->IDAT_bits; /* just a cache */
++         ps->IDAT_len = 0;
++         ps->IDAT_pos = 0;
++         ps->IDAT_crc = 0UL;
+          store_read_buffer_next(ps);
+          return;
+       }
+@@ -2581,17 +2965,6 @@ modifier_color_encoding_is_set(const png_modifier *pm)
+    return pm->current_gamma != 0;
+ }
+ 
+-/* Convenience macros. */
+-#define CHUNK(a,b,c,d) (((a)<<24)+((b)<<16)+((c)<<8)+(d))
+-#define CHUNK_IHDR CHUNK(73,72,68,82)
+-#define CHUNK_PLTE CHUNK(80,76,84,69)
+-#define CHUNK_IDAT CHUNK(73,68,65,84)
+-#define CHUNK_IEND CHUNK(73,69,78,68)
+-#define CHUNK_cHRM CHUNK(99,72,82,77)
+-#define CHUNK_gAMA CHUNK(103,65,77,65)
+-#define CHUNK_sBIT CHUNK(115,66,73,84)
+-#define CHUNK_sRGB CHUNK(115,82,71,66)
+-
+ /* The guts of modification are performed during a read. */
+ static void
+ modifier_crc(png_bytep buffer)
+@@ -2631,7 +3004,7 @@ modifier_read_imp(png_modifier *pm, png_bytep pb, png_size_t st)
+       {
+          static png_byte sign[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+          case modifier_start:
+-            store_read_imp(&pm->this, pm->buffer, 8); /* size of signature. */
++            store_read_chunk(&pm->this, pm->buffer, 8, 8); /* signature. */
+             pm->buffer_count = 8;
+             pm->buffer_position = 0;
+ 
+@@ -2641,7 +3014,7 @@ modifier_read_imp(png_modifier *pm, png_bytep pb, png_size_t st)
+             break;
+ 
+          case modifier_signature:
+-            store_read_imp(&pm->this, pm->buffer, 13+12); /* size of IHDR */
++            store_read_chunk(&pm->this, pm->buffer, 13+12, 13+12); /* IHDR */
+             pm->buffer_count = 13+12;
+             pm->buffer_position = 0;
+ 
+@@ -2682,7 +3055,7 @@ modifier_read_imp(png_modifier *pm, png_bytep pb, png_size_t st)
+             {
+                if (cb > st) cb = st;
+                pm->flush -= cb;
+-               store_read_imp(&pm->this, pb, cb);
++               store_read_chunk(&pm->this, pb, cb, cb);
+                pb += cb;
+                st -= cb;
+                if (st == 0) return;
+@@ -2699,7 +3072,7 @@ modifier_read_imp(png_modifier *pm, png_bytep pb, png_size_t st)
+                pm->pending_chunk = 0;
+             }
+             else
+-               store_read_imp(&pm->this, pm->buffer, 8);
++               store_read_chunk(&pm->this, pm->buffer, 8, 8);
+ 
+             pm->buffer_count = 8;
+             pm->buffer_position = 0;
+@@ -2765,8 +3138,8 @@ modifier_read_imp(png_modifier *pm, png_bytep pb, png_size_t st)
+              */
+             if (len+12 <= sizeof pm->buffer)
+             {
+-               store_read_imp(&pm->this, pm->buffer+pm->buffer_count,
+-                   len+12-pm->buffer_count);
++               png_size_t s = len+12-pm->buffer_count;
++               store_read_chunk(&pm->this, pm->buffer+pm->buffer_count, s, s);
+                pm->buffer_count = len+12;
+ 
+                /* Check for a modification, else leave it be. */
+@@ -3333,8 +3706,8 @@ set_random_tRNS(png_structp pp, png_infop pi, const png_byte colour_type,
+    {
+       if (bit_depth == 8)
+       {
+-         R16(tRNS.red);
+-         R16(tRNS.green);
++         tRNS.red = random_u16();
++         tRNS.green = random_u16();
+          tRNS.blue = tRNS.red ^ tRNS.green;
+          tRNS.red &= mask;
+          tRNS.green &= mask;
+@@ -3343,7 +3716,7 @@ set_random_tRNS(png_structp pp, png_infop pi, const png_byte colour_type,
+ 
+       else /* bit_depth == 16 */
+       {
+-         R16(tRNS.red);
++         tRNS.red = random_u16();
+          tRNS.green = (png_uint_16)(tRNS.red * 257);
+          tRNS.blue = (png_uint_16)(tRNS.green * 17);
+       }
+@@ -3351,7 +3724,7 @@ set_random_tRNS(png_structp pp, png_infop pi, const png_byte colour_type,
+ 
+    else
+    {
+-      R16(tRNS.gray);
++      tRNS.gray = random_u16();
+       tRNS.gray &= mask;
+    }
+ 
+@@ -7303,7 +7676,7 @@ image_transform_png_set_rgb_to_gray_ini(const image_transform *this,
+       png_uint_32 ru;
+       double total;
+ 
+-      R32_1(ru);
++      ru = random_u32();
+       data.green_coefficient = total = (ru & 0xffff) / 65535.;
+       ru >>= 16;
+       data.red_coefficient = (1 - total) * (ru & 0xffff) / 65535.;
+@@ -8231,7 +8604,7 @@ image_transform_png_set_filler_set(const image_transform *this,
+     * filler.  The 'filler' value has all 32 bits set, but only bit_depth
+     * will be used.  At this point we don't know bit_depth.
+     */
+-   R32(data.filler);
++   data.filler = random_u32();
+    data.flags = random_choice();
+ 
+    png_set_filler(pp, data.filler, data.flags);
+@@ -8304,7 +8677,7 @@ image_transform_png_set_add_alpha_set(const image_transform *this,
+     * filler.  The 'filler' value has all 32 bits set, but only bit_depth
+     * will be used.  At this point we don't know bit_depth.
+     */
+-   R32(data.filler);
++   data.filler = random_u32();
+    data.flags = random_choice();
+ 
+    png_set_add_alpha(pp, data.filler, data.flags);
+diff --git a/libpng-manual.txt b/libpng-manual.txt
+index f9b14ad..541a264 100644
+--- a/libpng-manual.txt
++++ b/libpng-manual.txt
+@@ -1,6 +1,6 @@
+ libpng-manual.txt - A description on how to use and modify libpng
+ 
+- libpng version 1.6.22 - May 26, 2016
++ libpng version 1.6.23 - June 9, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  <glennrp at users.sourceforge.net>
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+@@ -11,7 +11,7 @@ libpng-manual.txt - A description on how to use and modify libpng
+ 
+  Based on:
+ 
+- libpng versions 0.97, January 1998, through 1.6.22 - May 26, 2016
++ libpng versions 0.97, January 1998, through 1.6.23 - June 9, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+ 
+@@ -5345,7 +5345,7 @@ Since the PNG Development group is an ad-hoc body, we can't make
+ an official declaration.
+ 
+ This is your unofficial assurance that libpng from version 0.71 and
+-upward through 1.6.22 are Y2K compliant.  It is my belief that earlier
++upward through 1.6.23 are Y2K compliant.  It is my belief that earlier
+ versions were also Y2K compliant.
+ 
+ Libpng only has two year fields.  One is a 2-byte unsigned integer
+diff --git a/libpng.3 b/libpng.3
+index e27cff8..86a2945 100644
+--- a/libpng.3
++++ b/libpng.3
+@@ -1,6 +1,6 @@
+-.TH LIBPNG 3 "May 26, 2016"
++.TH LIBPNG 3 "June 9, 2016"
+ .SH NAME
+-libpng \- Portable Network Graphics (PNG) Reference Library 1.6.22
++libpng \- Portable Network Graphics (PNG) Reference Library 1.6.23
+ .SH SYNOPSIS
+ \fB
+ #include <png.h>\fP
+@@ -510,7 +510,7 @@ Following is a copy of the libpng-manual.txt file that accompanies libpng.
+ .SH LIBPNG.TXT
+ libpng-manual.txt - A description on how to use and modify libpng
+ 
+- libpng version 1.6.22 - May 26, 2016
++ libpng version 1.6.23 - June 9, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  <glennrp at users.sourceforge.net>
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+@@ -521,7 +521,7 @@ libpng-manual.txt - A description on how to use and modify libpng
+ 
+  Based on:
+ 
+- libpng versions 0.97, January 1998, through 1.6.22 - May 26, 2016
++ libpng versions 0.97, January 1998, through 1.6.23 - June 9, 2016
+  Updated and distributed by Glenn Randers-Pehrson
+  Copyright (c) 1998-2016 Glenn Randers-Pehrson
+ 
+@@ -5855,7 +5855,7 @@ Since the PNG Development group is an ad-hoc body, we can't make
+ an official declaration.
+ 
+ This is your unofficial assurance that libpng from version 0.71 and
+-upward through 1.6.22 are Y2K compliant.  It is my belief that earlier
++upward through 1.6.23 are Y2K compliant.  It is my belief that earlier
+ versions were also Y2K compliant.
+ 
+ Libpng only has two year fields.  One is a 2-byte unsigned integer
+@@ -5957,7 +5957,7 @@ the first widely used release:
+  ...
+  1.5.27                  15    10527  15.so.15.27[.0]
+  ...
+- 1.6.22                  16    10622  16.so.16.22[.0]
++ 1.6.23                  16    10623  16.so.16.23[.0]
+ 
+ Henceforth the source version will match the shared-library minor
+ and patch numbers; the shared-library major version number will be
+@@ -6013,7 +6013,7 @@ possible without all of you.
+ 
+ Thanks to Frank J. T. Wojcik for helping with the documentation.
+ 
+-Libpng version 1.6.22 - May 26, 2016:
++Libpng version 1.6.23 - June 9, 2016:
+ Initially created in 1995 by Guy Eric Schalnat, then of Group 42, Inc.
+ Currently maintained by Glenn Randers-Pehrson (glennrp at users.sourceforge.net).
+ 
+@@ -6038,7 +6038,7 @@ this sentence.
+ 
+ This code is released under the libpng license.
+ 
+-libpng versions 1.0.7, July 1, 2000 through 1.6.22, May 26, 2016 are
++libpng versions 1.0.7, July 1, 2000 through 1.6.23, June 9, 2016 are
+ Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+ derived from libpng-1.0.6, and are distributed according to the same
+ disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -6163,7 +6163,7 @@ files "pngbar.png" and "pngbar.jpg (88x31) and "pngnow.png" (98x31).
+ 
+ Glenn Randers-Pehrson
+ glennrp at users.sourceforge.net
+-May 26, 2016
++June 9, 2016
+ 
+ .\" end of man page
+ 
+diff --git a/libpngpf.3 b/libpngpf.3
+index 4b8278d..ea1a465 100644
+--- a/libpngpf.3
++++ b/libpngpf.3
+@@ -1,6 +1,6 @@
+-.TH LIBPNGPF 3 "May 26, 2016"
++.TH LIBPNGPF 3 "June 9, 2016"
+ .SH NAME
+-libpng \- Portable Network Graphics (PNG) Reference Library 1.6.22
++libpng \- Portable Network Graphics (PNG) Reference Library 1.6.23
+ (private functions)
+ .SH SYNOPSIS
+ \fB#include \fI"pngpriv.h"
+diff --git a/png.5 b/png.5
+index af210b1..8ff1639 100644
+--- a/png.5
++++ b/png.5
+@@ -1,4 +1,4 @@
+-.TH PNG 5 "May 26, 2016"
++.TH PNG 5 "June 9, 2016"
+ .SH NAME
+ png \- Portable Network Graphics (PNG) format
+ .SH DESCRIPTION
+@@ -35,7 +35,7 @@ PNG 1.0 specification, October 1996:
+ RFC 2083
+ .IP
+ .br
+-ftp://ds.internic.net/rfc/rfc2083.txt
++http://www.ietf.org/rfc/rfc2083.txt
+ .br
+ or (as a W3C Recommendation) at
+ .br
+diff --git a/png.c b/png.c
+index 65299a0..1720ca0 100644
+--- a/png.c
++++ b/png.c
+@@ -14,7 +14,7 @@
+ #include "pngpriv.h"
+ 
+ /* Generate a compiler error if there is an old png.h in the search path. */
+-typedef png_libpng_version_1_6_22 Your_png_h_is_not_version_1_6_22;
++typedef png_libpng_version_1_6_23 Your_png_h_is_not_version_1_6_23;
+ 
+ /* Tells libpng that we have already handled the first "num_bytes" bytes
+  * of the PNG file signature.  If the PNG data is embedded into another
+@@ -775,14 +775,14 @@ png_get_copyright(png_const_structrp png_ptr)
+ #else
+ #  ifdef __STDC__
+    return PNG_STRING_NEWLINE \
+-      "libpng version 1.6.22 - May 26, 2016" PNG_STRING_NEWLINE \
++      "libpng version 1.6.23 - June 9, 2016" PNG_STRING_NEWLINE \
+       "Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson" \
+       PNG_STRING_NEWLINE \
+       "Copyright (c) 1996-1997 Andreas Dilger" PNG_STRING_NEWLINE \
+       "Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc." \
+       PNG_STRING_NEWLINE;
+ #  else
+-   return "libpng version 1.6.22 - May 26, 2016\
++   return "libpng version 1.6.23 - June 9, 2016\
+       Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson\
+       Copyright (c) 1996-1997 Andreas Dilger\
+       Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.";
+diff --git a/png.h b/png.h
+index 08c039d..1efb0b0 100644
+--- a/png.h
++++ b/png.h
+@@ -1,7 +1,7 @@
+ 
+ /* png.h - header file for PNG reference library
+  *
+- * libpng version 1.6.22, May 26, 2016
++ * libpng version 1.6.23, June 9, 2016
+  *
+  * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+@@ -12,7 +12,7 @@
+  * Authors and maintainers:
+  *   libpng versions 0.71, May 1995, through 0.88, January 1996: Guy Schalnat
+  *   libpng versions 0.89, June 1996, through 0.96, May 1997: Andreas Dilger
+- *   libpng versions 0.97, January 1998, through 1.6.22, May 26, 2016:
++ *   libpng versions 0.97, January 1998, through 1.6.23, June 9, 2016:
+  *     Glenn Randers-Pehrson.
+  *   See also "Contributing Authors", below.
+  */
+@@ -29,7 +29,7 @@
+  * files that are distributed with libpng have other copyright owners and
+  * are released under other open source licenses.
+  *
+- * libpng versions 1.0.7, July 1, 2000 through 1.6.22, May 26, 2016 are
++ * libpng versions 1.0.7, July 1, 2000 through 1.6.23, June 9, 2016 are
+  * Copyright (c) 2000-2002, 2004, 2006-2016 Glenn Randers-Pehrson, are
+  * derived from libpng-1.0.6, and are distributed according to the same
+  * disclaimer and license as libpng-1.0.6 with the following individuals
+@@ -217,7 +217,7 @@
+  *    ...
+  *    1.5.27                  15    10527  15.so.15.27[.0]
+  *    ...
+- *    1.6.22                  16    10622  16.so.16.22[.0]
++ *    1.6.23                  16    10623  16.so.16.23[.0]
+  *
+  *    Henceforth the source version will match the shared-library major
+  *    and minor numbers; the shared-library major version number will be
+@@ -245,13 +245,13 @@
+  * Y2K compliance in libpng:
+  * =========================
+  *
+- *    May 26, 2016
++ *    June 9, 2016
+  *
+  *    Since the PNG Development group is an ad-hoc body, we can't make
+  *    an official declaration.
+  *
+  *    This is your unofficial assurance that libpng from version 0.71 and
+- *    upward through 1.6.22 are Y2K compliant.  It is my belief that
++ *    upward through 1.6.23 are Y2K compliant.  It is my belief that
+  *    earlier versions were also Y2K compliant.
+  *
+  *    Libpng only has two year fields.  One is a 2-byte unsigned integer
+@@ -313,9 +313,9 @@
+  */
+ 
+ /* Version information for png.h - this should match the version in png.c */
+-#define PNG_LIBPNG_VER_STRING "1.6.22"
++#define PNG_LIBPNG_VER_STRING "1.6.23"
+ #define PNG_HEADER_VERSION_STRING \
+-     " libpng version 1.6.22 - May 26, 2016\n"
++     " libpng version 1.6.23 - June 9, 2016\n"
+ 
+ #define PNG_LIBPNG_VER_SONUM   16
+ #define PNG_LIBPNG_VER_DLLNUM  16
+@@ -323,7 +323,7 @@
+ /* These should match the first 3 components of PNG_LIBPNG_VER_STRING: */
+ #define PNG_LIBPNG_VER_MAJOR   1
+ #define PNG_LIBPNG_VER_MINOR   6
+-#define PNG_LIBPNG_VER_RELEASE 22
++#define PNG_LIBPNG_VER_RELEASE 23
+ 
+ /* This should match the numeric part of the final component of
+  * PNG_LIBPNG_VER_STRING, omitting any leading zero:
+@@ -354,7 +354,7 @@
+  * version 1.0.0 was mis-numbered 100 instead of 10000).  From
+  * version 1.0.1 it's    xxyyzz, where x=major, y=minor, z=release
+  */
+-#define PNG_LIBPNG_VER 10622 /* 1.6.22 */
++#define PNG_LIBPNG_VER 10623 /* 1.6.23 */
+ 
+ /* Library configuration: these options cannot be changed after
+  * the library has been built.
+@@ -464,7 +464,7 @@ extern "C" {
+ /* This triggers a compiler error in png.c, if png.c and png.h
+  * do not agree upon the version number.
+  */
+-typedef char* png_libpng_version_1_6_22;
++typedef char* png_libpng_version_1_6_23;
+ 
+ /* Basic control structions.  Read libpng-manual.txt or libpng.3 for more info.
+  *
+diff --git a/pngconf.h b/pngconf.h
+index 0cabe4b..b0ccc8c 100644
+--- a/pngconf.h
++++ b/pngconf.h
+@@ -1,7 +1,7 @@
+ 
+ /* pngconf.h - machine configurable file for libpng
+  *
+- * libpng version 1.6.22, May 26, 2016
++ * libpng version 1.6.23, June 9, 2016
+  *
+  * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+diff --git a/pngerror.c b/pngerror.c
+index 6904bea..3fc8092 100644
+--- a/pngerror.c
++++ b/pngerror.c
+@@ -44,7 +44,7 @@ png_error,(png_const_structrp png_ptr, png_const_charp error_message),
+    if (png_ptr != NULL)
+    {
+       if ((png_ptr->flags &
+-         (PNG_FLAG_STRIP_ERROR_NUMBERS|PNG_FLAG_STRIP_ERROR_TEXT)) != 0
++         (PNG_FLAG_STRIP_ERROR_NUMBERS|PNG_FLAG_STRIP_ERROR_TEXT)) != 0)
+       {
+          if (*error_message == PNG_LITERAL_SHARP)
+          {
+diff --git a/pngpread.c b/pngpread.c
+index 0dc1e53..ca300e7 100644
+--- a/pngpread.c
++++ b/pngpread.c
+@@ -1,8 +1,8 @@
+ 
+ /* pngpread.c - read a png file in push mode
+  *
+- * Last changed in libpng 1.6.18 [July 23, 2015]
+- * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
++ * Last changed in libpng 1.6.23 [June 9, 2016]
++ * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+  *
+@@ -210,12 +210,14 @@ png_push_read_chunk(png_structrp png_ptr, png_inforp info_ptr)
+           (png_ptr->mode & PNG_HAVE_PLTE) == 0)
+          png_error(png_ptr, "Missing PLTE before IDAT");
+ 
+-      png_ptr->mode |= PNG_HAVE_IDAT;
+       png_ptr->process_mode = PNG_READ_IDAT_MODE;
+ 
+-      if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
+-         if (png_ptr->push_length == 0)
+-            return;
++      if ((png_ptr->mode & PNG_HAVE_IDAT) != 0)
++         if ((png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) == 0)
++            if (png_ptr->push_length == 0)
++               return;
++
++      png_ptr->mode |= PNG_HAVE_IDAT;
+ 
+       if ((png_ptr->mode & PNG_AFTER_IDAT) != 0)
+          png_benign_error(png_ptr, "Too many IDATs found");
+@@ -499,7 +501,10 @@ png_push_save_buffer(png_structrp png_ptr)
+          png_error(png_ptr, "Insufficient memory for save_buffer");
+       }
+ 
+-      memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
++      if (old_buffer)
++         memcpy(png_ptr->save_buffer, old_buffer, png_ptr->save_buffer_size);
++      else if (png_ptr->save_buffer_size)
++         png_error(png_ptr, "save_buffer error");
+       png_free(png_ptr, old_buffer);
+       png_ptr->save_buffer_max = new_max;
+    }
+diff --git a/pngpriv.h b/pngpriv.h
+index 718408a..9338df3 100644
+--- a/pngpriv.h
++++ b/pngpriv.h
+@@ -1915,8 +1915,6 @@ PNG_INTERNAL_FUNCTION(void, PNG_FILTER_OPTIMIZATIONS, (png_structp png_ptr,
+     */
+ PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_neon,
+    (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+-PNG_INTERNAL_FUNCTION(void, png_init_filter_functions_sse2,
+-   (png_structp png_ptr, unsigned int bpp), PNG_EMPTY);
+ #endif
+ 
+ PNG_INTERNAL_FUNCTION(png_uint_32, png_check_keyword, (png_structrp png_ptr,
+diff --git a/pngread.c b/pngread.c
+index 64114ef..0ff6238 100644
+--- a/pngread.c
++++ b/pngread.c
+@@ -1,8 +1,8 @@
+ 
+ /* pngread.c - read a PNG file
+  *
+- * Last changed in libpng 1.6.17 [March 26, 2015]
+- * Copyright (c) 1998-2002,2004,2006-2015 Glenn Randers-Pehrson
++ * Last changed in libpng 1.6.23 [June 9, 2016]
++ * Copyright (c) 1998-2002,2004,2006-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+  *
+@@ -127,7 +127,10 @@ png_read_info(png_structrp png_ptr, png_inforp info_ptr)
+       }
+ 
+       else if ((png_ptr->mode & PNG_HAVE_IDAT) != 0)
++      {
++         png_ptr->mode |= PNG_HAVE_CHUNK_AFTER_IDAT;
+          png_ptr->mode |= PNG_AFTER_IDAT;
++      }
+ 
+       /* This should be a binary subdivision search or a hash for
+        * matching the chunk name rather than a linear search.
+@@ -785,6 +788,9 @@ png_read_end(png_structrp png_ptr, png_inforp info_ptr)
+       png_uint_32 length = png_read_chunk_header(png_ptr);
+       png_uint_32 chunk_name = png_ptr->chunk_name;
+ 
++      if (chunk_name != png_IDAT)
++         png_ptr->mode |= PNG_HAVE_CHUNK_AFTER_IDAT;
++
+       if (chunk_name == png_IEND)
+          png_handle_IEND(png_ptr, info_ptr, length);
+ 
+@@ -799,9 +805,9 @@ png_read_end(png_structrp png_ptr, png_inforp info_ptr)
+       {
+          if (chunk_name == png_IDAT)
+          {
+-            if ((length > 0) ||
+-                (png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) != 0)
+-               png_benign_error(png_ptr, "Too many IDATs found");
++            if ((length > 0 && !(png_ptr->flags & PNG_FLAG_ZSTREAM_ENDED))
++                || (png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) != 0)
++               png_benign_error(png_ptr, ".Too many IDATs found");
+          }
+          png_handle_unknown(png_ptr, info_ptr, length, keep);
+          if (chunk_name == png_PLTE)
+@@ -812,10 +818,14 @@ png_read_end(png_structrp png_ptr, png_inforp info_ptr)
+       else if (chunk_name == png_IDAT)
+       {
+          /* Zero length IDATs are legal after the last IDAT has been
+-          * read, but not after other chunks have been read.
++          * read, but not after other chunks have been read.  1.6 does not
++          * always read all the deflate data; specifically it cannot be relied
++          * upon to read the Adler32 at the end.  If it doesn't ignore IDAT
++          * chunks which are longer than zero as well:
+           */
+-         if ((length > 0) || (png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) != 0)
+-            png_benign_error(png_ptr, "Too many IDATs found");
++         if ((length > 0 && !(png_ptr->flags & PNG_FLAG_ZSTREAM_ENDED))
++             || (png_ptr->mode & PNG_HAVE_CHUNK_AFTER_IDAT) != 0)
++            png_benign_error(png_ptr, "..Too many IDATs found");
+ 
+          png_crc_finish(png_ptr, length);
+       }
+diff --git a/pngset.c b/pngset.c
+index 2103fe6..43456b7 100644
+--- a/pngset.c
++++ b/pngset.c
+@@ -1,8 +1,8 @@
+ 
+ /* pngset.c - storage of image information into info struct
+  *
+- * Last changed in libpng 1.6.21 [(PENDING RELEASE)]
+- * Copyright (c) 1998-2015 Glenn Randers-Pehrson
++ * Last changed in libpng 1.6.23 [June 9, 2016]
++ * Copyright (c) 1998-2016 Glenn Randers-Pehrson
+  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
+  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
+  *
+@@ -952,12 +952,14 @@ png_set_tRNS(png_structrp png_ptr, png_inforp info_ptr,
+ 
+        png_free_data(png_ptr, info_ptr, PNG_FREE_TRNS, 0);
+ 
+-       /* Changed from num_trans to PNG_MAX_PALETTE_LENGTH in version 1.2.1 */
+-       png_ptr->trans_alpha = info_ptr->trans_alpha = png_voidcast(png_bytep,
+-         png_malloc(png_ptr, PNG_MAX_PALETTE_LENGTH));
+-
+        if (num_trans > 0 && num_trans <= PNG_MAX_PALETTE_LENGTH)
++       {
++         /* Changed from num_trans to PNG_MAX_PALETTE_LENGTH in version 1.2.1 */
++          info_ptr->trans_alpha = png_voidcast(png_bytep,
++             png_malloc(png_ptr, PNG_MAX_PALETTE_LENGTH));
+           memcpy(info_ptr->trans_alpha, trans_alpha, (png_size_t)num_trans);
++       }
++       png_ptr->trans_alpha = info_ptr->trans_alpha;
+    }
+ 
+    if (trans_color != NULL)
+diff --git a/pngtest.c b/pngtest.c
+index eb431f9..37e2209 100644
+--- a/pngtest.c
++++ b/pngtest.c
+@@ -2079,4 +2079,4 @@ main(void)
+ #endif
+ 
+ /* Generate a compiler error if there is an old png.h in the search path. */
+-typedef png_libpng_version_1_6_22 Your_png_h_is_not_version_1_6_22;
++typedef png_libpng_version_1_6_23 Your_png_h_is_not_version_1_6_23;
+diff --git a/projects/vstudio/README.txt b/projects/vstudio/README.txt
+index c8be615..e275173 100644
+--- a/projects/vstudio/README.txt
++++ b/projects/vstudio/README.txt
+@@ -1,7 +1,7 @@
+ 
+ VisualStudio instructions
+ 
+-libpng version 1.6.22 - May 26, 2016
++libpng version 1.6.23 - June 9, 2016
+ 
+ Copyright (c) 2010,2013,2015 Glenn Randers-Pehrson
+ 
+diff --git a/projects/vstudio/zlib.props b/projects/vstudio/zlib.props
+index 47882dd..f64a227 100644
+--- a/projects/vstudio/zlib.props
++++ b/projects/vstudio/zlib.props
+@@ -2,7 +2,7 @@
+ <!--
+  * zlib.props - location of zlib source
+  *
+- * libpng version 1.6.22 - May 26, 2016
++ * libpng version 1.6.23 - June 9, 2016
+  *
+  * Copyright (c) 1998-2011 Glenn Randers-Pehrson
+  *
+diff --git a/scripts/README.txt b/scripts/README.txt
+index 0427d6c..7f83431 100644
+--- a/scripts/README.txt
++++ b/scripts/README.txt
+@@ -1,9 +1,9 @@
+ 
+-Makefiles for  libpng version 1.6.22 - May 26, 2016
++Makefiles for  libpng version 1.6.23 - June 9, 2016
+ 
+ pnglibconf.h.prebuilt       =>  Stores configuration settings
+  makefile.linux    =>  Linux/ELF makefile
+-                       (gcc, creates libpng16.so.16.1.6.22)
++                       (gcc, creates libpng16.so.16.1.6.23)
+  makefile.gcc      =>  Generic makefile (gcc, creates static libpng.a)
+  makefile.knr      =>  Archaic UNIX Makefile that converts files with
+                        ansi2knr (Requires ansi2knr.c from
+@@ -33,12 +33,12 @@ pnglibconf.h.prebuilt       =>  Stores configuration settings
+  makefile.os2      =>  OS/2 Makefile (gcc and emx, requires libpng.def)
+  makefile.sco      =>  For SCO OSr5  ELF and Unixware 7 with Native cc
+  makefile.sggcc    =>  Silicon Graphics (gcc,
+-                       creates libpng16.so.16.1.6.22)
++                       creates libpng16.so.16.1.6.23)
+  makefile.sgi      =>  Silicon Graphics IRIX makefile (cc, creates static lib)
+  makefile.solaris  =>  Solaris 2.X makefile (gcc,
+-                       creates libpng16.so.16.1.6.22)
++                       creates libpng16.so.16.1.6.23)
+  makefile.so9      =>  Solaris 9 makefile (gcc,
+-                       creates libpng16.so.16.1.6.22)
++                       creates libpng16.so.16.1.6.23)
+  makefile.std      =>  Generic UNIX makefile (cc, creates static libpng.a)
+  makefile.sunos    =>  Sun makefile
+  makefile.32sunu   =>  Sun Ultra 32-bit makefile
+diff --git a/scripts/def.c b/scripts/def.c
+index 3914073..caf174d 100644
+--- a/scripts/def.c
++++ b/scripts/def.c
+@@ -21,7 +21,7 @@ PNG_DFN "OS2 DESCRIPTION "PNG image compression library""
+ PNG_DFN "OS2 CODE PRELOAD MOVEABLE DISCARDABLE"
+ PNG_DFN ""
+ PNG_DFN "EXPORTS"
+-PNG_DFN ";Version 1.6.22"
++PNG_DFN ";Version 1.6.23"
+ 
+ #define PNG_EXPORTA(ordinal, type, name, args, attributes)\
+         PNG_DFN "@" SYMBOL_PREFIX "@@" name "@"
+diff --git a/scripts/libpng-config-head.in b/scripts/libpng-config-head.in
+index 50542b3..df11744 100644
+--- a/scripts/libpng-config-head.in
++++ b/scripts/libpng-config-head.in
+@@ -11,7 +11,7 @@
+ 
+ # Modeled after libxml-config.
+ 
+-version=1.6.22
++version=1.6.23
+ prefix=""
+ libdir=""
+ libs=""
+diff --git a/scripts/libpng.pc.in b/scripts/libpng.pc.in
+index 9639b11..e5e0eac 100644
+--- a/scripts/libpng.pc.in
++++ b/scripts/libpng.pc.in
+@@ -5,6 +5,6 @@ includedir=@includedir@/libpng16
+ 
+ Name: libpng
+ Description: Loads and saves PNG files
+-Version: 1.6.22
++Version: 1.6.23
+ Libs: -L${libdir} -lpng16
+ Cflags: -I${includedir}
+diff --git a/scripts/makefile.cegcc b/scripts/makefile.cegcc
+index ea4f0ad..bcd661c 100644
+--- a/scripts/makefile.cegcc
++++ b/scripts/makefile.cegcc
+@@ -23,7 +23,7 @@
+ 
+ VERMAJ = 1
+ VERMIN = 6
+-VERMIC = 22
++VERMIC = 23
+ VER = $(VERMAJ).$(VERMIN).$(VERMIC)
+ NAME = libpng
+ PACKAGE = $(NAME)-$(VER)
+diff --git a/scripts/makefile.linux b/scripts/makefile.linux
+index 782a255..cfa236b 100644
+--- a/scripts/makefile.linux
++++ b/scripts/makefile.linux
+@@ -10,7 +10,7 @@
+ # Library name:
+ LIBNAME = libpng16
+ PNGMAJ = 16
+-RELEASE = 22
++RELEASE = 23
+ 
+ # Shared library names:
+ LIBSO=$(LIBNAME).so
+diff --git a/scripts/makefile.msys b/scripts/makefile.msys
+index 5a1a988..cf8a29d 100644
+--- a/scripts/makefile.msys
++++ b/scripts/makefile.msys
+@@ -18,7 +18,7 @@ exec_prefix=$(prefix)
+ # Library name:
+ LIBNAME = libpng16
+ PNGMAJ = 16
+-RELEASE = 22
++RELEASE = 23
+ 
+ # Shared library names:
+ LIBSO=$(LIBNAME).dll
+diff --git a/scripts/makefile.ne12bsd b/scripts/makefile.ne12bsd
+index 631b72a..6106021 100644
+--- a/scripts/makefile.ne12bsd
++++ b/scripts/makefile.ne12bsd
+@@ -17,7 +17,7 @@ INCSDIR=${LOCALBASE}/include/libpng16
+ 
+ LIB=	png16
+ SHLIB_MAJOR=	0
+-SHLIB_MINOR=	1.6.22
++SHLIB_MINOR=	1.6.23
+ SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
+ 	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
+ 	pngwtran.c pngmem.c pngerror.c pngpread.c
+diff --git a/scripts/makefile.netbsd b/scripts/makefile.netbsd
+index 8e4b59f..a46644a 100644
+--- a/scripts/makefile.netbsd
++++ b/scripts/makefile.netbsd
+@@ -17,7 +17,7 @@ INCSDIR=${LOCALBASE}/include
+ 
+ LIB=	png
+ SHLIB_MAJOR=	16
+-SHLIB_MINOR=	1.6.22
++SHLIB_MINOR=	1.6.23
+ SRCS=	png.c pngset.c pngget.c pngrutil.c pngtrans.c pngwutil.c \
+ 	pngread.c pngrio.c pngwio.c pngwrite.c pngrtran.c \
+ 	pngwtran.c pngmem.c pngerror.c pngpread.c
+diff --git a/scripts/makefile.openbsd b/scripts/makefile.openbsd
+index fd7ebff..22ca136 100644
+--- a/scripts/makefile.openbsd
++++ b/scripts/makefile.openbsd
+@@ -11,7 +11,7 @@ LIBDIR=	${PREFIX}/lib
+ MANDIR= ${PREFIX}/man/cat
+ 
+ SHLIB_MAJOR=	16
+-SHLIB_MINOR=	1.6.22
++SHLIB_MINOR=	1.6.23
+ 
+ LIB=	png
+ SRCS=	png.c pngerror.c pngget.c pngmem.c pngpread.c \
+diff --git a/scripts/pnglibconf.h.prebuilt b/scripts/pnglibconf.h.prebuilt
+index d0db96b..3e70aa1 100644
+--- a/scripts/pnglibconf.h.prebuilt
++++ b/scripts/pnglibconf.h.prebuilt
+@@ -1,8 +1,8 @@
+-/* libpng 1.6.22 STANDARD API DEFINITION */
++/* libpng 1.6.23 STANDARD API DEFINITION */
+ 
+ /* pnglibconf.h - library build configuration */
+ 
+-/* Libpng version 1.6.22 - May 26, 2016 */
++/* Libpng version 1.6.23 - June 9, 2016 */
+ 
+ /* Copyright (c) 1998-2015 Glenn Randers-Pehrson */
+ 
+diff --git a/scripts/symbols.def b/scripts/symbols.def
+index 6431a22..35fd39d 100644
+--- a/scripts/symbols.def
++++ b/scripts/symbols.def
+@@ -1,4 +1,4 @@
+-;Version 1.6.22
++;Version 1.6.23
+ ;--------------------------------------------------------------
+ ; LIBPNG symbol list as a Win32 DEF file
+ ; Contains all the symbols that can be exported from libpng
+-- 
+2.10.0
+

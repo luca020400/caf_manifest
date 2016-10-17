@@ -1,0 +1,310 @@
+From f94ac9f88203e9205f4b43a590ae5da2e9be2528 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Mon, 15 Aug 2016 17:00:16 +0200
+Subject: [PATCH 5/8] sqlite: upgrade to SQLite 3.14.1
+
+Downloaded from https://www.sqlite.org/2016/sqlite-amalgamation-3140100.zip
+
+    $ sha256sum sqlite-amalgamation-3140100.zip
+    b7a8bccbe55df471f3f4ba84e789372606025eaccd09b05f80a41591282a2a41  sqlite-amalgamation-3140100.zip
+
+dist/orig contains the stock sqlite3 code, as packaged in the ZIP file above.
+
+dist contains a copy of dist/orig, but with the Android.patch file applied.
+Please see Android.patch for a list of differences between stock and
+Android.
+
+The Android specific patch applied cleanly and was regenerated.
+
+This very minor release contains a performance enhancement to the page-cache "truncate" operation.
+
+More details about the release is avaliable here: http://sqlite.com/releaselog/3_14_1.html
+
+Change-Id: I0a2581dc64a2bb327fdd4bded7539882848c4321
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ README.version      |  4 ++--
+ dist/Android.patch  | 12 ++++++------
+ dist/orig/sqlite3.c | 44 ++++++++++++++++++++++++++++++++------------
+ dist/orig/sqlite3.h |  6 +++---
+ dist/sqlite3.c      | 44 ++++++++++++++++++++++++++++++++------------
+ dist/sqlite3.h      |  6 +++---
+ 6 files changed, 78 insertions(+), 38 deletions(-)
+
+diff --git a/README.version b/README.version
+index 251ce7b..4eac023 100644
+--- a/README.version
++++ b/README.version
+@@ -1,3 +1,3 @@
+-URL: http://sqlite.com/2016/sqlite-amalgamation-3140000.zip
+-Version: 3.14.0
++URL: http://sqlite.com/2016/sqlite-amalgamation-3140100.zip
++Version: 3.14.1
+ BugComponent: 24950
+diff --git a/dist/Android.patch b/dist/Android.patch
+index 05ace1b..d674732 100644
+--- a/dist/Android.patch
++++ b/dist/Android.patch
+@@ -1,6 +1,6 @@
+ diff -r -u -d orig/shell.c ./shell.c
+---- orig/shell.c	2016-08-08 20:55:26.000000000 +0200
+-+++ ./shell.c	2016-08-09 00:27:40.510891503 +0200
++--- orig/shell.c	2016-08-12 02:17:06.000000000 +0200
+++++ ./shell.c	2016-08-15 16:55:13.427468671 +0200
+ @@ -52,6 +52,12 @@
+  #endif
+  #include <ctype.h>
+@@ -38,8 +38,8 @@ diff -r -u -d orig/shell.c ./shell.c
+  }
+  
+ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+---- orig/sqlite3.c	2016-08-08 20:55:26.000000000 +0200
+-+++ ./sqlite3.c	2016-08-09 00:27:40.534891075 +0200
++--- orig/sqlite3.c	2016-08-12 02:17:06.000000000 +0200
+++++ ./sqlite3.c	2016-08-15 16:55:13.463467951 +0200
+ @@ -32976,7 +32976,7 @@
+    SimulateIOError( rc=1 );
+    if( rc!=0 ){
+@@ -76,7 +76,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      }
+    }else if( flags & SQLITE_OPEN_DELETEONCLOSE ){
+      *pMode = 0600;
+-@@ -112875,7 +112875,7 @@
++@@ -112895,7 +112895,7 @@
+    }
+    if( pDb->pSchema->file_format>SQLITE_MAX_FILE_FORMAT ){
+      sqlite3SetString(pzErrMsg, db, "unsupported file format");
+@@ -85,7 +85,7 @@ diff -r -u -d orig/sqlite3.c ./sqlite3.c
+      goto initone_error_out;
+    }
+  
+-@@ -145666,13 +145666,25 @@
++@@ -145686,13 +145686,25 @@
+    ** module with sqlite.
+    */
+    if( SQLITE_OK==rc 
+diff --git a/dist/orig/sqlite3.c b/dist/orig/sqlite3.c
+index 1f085b0..ccddfe6 100644
+--- a/dist/orig/sqlite3.c
++++ b/dist/orig/sqlite3.c
+@@ -1,6 +1,6 @@
+ /******************************************************************************
+ ** This file is an amalgamation of many separate C source files from SQLite
+-** version 3.14.0.  By combining all the individual C code files into this 
++** version 3.14.1.  By combining all the individual C code files into this 
+ ** single large file, the entire code can be compiled as a single translation
+ ** unit.  This allows many compilers to do optimizations that would not be
+ ** possible if the files were compiled separately.  Performance improvements
+@@ -380,9 +380,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.14.0"
+-#define SQLITE_VERSION_NUMBER 3014000
+-#define SQLITE_SOURCE_ID      "2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de"
++#define SQLITE_VERSION        "3.14.1"
++#define SQLITE_VERSION_NUMBER 3014001
++#define SQLITE_SOURCE_ID      "2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -44998,12 +44998,30 @@ static void pcache1TruncateUnsafe(
+   PCache1 *pCache,             /* The cache to truncate */
+   unsigned int iLimit          /* Drop pages with this pgno or larger */
+ ){
+-  TESTONLY( unsigned int nPage = 0; )  /* To assert pCache->nPage is correct */
+-  unsigned int h;
++  TESTONLY( int nPage = 0; )  /* To assert pCache->nPage is correct */
++  unsigned int h, iStop;
+   assert( sqlite3_mutex_held(pCache->pGroup->mutex) );
+-  for(h=0; h<pCache->nHash; h++){
+-    PgHdr1 **pp = &pCache->apHash[h]; 
++  assert( pCache->iMaxKey >= iLimit );
++  assert( pCache->nHash > 0 );
++  if( pCache->iMaxKey - iLimit < pCache->nHash ){
++    /* If we are just shaving the last few pages off the end of the
++    ** cache, then there is no point in scanning the entire hash table.
++    ** Only scan those hash slots that might contain pages that need to
++    ** be removed. */
++    h = iLimit % pCache->nHash;
++    iStop = pCache->iMaxKey % pCache->nHash;
++    TESTONLY( nPage = -10; )  /* Disable the pCache->nPage validity check */
++  }else{
++    /* This is the general case where many pages are being removed.
++    ** It is necessary to scan the entire hash table */
++    h = pCache->nHash/2;
++    iStop = h - 1;
++  }
++  for(;;){
++    PgHdr1 **pp;
+     PgHdr1 *pPage;
++    assert( h<pCache->nHash );
++    pp = &pCache->apHash[h]; 
+     while( (pPage = *pp)!=0 ){
+       if( pPage->iKey>=iLimit ){
+         pCache->nPage--;
+@@ -45012,11 +45030,13 @@ static void pcache1TruncateUnsafe(
+         pcache1FreePage(pPage);
+       }else{
+         pp = &pPage->pNext;
+-        TESTONLY( nPage++; )
++        TESTONLY( if( nPage>=0 ) nPage++; )
+       }
+     }
++    if( h==iStop ) break;
++    h = (h+1) % pCache->nHash;
+   }
+-  assert( pCache->nPage==nPage );
++  assert( nPage<0 || pCache->nPage==(unsigned)nPage );
+ }
+ 
+ /******************************************************************************/
+@@ -45493,7 +45513,7 @@ static void pcache1Destroy(sqlite3_pcache *p){
+   PGroup *pGroup = pCache->pGroup;
+   assert( pCache->bPurgeable || (pCache->nMax==0 && pCache->nMin==0) );
+   pcache1EnterMutex(pGroup);
+-  pcache1TruncateUnsafe(pCache, 0);
++  if( pCache->nPage ) pcache1TruncateUnsafe(pCache, 0);
+   assert( pGroup->nMaxPage >= pCache->nMax );
+   pGroup->nMaxPage -= pCache->nMax;
+   assert( pGroup->nMinPage >= pCache->nMin );
+@@ -194000,7 +194020,7 @@ static void fts5SourceIdFunc(
+ ){
+   assert( nArg==0 );
+   UNUSED_PARAM2(nArg, apUnused);
+-  sqlite3_result_text(pCtx, "fts5: 2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de", -1, SQLITE_TRANSIENT);
++  sqlite3_result_text(pCtx, "fts5: 2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b", -1, SQLITE_TRANSIENT);
+ }
+ 
+ static int fts5Init(sqlite3 *db){
+diff --git a/dist/orig/sqlite3.h b/dist/orig/sqlite3.h
+index 4e2df5e..3b6b07c 100644
+--- a/dist/orig/sqlite3.h
++++ b/dist/orig/sqlite3.h
+@@ -120,9 +120,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.14.0"
+-#define SQLITE_VERSION_NUMBER 3014000
+-#define SQLITE_SOURCE_ID      "2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de"
++#define SQLITE_VERSION        "3.14.1"
++#define SQLITE_VERSION_NUMBER 3014001
++#define SQLITE_SOURCE_ID      "2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+diff --git a/dist/sqlite3.c b/dist/sqlite3.c
+index 5f9575b..34e723d 100644
+--- a/dist/sqlite3.c
++++ b/dist/sqlite3.c
+@@ -1,6 +1,6 @@
+ /******************************************************************************
+ ** This file is an amalgamation of many separate C source files from SQLite
+-** version 3.14.0.  By combining all the individual C code files into this 
++** version 3.14.1.  By combining all the individual C code files into this 
+ ** single large file, the entire code can be compiled as a single translation
+ ** unit.  This allows many compilers to do optimizations that would not be
+ ** possible if the files were compiled separately.  Performance improvements
+@@ -380,9 +380,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.14.0"
+-#define SQLITE_VERSION_NUMBER 3014000
+-#define SQLITE_SOURCE_ID      "2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de"
++#define SQLITE_VERSION        "3.14.1"
++#define SQLITE_VERSION_NUMBER 3014001
++#define SQLITE_SOURCE_ID      "2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+@@ -44998,12 +44998,30 @@ static void pcache1TruncateUnsafe(
+   PCache1 *pCache,             /* The cache to truncate */
+   unsigned int iLimit          /* Drop pages with this pgno or larger */
+ ){
+-  TESTONLY( unsigned int nPage = 0; )  /* To assert pCache->nPage is correct */
+-  unsigned int h;
++  TESTONLY( int nPage = 0; )  /* To assert pCache->nPage is correct */
++  unsigned int h, iStop;
+   assert( sqlite3_mutex_held(pCache->pGroup->mutex) );
+-  for(h=0; h<pCache->nHash; h++){
+-    PgHdr1 **pp = &pCache->apHash[h]; 
++  assert( pCache->iMaxKey >= iLimit );
++  assert( pCache->nHash > 0 );
++  if( pCache->iMaxKey - iLimit < pCache->nHash ){
++    /* If we are just shaving the last few pages off the end of the
++    ** cache, then there is no point in scanning the entire hash table.
++    ** Only scan those hash slots that might contain pages that need to
++    ** be removed. */
++    h = iLimit % pCache->nHash;
++    iStop = pCache->iMaxKey % pCache->nHash;
++    TESTONLY( nPage = -10; )  /* Disable the pCache->nPage validity check */
++  }else{
++    /* This is the general case where many pages are being removed.
++    ** It is necessary to scan the entire hash table */
++    h = pCache->nHash/2;
++    iStop = h - 1;
++  }
++  for(;;){
++    PgHdr1 **pp;
+     PgHdr1 *pPage;
++    assert( h<pCache->nHash );
++    pp = &pCache->apHash[h]; 
+     while( (pPage = *pp)!=0 ){
+       if( pPage->iKey>=iLimit ){
+         pCache->nPage--;
+@@ -45012,11 +45030,13 @@ static void pcache1TruncateUnsafe(
+         pcache1FreePage(pPage);
+       }else{
+         pp = &pPage->pNext;
+-        TESTONLY( nPage++; )
++        TESTONLY( if( nPage>=0 ) nPage++; )
+       }
+     }
++    if( h==iStop ) break;
++    h = (h+1) % pCache->nHash;
+   }
+-  assert( pCache->nPage==nPage );
++  assert( nPage<0 || pCache->nPage==(unsigned)nPage );
+ }
+ 
+ /******************************************************************************/
+@@ -45493,7 +45513,7 @@ static void pcache1Destroy(sqlite3_pcache *p){
+   PGroup *pGroup = pCache->pGroup;
+   assert( pCache->bPurgeable || (pCache->nMax==0 && pCache->nMin==0) );
+   pcache1EnterMutex(pGroup);
+-  pcache1TruncateUnsafe(pCache, 0);
++  if( pCache->nPage ) pcache1TruncateUnsafe(pCache, 0);
+   assert( pGroup->nMaxPage >= pCache->nMax );
+   pGroup->nMaxPage -= pCache->nMax;
+   assert( pGroup->nMinPage >= pCache->nMin );
+@@ -194012,7 +194032,7 @@ static void fts5SourceIdFunc(
+ ){
+   assert( nArg==0 );
+   UNUSED_PARAM2(nArg, apUnused);
+-  sqlite3_result_text(pCtx, "fts5: 2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de", -1, SQLITE_TRANSIENT);
++  sqlite3_result_text(pCtx, "fts5: 2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b", -1, SQLITE_TRANSIENT);
+ }
+ 
+ static int fts5Init(sqlite3 *db){
+diff --git a/dist/sqlite3.h b/dist/sqlite3.h
+index 4e2df5e..3b6b07c 100644
+--- a/dist/sqlite3.h
++++ b/dist/sqlite3.h
+@@ -120,9 +120,9 @@ extern "C" {
+ ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
+ ** [sqlite_version()] and [sqlite_source_id()].
+ */
+-#define SQLITE_VERSION        "3.14.0"
+-#define SQLITE_VERSION_NUMBER 3014000
+-#define SQLITE_SOURCE_ID      "2016-08-08 13:40:27 d5e98057028abcf7217d0d2b2e29bbbcdf09d6de"
++#define SQLITE_VERSION        "3.14.1"
++#define SQLITE_VERSION_NUMBER 3014001
++#define SQLITE_SOURCE_ID      "2016-08-11 18:53:32 a12d8059770df4bca59e321c266410344242bf7b"
+ 
+ /*
+ ** CAPI3REF: Run-Time Library Version Numbers
+-- 
+2.10.0
+
