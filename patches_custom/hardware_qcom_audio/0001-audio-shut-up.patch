@@ -1,7 +1,7 @@
-From 63c6875bbb79726fd46ef7f91361191901274c6d Mon Sep 17 00:00:00 2001
+From 81d1ac929548709993a82e033440e3807721d149 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Fri, 2 Sep 2016 22:57:30 +0200
-Subject: [PATCH 2/2] audio: shut up
+Subject: [PATCH] audio: shut up
 
 Change-Id: I44722214b599b00eb80c49915dddaea0d31cb7f3
 ---
@@ -75,5 +75,5 @@ index 71ea27c..59c885a 100644
                  ret = pcm_mmap_write(out->pcm, (void *)buffer, bytes);
              else
 -- 
-2.9.3
+2.10.0
 
