@@ -1,0 +1,44 @@
+From d43fee60ea47ab5beb56865a5ba29deb7ca10cb2 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Fri, 19 Aug 2016 22:57:27 +0200
+Subject: [PATCH 2/3] jemalloc: apply recommended optimizations
+
+The Jemalloc project suggests using -O3 and -funroll-loops for optimization.
+Let's enable these flags by default in order to improve the performance.
+
+Change-Id: Ibb8305be459db2e670e335ab6eac333855654379
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ Android.bp | 2 ++
+ Android.mk | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/Android.bp b/Android.bp
+index 3d55e6f..6af9f07 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -15,6 +15,8 @@
+ //
+ 
+ common_cflags = [
++    "-O3",
++    "-funroll-loops",
+     "-std=gnu99",
+     "-D_REENTRANT",
+     "-fvisibility=hidden",
+diff --git a/Android.mk b/Android.mk
+index b5815fc..52b9b89 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -17,6 +17,8 @@
+ LOCAL_PATH := $(call my-dir)
+ 
+ jemalloc_common_cflags := \
++	-O3 \
++	-funroll-loops \
+ 	-std=gnu99 \
+ 	-D_REENTRANT \
+ 	-fvisibility=hidden \
+-- 
+2.10.0
+
