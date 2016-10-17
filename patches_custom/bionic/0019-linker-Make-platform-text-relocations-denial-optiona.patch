@@ -1,0 +1,57 @@
+From 74750df9208a09719a7815fb6dd21b28432ee71a Mon Sep 17 00:00:00 2001
+From: Adrian DC <radian.dc@gmail.com>
+Date: Sat, 27 Aug 2016 15:09:36 +0200
+Subject: [PATCH 19/19] linker: Make platform text relocations denial optional
+
+ * Use the TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS := true
+    configuration to allow a device to use legacy proprietary
+    libraries like camera on non-user build variants
+
+ * Partial revert "Remove textrels support for platform libs"
+    commit 8068786ae67835291521e52f39c695e40f3ad20d.
+
+Change-Id: I994ab1a600a0b237b496ceebe2dd54febc28a6bd
+---
+ linker/Android.mk | 8 ++++++++
+ linker/linker.cpp | 5 +++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/linker/Android.mk b/linker/Android.mk
+index 4a4ca5c..7221d12 100644
+--- a/linker/Android.mk
++++ b/linker/Android.mk
+@@ -54,6 +54,14 @@ ifeq ($(TARGET_IS_64_BIT),true)
+ LOCAL_CPPFLAGS += -DTARGET_IS_64_BIT
+ endif
+ 
++ifeq ($(TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS),true)
++ifeq ($(user_variant),user)
++$(error Do not enable text relocations on user builds)
++else
++LOCAL_CPPFLAGS += -DTARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS
++endif
++endif
++
+ # We need to access Bionic private headers in the linker.
+ LOCAL_CFLAGS += -I$(LOCAL_PATH)/../libc/
+ 
+diff --git a/linker/linker.cpp b/linker/linker.cpp
+index c32ce04..d17c1bb 100644
+--- a/linker/linker.cpp
++++ b/linker/linker.cpp
+@@ -3988,7 +3988,12 @@ bool soinfo::link_image(const soinfo_list_t& global_group, const soinfo_list_t&
+ #if !defined(__LP64__)
+   if (has_text_relocations) {
+     // Fail if app is targeting sdk version > 22
++#if defined(TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS)
++    if (get_application_target_sdk_version() != __ANDROID_API__
++        && get_application_target_sdk_version() > 22) {
++#else
+     if (get_application_target_sdk_version() > 22) {
++#endif
+       PRINT("%s: has text relocations", get_realpath());
+       DL_ERR("%s: has text relocations", get_realpath());
+       return false;
+-- 
+2.10.0
+

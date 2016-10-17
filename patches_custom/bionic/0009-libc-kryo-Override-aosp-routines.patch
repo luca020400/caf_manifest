@@ -1,27 +1,28 @@
-From 37d3036799871ba6e60230e37ee6c6cc1d587541 Mon Sep 17 00:00:00 2001
+From c28ef01dd501a150306f024be656ad6ca6e61f5d Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sun, 4 Sep 2016 12:23:07 +0200
-Subject: [PATCH 4/5] libc: kryo: Override aosp routines
+Subject: [PATCH 09/19] libc: kryo: Override aosp routines
 
 Change-Id: Ic7551bf1261a6bcfaf4e78bc88c13d86ee5d529c
 ---
- libc/arch-arm64/arm64.mk     |  3 ---
+ libc/arch-arm64/arm64.mk     |  4 +---
  libc/arch-arm64/kryo/kryo.mk | 15 +++------------
- 2 files changed, 3 insertions(+), 15 deletions(-)
+ 2 files changed, 4 insertions(+), 15 deletions(-)
 
 diff --git a/libc/arch-arm64/arm64.mk b/libc/arch-arm64/arm64.mk
-index 589fc3b..35401d3 100644
+index 589fc3b..9a76072 100644
 --- a/libc/arch-arm64/arm64.mk
 +++ b/libc/arch-arm64/arm64.mk
-@@ -3,7 +3,6 @@
+@@ -3,7 +3,7 @@
  #
  # Generic arm64 optimizations, may be overriden by CPU variants.
  #
 -ifeq ($(TARGET_CPU_VARIANT),generic)
++
  libc_bionic_src_files_arm64 += \
      arch-arm64/generic/bionic/memchr.S \
      arch-arm64/generic/bionic/memcmp.S \
-@@ -19,8 +18,6 @@ libc_bionic_src_files_arm64 += \
+@@ -19,8 +19,6 @@ libc_bionic_src_files_arm64 += \
      arch-arm64/generic/bionic/strnlen.S \
      arch-arm64/generic/bionic/wmemmove.S \
  
@@ -53,5 +54,5 @@ index b5b714e..7f3fe8c 100644
 +libc_bionic_src_files_exclude_arm64 += \
 +    arch-arm64/generic/bionic/memcpy.S \
 -- 
-2.9.3
+2.10.0
 

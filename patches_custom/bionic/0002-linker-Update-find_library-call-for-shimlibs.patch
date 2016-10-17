@@ -1,7 +1,7 @@
-From 3926d52ded0fb91d714ec01a36c3633eb47b460a Mon Sep 17 00:00:00 2001
+From a9366be1c509cca6cbdb2a9709d4e0bab6bf7d4a Mon Sep 17 00:00:00 2001
 From: Chirayu Desai <chirayudesai1@gmail.com>
 Date: Thu, 25 Aug 2016 19:02:41 +0530
-Subject: [PATCH 2/5] linker: Update find_library call for shimlibs
+Subject: [PATCH 02/19] linker: Update find_library call for shimlibs
 
 commits 0cdef7e7f3c6837b56a969120d9098463d1df8d8
 "Respect caller DT_RUNPATH in dlopen()."
@@ -40,5 +40,5 @@ index 2c2f174..7873ac1 100644
        INFO("Using shim lib \"%s\"\n", sep+1);
        action(child);
 -- 
-2.9.3
+2.10.0
 

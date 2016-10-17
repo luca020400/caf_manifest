@@ -1,7 +1,7 @@
-From e31e41dc7ad0e1c5a82a72f63387be65851cf0f5 Mon Sep 17 00:00:00 2001
+From c328557e06c0f67111a9975e89659f3dae36d373 Mon Sep 17 00:00:00 2001
 From: Chippa-a <vusal1372@gmail.com>
 Date: Sat, 27 Aug 2016 14:56:30 +0200
-Subject: [PATCH 3/5] linker: Update LD_SHIM_LIBS parser function
+Subject: [PATCH 03/19] linker: Update LD_SHIM_LIBS parser function
 
  * Upgrade the code using the same changes as
     42d5fcb9f494eb45de3b6bf759f4a18076e84728
@@ -33,5 +33,5 @@ index 7873ac1..bfe9f33 100644
  }
  
 -- 
-2.9.3
+2.10.0
 

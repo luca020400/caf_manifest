@@ -1,0 +1,34 @@
+From 33e5fc886107cee1ca0decea0f478deeb8711006 Mon Sep 17 00:00:00 2001
+From: Erik Kline <ek@google.com>
+Date: Fri, 4 Mar 2016 17:16:55 +0900
+Subject: [PATCH 06/19] Don't leak sockets if setsockopt() or fchown() fail.
+
+Change-Id: Idcf8c08ff50d21c3a04b7ef80c4044f3f9762f2b
+---
+ libc/dns/net/getaddrinfo.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/libc/dns/net/getaddrinfo.c b/libc/dns/net/getaddrinfo.c
+index 829b679..cc8b8b4 100644
+--- a/libc/dns/net/getaddrinfo.c
++++ b/libc/dns/net/getaddrinfo.c
+@@ -1791,10 +1791,14 @@ _find_src_addr(const struct sockaddr *addr, struct sockaddr *src_addr, unsigned
+ 			return -1;
+ 		}
+ 	}
+-	if (mark != MARK_UNSET && setsockopt(sock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
++	if (mark != MARK_UNSET && setsockopt(sock, SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0) {
++		close(sock);
+ 		return 0;
+-	if (uid > 0 && uid != NET_CONTEXT_INVALID_UID && fchown(sock, uid, (gid_t)-1) < 0)
++	}
++	if (uid > 0 && uid != NET_CONTEXT_INVALID_UID && fchown(sock, uid, (gid_t)-1) < 0) {
++		close(sock);
+ 		return 0;
++	}
+ 	do {
+ 		ret = __connect(sock, addr, len);
+ 	} while (ret == -1 && errno == EINTR);
+-- 
+2.10.0
+

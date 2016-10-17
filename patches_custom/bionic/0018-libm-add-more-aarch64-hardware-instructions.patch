@@ -1,0 +1,306 @@
+From 7b99d4c754a5ec0f181ad74cd52b489820555771 Mon Sep 17 00:00:00 2001
+From: Jake Weinstein <xboxlover360@gmail.com>
+Date: Tue, 15 Mar 2016 00:22:54 -0400
+Subject: [PATCH 18/19] libm: add more aarch64 hardware instructions
+
+* Taken from ARM code contributed to newlib
+
+Change-Id: Ie01353ec9aeb2ee19053062d5d3b768a4f98d96d
+---
+ libm/Android.bp                                  | 21 +++++++++++++---
+ libm/Android.mk                                  | 17 ++++++++++++-
+ libm/arm64/fmax.S                                | 27 ++++++++++++++++++++
+ libm/arm64/fmin.S                                | 27 ++++++++++++++++++++
+ libm/arm64/lround.S                              | 32 ++++++++++++++++++++++++
+ libm/arm64/nearbyint.S                           | 27 ++++++++++++++++++++
+ libm/arm64/round.S                               | 27 ++++++++++++++++++++
+ libm/upstream-freebsd/lib/msun/src/s_nearbyint.c |  2 ++
+ 8 files changed, 176 insertions(+), 4 deletions(-)
+ create mode 100644 libm/arm64/fmax.S
+ create mode 100644 libm/arm64/fmin.S
+ create mode 100644 libm/arm64/lround.S
+ create mode 100644 libm/arm64/nearbyint.S
+ create mode 100644 libm/arm64/round.S
+
+diff --git a/libm/Android.bp b/libm/Android.bp
+index 081a139..029daff 100644
+--- a/libm/Android.bp
++++ b/libm/Android.bp
+@@ -331,10 +331,15 @@ cc_library {
+             srcs: [
+                 "arm64/ceil.S",
+                 "arm64/fenv.c",
+-                "arm64/fma.S",
+                 "arm64/floor.S",
++                "arm64/fma.S",
++                "arm64/fmax.S",
++                "arm64/fmin.S",
+                 "arm64/lrint.S",
++                "arm64/lround.S",
++                "arm64/nearbyint.S"
+                 "arm64/rint.S",
++                "arm64/round.S"
+                 "arm64/sqrt.S",
+                 "arm64/trunc.S",
+             ],
+@@ -343,16 +348,26 @@ cc_library {
+                 "upstream-freebsd/lib/msun/src/e_sqrtf.c",
+                 "upstream-freebsd/lib/msun/src/s_ceil.c",
+                 "upstream-freebsd/lib/msun/src/s_ceilf.c",
+-                "upstream-freebsd/lib/msun/src/s_fma.c",
+-                "upstream-freebsd/lib/msun/src/s_fmaf.c",
+                 "upstream-freebsd/lib/msun/src/s_floor.c",
+                 "upstream-freebsd/lib/msun/src/s_floorf.c",
++                "upstream-freebsd/lib/msun/src/s_fma.c",
++                "upstream-freebsd/lib/msun/src/s_fmaf.c",
++                "upstream-freebsd/lib/msun/src/s_fmax.c",
++                "upstream-freebsd/lib/msun/src/s_fmaxf.c",
++                "upstream-freebsd/lib/msun/src/s_fmin.c",
++                "upstream-freebsd/lib/msun/src/s_finf.c",
+                 "upstream-freebsd/lib/msun/src/s_llrint.c",
+                 "upstream-freebsd/lib/msun/src/s_llrintf.c",
++                "upstream-freebsd/lib/msun/src/s_llround.c",
++                "upstream-freebsd/lib/msun/src/s_llroundf.c",
+                 "upstream-freebsd/lib/msun/src/s_lrint.c",
+                 "upstream-freebsd/lib/msun/src/s_lrintf.c",
++                "upstream-freebsd/lib/msun/src/s_lround.c",
++                "upstream-freebsd/lib/msun/src/s_lroundf.c",
+                 "upstream-freebsd/lib/msun/src/s_rint.c",
+                 "upstream-freebsd/lib/msun/src/s_rintf.c",
++                "upstream-freebsd/lib/msun/src/s_round.c",
++                "upstream-freebsd/lib/msun/src/s_roundf.c",
+                 "upstream-freebsd/lib/msun/src/s_trunc.c",
+                 "upstream-freebsd/lib/msun/src/s_truncf.c",
+             ],
+diff --git a/libm/Android.mk b/libm/Android.mk
+index 6575e1e..8ea9d37 100644
+--- a/libm/Android.mk
++++ b/libm/Android.mk
+@@ -297,10 +297,15 @@ endif
+ LOCAL_SRC_FILES_arm64 += \
+     arm64/ceil.S \
+     arm64/fenv.c \
+-    arm64/fma.S \
+     arm64/floor.S \
++    arm64/fma.S \
++    arm64/fmax.S \
++    arm64/fmin.S \
+     arm64/lrint.S \
++    arm64/lround.S \
++    arm64/nearbyint.S \
+     arm64/rint.S \
++    arm64/round.S \
+     arm64/sqrt.S \
+     arm64/trunc.S \
+ 
+@@ -311,14 +316,24 @@ LOCAL_SRC_FILES_EXCLUDE_arm64 += \
+     upstream-freebsd/lib/msun/src/s_ceilf.c \
+     upstream-freebsd/lib/msun/src/s_fma.c \
+     upstream-freebsd/lib/msun/src/s_fmaf.c \
++    upstream-freebsd/lib/msun/src/s_fmax.c \
++    upstream-freebsd/lib/msun/src/s_fmaxf.c \
++    upstream-freebsd/lib/msun/src/s_fmin.c \
++    upstream-freebsd/lib/msun/src/s_fminf.c \
+     upstream-freebsd/lib/msun/src/s_floor.c \
+     upstream-freebsd/lib/msun/src/s_floorf.c \
+     upstream-freebsd/lib/msun/src/s_llrint.c \
+     upstream-freebsd/lib/msun/src/s_llrintf.c \
++    upstream-freebsd/lib/msun/src/s_llround.c \
++    upstream-freebsd/lib/msun/src/s_llroundf.c \
+     upstream-freebsd/lib/msun/src/s_lrint.c \
+     upstream-freebsd/lib/msun/src/s_lrintf.c \
++    upstream-freebsd/lib/msun/src/s_lround.c \
++    upstream-freebsd/lib/msun/src/s_lroundf.c \
+     upstream-freebsd/lib/msun/src/s_rint.c \
+     upstream-freebsd/lib/msun/src/s_rintf.c \
++    upstream-freebsd/lib/msun/src/s_round.c \
++    upstream-freebsd/lib/msun/src/s_roundf.c \
+     upstream-freebsd/lib/msun/src/s_trunc.c \
+     upstream-freebsd/lib/msun/src/s_truncf.c \
+ 
+diff --git a/libm/arm64/fmax.S b/libm/arm64/fmax.S
+new file mode 100644
+index 0000000..4b4beef
+--- /dev/null
++++ b/libm/arm64/fmax.S
+@@ -0,0 +1,27 @@
++/*
++ * Copyright 2015, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <private/bionic_asm.h>
++
++ENTRY(fmax)
++  fmaxnm d0, d0, d1
++  ret
++END(fmax)
++
++ENTRY(fmaxf)
++  fmaxnm s0, s0, s1
++  ret
++END(fmaxf)
+diff --git a/libm/arm64/fmin.S b/libm/arm64/fmin.S
+new file mode 100644
+index 0000000..8b668e1
+--- /dev/null
++++ b/libm/arm64/fmin.S
+@@ -0,0 +1,27 @@
++/*
++ * Copyright 2015, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <private/bionic_asm.h>
++
++ENTRY(fmin)
++  fminnm d0, d0, d1
++  ret
++END(fmin)
++
++ENTRY(fminf)
++  fminnm s0, s0, s1
++  ret
++END(fminf)
+diff --git a/libm/arm64/lround.S b/libm/arm64/lround.S
+new file mode 100644
+index 0000000..72b5b30
+--- /dev/null
++++ b/libm/arm64/lround.S
+@@ -0,0 +1,32 @@
++/*
++ * Copyright 2015, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <private/bionic_asm.h>
++
++ENTRY(lround)
++  fcvtas x0, d0
++  ret
++END(lround)
++
++ENTRY(lroundf)
++  fcvtas x0, s0
++  ret
++END(lroundf)
++
++// sizeof(long) and sizeof(long long) are the same for aarch64
++ALIAS_SYMBOL(llround, lround);
++
++ALIAS_SYMBOL(llroundf, lroundf);
+diff --git a/libm/arm64/nearbyint.S b/libm/arm64/nearbyint.S
+new file mode 100644
+index 0000000..b59fcd5
+--- /dev/null
++++ b/libm/arm64/nearbyint.S
+@@ -0,0 +1,27 @@
++/*
++ * Copyright 2015, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <private/bionic_asm.h>
++
++ENTRY(nearbyint)
++  frinti d0, d0
++  ret
++END(nearbyint)
++
++ENTRY(nearbyintf)
++  frinti s0, s0
++  ret
++END(nearbyintf)
+diff --git a/libm/arm64/round.S b/libm/arm64/round.S
+new file mode 100644
+index 0000000..f0ae425
+--- /dev/null
++++ b/libm/arm64/round.S
+@@ -0,0 +1,27 @@
++/*
++ * Copyright 2015, The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include <private/bionic_asm.h>
++
++ENTRY(round)
++  frinta d0, d0
++  ret
++END(round)
++
++ENTRY(roundf)
++  frinta s0, s0
++  ret
++END(roundf)
+diff --git a/libm/upstream-freebsd/lib/msun/src/s_nearbyint.c b/libm/upstream-freebsd/lib/msun/src/s_nearbyint.c
+index 063f8d7..760abd1 100644
+--- a/libm/upstream-freebsd/lib/msun/src/s_nearbyint.c
++++ b/libm/upstream-freebsd/lib/msun/src/s_nearbyint.c
+@@ -54,6 +54,8 @@ fn(type x)			\
+ 	return (ret);		\
+ }
+ 
++#ifndef __aarch64__
+ DECL(double, nearbyint, rint)
+ DECL(float, nearbyintf, rintf)
++#endif
+ DECL(long double, nearbyintl, rintl)
+-- 
+2.10.0
+

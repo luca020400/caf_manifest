@@ -1,0 +1,62 @@
+From f215677994890f5376d00cce1bca42e5683b7a6a Mon Sep 17 00:00:00 2001
+From: Jake Weinstein <xboxlover360@gmail.com>
+Date: Fri, 18 Sep 2015 15:02:39 +0000
+Subject: [PATCH 10/19] libc: ARM64: remove bcopy from memset
+
+* Deprecated by ce9ce28e5d760e32ab6c894dfaf7b8dad6de7ff6
+
+* Already removed from Denver memset
+
+Change-Id: I7beda29a799c7fa11f5a239d78626f4da1b581a2
+---
+ libc/arch-arm64/generic/bionic/memset.S | 15 ---------------
+ 1 file changed, 15 deletions(-)
+
+diff --git a/libc/arch-arm64/generic/bionic/memset.S b/libc/arch-arm64/generic/bionic/memset.S
+index 7c204b4..b9c0d50 100644
+--- a/libc/arch-arm64/generic/bionic/memset.S
++++ b/libc/arch-arm64/generic/bionic/memset.S
+@@ -45,11 +45,7 @@
+    values rather than re-reading them each call.  */
+ 
+ #define dstin		x0
+-#ifdef BZERO
+-#define count		x1
+-#else
+ #define count		x2
+-#endif
+ #define val		w1
+ #define tmp1		x3
+ #define tmp1w		w3
+@@ -64,16 +60,9 @@
+ #define dst		x8
+ #define tmp3w		w9
+ 
+-#ifdef BZERO
+-ENTRY(bzero)
+-#else
+ ENTRY(memset)
+-#endif
+ 
+ 	mov	dst, dstin		/* Preserve return value.  */
+-#ifdef BZERO
+-	b	.Lzero_mem
+-#endif
+ 	ands	A_lw, val, #255
+ 	b.eq	.Lzero_mem
+ 	orr	A_lw, A_lw, A_lw, lsl #8
+@@ -233,11 +222,7 @@ ENTRY(memset)
+ 	ands	count, count, zva_bits_x
+ 	b.ne	.Ltail_maybe_long
+ 	ret
+-#ifdef BZERO
+-END(bzero)
+-#else
+ END(memset)
+-#endif
+ 
+ #ifdef MAYBE_VIRT
+ 	.bss
+-- 
+2.10.0
+

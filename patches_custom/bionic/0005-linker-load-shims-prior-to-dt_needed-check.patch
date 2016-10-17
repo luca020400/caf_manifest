@@ -1,0 +1,45 @@
+From fabeeb33781b1adb92bd909c85397e19818e1928 Mon Sep 17 00:00:00 2001
+From: jrior001 <jriordan001@gmail.com>
+Date: Fri, 7 Oct 2016 19:36:51 -0400
+Subject: [PATCH 05/19] linker: load shims prior to dt_needed check
+
+This allows shims to override existing symbols, not just
+inject new symbols.
+
+Change-Id: Ib9216bcc651d8d38999c593babb94d76dc1dbc95
+---
+ linker/linker.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/linker/linker.cpp b/linker/linker.cpp
+index 41304a6..c32ce04 100644
+--- a/linker/linker.cpp
++++ b/linker/linker.cpp
+@@ -1722,22 +1722,22 @@ static const char* fix_dt_needed(const char* dt_needed, const char* sopath __unu
+ 
+ template<typename F>
+ static void for_each_dt_needed(const soinfo* si, F action) {
++  for_each_matching_shim(si->get_realpath(), action);
+   for (const ElfW(Dyn)* d = si->dynamic; d->d_tag != DT_NULL; ++d) {
+     if (d->d_tag == DT_NEEDED) {
+       action(fix_dt_needed(si->get_string(d->d_un.d_val), si->get_realpath()));
+     }
+   }
+-  for_each_matching_shim(si->get_realpath(), action);
+ }
+ 
+ template<typename F>
+ static void for_each_dt_needed(const ElfReader& elf_reader, F action) {
++  for_each_matching_shim(elf_reader.name(), action);
+   for (const ElfW(Dyn)* d = elf_reader.dynamic(); d->d_tag != DT_NULL; ++d) {
+     if (d->d_tag == DT_NEEDED) {
+       action(fix_dt_needed(elf_reader.get_string(d->d_un.d_val), elf_reader.name()));
+     }
+   }
+-  for_each_matching_shim(elf_reader.name(), action);
+ }
+ 
+ static bool load_library(android_namespace_t* ns,
+-- 
+2.10.0
+
