@@ -1,0 +1,26 @@
+From 9f4cc133ec1279500af4331dfbc0418241ee0d92 Mon Sep 17 00:00:00 2001
+From: Sam Mortimer <sam@mortimer.me.uk>
+Date: Mon, 18 Jan 2016 09:58:58 -0800
+Subject: [PATCH 13/18] Fix mounting ext4 adopted storage
+
+Change-Id: I36cb858b96968a949632017874addb278679b3a4
+---
+ PrivateVolume.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/PrivateVolume.cpp b/PrivateVolume.cpp
+index eb4db46..87658b9 100644
+--- a/PrivateVolume.cpp
++++ b/PrivateVolume.cpp
+@@ -113,7 +113,7 @@ status_t PrivateVolume::doMount() {
+             return -EIO;
+         }
+ 
+-        if (ext4::Mount(mDmDevPath, mPath, false, false, true, NULL, true)) {
++        if (ext4::Mount(mDmDevPath, mPath, false, false, true, "", true)) {
+             PLOG(ERROR) << getId() << " failed to mount";
+             return -EIO;
+         }
+-- 
+2.8.2
+

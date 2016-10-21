@@ -1,0 +1,61 @@
+From 37abaa17cefc17df4cf3ed8fe9a70686b288b75b Mon Sep 17 00:00:00 2001
+From: Luca Stefani <luca.stefani.ge1@gmail.com>
+Date: Thu, 25 Aug 2016 20:16:50 +0200
+Subject: [PATCH 17/18] vold: fs: Fix build errors
+
+* Migrate from base to android-base
+* Add missing , in Ext4 Mount function
+
+Change-Id: I875b5763c472aa7da2976ec7c5db7cf28c913876
+---
+ fs/Exfat.cpp | 4 ++--
+ fs/Ext4.h    | 2 +-
+ fs/Ntfs.cpp  | 4 ++--
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/fs/Exfat.cpp b/fs/Exfat.cpp
+index 5e34857..d0b1143 100644
+--- a/fs/Exfat.cpp
++++ b/fs/Exfat.cpp
+@@ -17,8 +17,8 @@
+ #include "Exfat.h"
+ #include "Utils.h"
+ 
+-#include <base/logging.h>
+-#include <base/stringprintf.h>
++#include <android-base/logging.h>
++#include <android-base/stringprintf.h>
+ 
+ #include <vector>
+ #include <string>
+diff --git a/fs/Ext4.h b/fs/Ext4.h
+index 74218a0..7445fe3 100644
+--- a/fs/Ext4.h
++++ b/fs/Ext4.h
+@@ -30,7 +30,7 @@ bool IsSupported();
+ status_t Check(const std::string& source, const std::string& target,
+         bool trusted);
+ status_t Mount(const std::string& source, const std::string& target, bool ro,
+-        bool remount, bool executable, const std::string& opts = ""
++        bool remount, bool executable, const std::string& opts = "",
+         bool trusted = false, bool portable = false);
+ status_t Format(const std::string& source, unsigned long numSectors,
+         const std::string& target);
+diff --git a/fs/Ntfs.cpp b/fs/Ntfs.cpp
+index a6663f8..1a69fc2 100644
+--- a/fs/Ntfs.cpp
++++ b/fs/Ntfs.cpp
+@@ -17,8 +17,8 @@
+ #include "Ntfs.h"
+ #include "Utils.h"
+ 
+-#include <base/logging.h>
+-#include <base/stringprintf.h>
++#include <android-base/logging.h>
++#include <android-base/stringprintf.h>
+ 
+ #include <vector>
+ #include <string>
+-- 
+2.8.2
+

@@ -1,0 +1,24 @@
+From 19ff47ebb7c41b072fe59dace7e02231c0ca69ef Mon Sep 17 00:00:00 2001
+From: "Christopher R. Palmer" <crpalmer@gmail.com>
+Date: Wed, 25 Nov 2015 20:53:45 -0500
+Subject: [PATCH 06/18] vold: Fix crash on startup
+
+Change-Id: Ib4d1be706b8d9bddc46aa71140fdb89d4ac2e0d1
+---
+ vold.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vold.c b/vold.c
+index 9da3054..9dc9f10 100644
+--- a/vold.c
++++ b/vold.c
+@@ -17,5 +17,5 @@
+ #include "vold.h"
+ 
+ int main(int argc, char **argv) {
+-    return vold_main();
++    return vold_main(argc, argv);
+ }
+-- 
+2.8.2
+

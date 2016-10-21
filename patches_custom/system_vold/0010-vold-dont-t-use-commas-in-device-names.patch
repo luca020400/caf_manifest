@@ -1,0 +1,59 @@
+From 7040bcb0c762dde083084747e98ad93aa67782aa Mon Sep 17 00:00:00 2001
+From: morckx <morckx@gmail.com>
+Date: Tue, 24 Nov 2015 22:45:01 +0100
+Subject: [PATCH 10/18] vold: dont't use commas in device names
+
+Fuse supports commas escaped by '\' in fs names, but exfat and ntfs-3g
+currently don't support the escaping.
+
+This fixes mounting of exFAT and NTFS public volumes.
+
+Change-Id: I72005489956e59e7f889267114fee3921d289984
+---
+ Disk.cpp          | 2 +-
+ PrivateVolume.cpp | 2 +-
+ PublicVolume.cpp  | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Disk.cpp b/Disk.cpp
+index 5316711..e2bd38b 100644
+--- a/Disk.cpp
++++ b/Disk.cpp
+@@ -113,7 +113,7 @@ Disk::Disk(const std::string& eventPath, dev_t device,
+         const std::string& nickname, int flags) :
+         mDevice(device), mSize(-1), mNickname(nickname), mFlags(flags), mCreated(
+                 false), mJustPartitioned(false) {
+-    mId = StringPrintf("disk:%u,%u", major(device), minor(device));
++    mId = StringPrintf("disk:%u_%u", major(device), minor(device));
+     mEventPath = eventPath;
+     mSysPath = StringPrintf("/sys/%s", eventPath.c_str());
+     mDevPath = StringPrintf("/dev/block/vold/%s", mId.c_str());
+diff --git a/PrivateVolume.cpp b/PrivateVolume.cpp
+index 8afc0d6..f1ce664 100644
+--- a/PrivateVolume.cpp
++++ b/PrivateVolume.cpp
+@@ -45,7 +45,7 @@ static const unsigned int kMajorBlockMmc = 179;
+ 
+ PrivateVolume::PrivateVolume(dev_t device, const std::string& keyRaw) :
+         VolumeBase(Type::kPrivate), mRawDevice(device), mKeyRaw(keyRaw) {
+-    setId(StringPrintf("private:%u,%u", major(device), minor(device)));
++    setId(StringPrintf("private:%u_%u", major(device), minor(device)));
+     mRawDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
+ }
+ 
+diff --git a/PublicVolume.cpp b/PublicVolume.cpp
+index 4005468..e92639d 100644
+--- a/PublicVolume.cpp
++++ b/PublicVolume.cpp
+@@ -54,7 +54,7 @@ PublicVolume::PublicVolume(dev_t device, const std::string& nickname,
+                 const std::string& mntopts /* = "" */) :
+         VolumeBase(Type::kPublic), mDevice(device), mFusePid(0),
+         mFsType(fstype), mFsLabel(nickname), mMntOpts(mntopts) {
+-    setId(StringPrintf("public:%u,%u", major(device), minor(device)));
++    setId(StringPrintf("public:%u_%u", major(device), minor(device)));
+     mDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
+ }
+ 
+-- 
+2.8.2
+

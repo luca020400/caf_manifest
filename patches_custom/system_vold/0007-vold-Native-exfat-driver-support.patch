@@ -1,0 +1,69 @@
+From 1ffc6efff72f466d6dc52e88c382eef893774b39 Mon Sep 17 00:00:00 2001
+From: Ketut Putu Kumajaya <ketut.kumajaya@gmail.com>
+Date: Wed, 2 Dec 2015 16:17:23 +0700
+Subject: [PATCH 07/18] vold: Native exfat driver support
+
+* exfat-nofuse https://github.com/dorimanx/exfat-nofuse
+
+Change-Id: I0b7d7b3f3e21defa83e08564b3fdb67a9957edc0
+---
+ Android.mk   |  4 ++++
+ fs/Exfat.cpp | 12 ++++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/Android.mk b/Android.mk
+index 8f0b462..2a8354a 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -121,6 +121,10 @@ common_shared_libraries += libcryptfs_hw
+ LOCAL_CFLAGS += -DCONFIG_HW_DISK_ENCRYPTION
+ endif
+ 
++ifeq ($(TARGET_KERNEL_HAVE_EXFAT),true)
++LOCAL_CFLAGS += -DCONFIG_KERNEL_HAVE_EXFAT
++endif
++
+ LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
+ LOCAL_STATIC_LIBRARIES := libvold $(common_static_libraries)
+ 
+diff --git a/fs/Exfat.cpp b/fs/Exfat.cpp
+index 24a7831..7cfb019 100644
+--- a/fs/Exfat.cpp
++++ b/fs/Exfat.cpp
+@@ -33,7 +33,11 @@ namespace exfat {
+ 
+ static const char* kMkfsPath = "/system/bin/mkfs.exfat";
+ static const char* kFsckPath = "/system/bin/fsck.exfat";
++#ifdef CONFIG_KERNEL_HAVE_EXFAT
++static const char* kMountPath = "/system/bin/mount";
++#else
+ static const char* kMountPath = "/system/bin/mount.exfat";
++#endif
+ 
+ bool IsSupported() {
+     return access(kMkfsPath, X_OK) == 0
+@@ -58,13 +62,21 @@ status_t Mount(const std::string& source, const std::string& target, bool ro,
+     const char* c_target = target.c_str();
+ 
+     sprintf(mountData,
++#ifdef CONFIG_KERNEL_HAVE_EXFAT
++            "noatime,nodev,nosuid,uid=%d,gid=%d,fmask=%o,dmask=%o,%s,%s",
++#else
+             "noatime,nodev,nosuid,dirsync,uid=%d,gid=%d,fmask=%o,dmask=%o,%s,%s",
++#endif
+             ownerUid, ownerGid, permMask, permMask,
+             (executable ? "exec" : "noexec"),
+             (ro ? "ro" : "rw"));
+ 
+     std::vector<std::string> cmd;
+     cmd.push_back(kMountPath);
++#ifdef CONFIG_KERNEL_HAVE_EXFAT
++    cmd.push_back("-t");
++    cmd.push_back("exfat");
++#endif
+     cmd.push_back("-o");
+     cmd.push_back(mountData);
+     cmd.push_back(c_source);
+-- 
+2.8.2
+

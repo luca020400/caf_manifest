@@ -1,0 +1,141 @@
+From 2f68b2a0bc5309b750507a7e888317747d846c78 Mon Sep 17 00:00:00 2001
+From: Sam Mortimer <sam@mortimer.me.uk>
+Date: Fri, 27 Nov 2015 15:27:03 -0800
+Subject: [PATCH 12/18] vold ext4/f2fs: do not use dirsync if we're mounting
+ adopted storage
+
+Change-Id: I6f8ca75385c2d4080b1430c0b6545b61e6632e2c
+---
+ PrivateVolume.cpp |  4 ++--
+ PublicVolume.cpp  |  5 +++--
+ fs/Ext4.cpp       | 10 ++++++++--
+ fs/Ext4.h         |  6 ++++--
+ fs/F2fs.cpp       | 10 ++++++++--
+ fs/F2fs.h         |  3 ++-
+ 6 files changed, 27 insertions(+), 11 deletions(-)
+
+diff --git a/PrivateVolume.cpp b/PrivateVolume.cpp
+index f1ce664..eb4db46 100644
+--- a/PrivateVolume.cpp
++++ b/PrivateVolume.cpp
+@@ -113,7 +113,7 @@ status_t PrivateVolume::doMount() {
+             return -EIO;
+         }
+ 
+-        if (ext4::Mount(mDmDevPath, mPath, false, false, true)) {
++        if (ext4::Mount(mDmDevPath, mPath, false, false, true, NULL, true)) {
+             PLOG(ERROR) << getId() << " failed to mount";
+             return -EIO;
+         }
+@@ -127,7 +127,7 @@ status_t PrivateVolume::doMount() {
+             return -EIO;
+         }
+ 
+-        if (f2fs::Mount(mDmDevPath, mPath)) {
++        if (f2fs::Mount(mDmDevPath, mPath, true)) {
+             PLOG(ERROR) << getId() << " failed to mount";
+             return -EIO;
+         }
+diff --git a/PublicVolume.cpp b/PublicVolume.cpp
+index e92639d..49c51e2 100644
+--- a/PublicVolume.cpp
++++ b/PublicVolume.cpp
+@@ -167,9 +167,10 @@ status_t PublicVolume::doMount() {
+         ret = exfat::Mount(mDevPath, mRawPath, false, false, false,
+                 AID_MEDIA_RW, AID_MEDIA_RW, 0007);
+     } else if (mFsType == "ext4") {
+-        ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts);
++        ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts,
++                false);
+     } else if (mFsType == "f2fs") {
+-        ret = f2fs::Mount(mDevPath, mRawPath);
++        ret = f2fs::Mount(mDevPath, mRawPath, false);
+     } else if (mFsType == "ntfs") {
+         ret = ntfs::Mount(mDevPath, mRawPath, false, false, false,
+                 AID_MEDIA_RW, AID_MEDIA_RW, 0007, true);
+diff --git a/fs/Ext4.cpp b/fs/Ext4.cpp
+index b8bea18..5f07d0c 100644
+--- a/fs/Ext4.cpp
++++ b/fs/Ext4.cpp
+@@ -132,7 +132,8 @@ status_t Check(const std::string& source, const std::string& target, bool truste
+ }
+ 
+ status_t Mount(const std::string& source, const std::string& target, bool ro,
+-        bool remount, bool executable, const std::string& opts /* = "" */) {
++        bool remount, bool executable, const std::string& opts /* = "" */,
++        bool trusted) {
+     int rc;
+     unsigned long flags;
+ 
+@@ -140,7 +141,12 @@ status_t Mount(const std::string& source, const std::string& target, bool ro,
+     const char* c_target = target.c_str();
+     const char* c_opts = opts.c_str();
+ 
+-    flags = MS_NOATIME | MS_NODEV | MS_NOSUID | MS_DIRSYNC;
++    flags = MS_NOATIME | MS_NODEV | MS_NOSUID;
++
++    // Only use MS_DIRSYNC if we're not mounting adopted storage
++    if (!trusted) {
++        flags |= MS_DIRSYNC;
++    }
+ 
+     flags |= (executable ? 0 : MS_NOEXEC);
+     flags |= (ro ? MS_RDONLY : 0);
+diff --git a/fs/Ext4.h b/fs/Ext4.h
+index 3fdf6f7..49279ef 100644
+--- a/fs/Ext4.h
++++ b/fs/Ext4.h
+@@ -27,9 +27,11 @@ namespace ext4 {
+ 
+ bool IsSupported();
+ 
+-status_t Check(const std::string& source, const std::string& target, bool trusted);
++status_t Check(const std::string& source, const std::string& target,
++        bool trusted);
+ status_t Mount(const std::string& source, const std::string& target, bool ro,
+-        bool remount, bool executable, const std::string& opts = "");
++        bool remount, bool executable, const std::string& opts = ""
++        bool trusted = false);
+ status_t Format(const std::string& source, unsigned long numSectors,
+         const std::string& target);
+ status_t Resize(const std::string& source, unsigned long numSectors);
+diff --git a/fs/F2fs.cpp b/fs/F2fs.cpp
+index 4faa34a..5551753 100644
+--- a/fs/F2fs.cpp
++++ b/fs/F2fs.cpp
+@@ -49,10 +49,16 @@ status_t Check(const std::string& source, bool trusted) {
+     return ForkExecvp(cmd, trusted ? sFsckContext : sFsckUntrustedContext);
+ }
+ 
+-status_t Mount(const std::string& source, const std::string& target) {
++status_t Mount(const std::string& source, const std::string& target,
++        bool trusted) {
+     const char* c_source = source.c_str();
+     const char* c_target = target.c_str();
+-    unsigned long flags = MS_NOATIME | MS_NODEV | MS_NOSUID | MS_DIRSYNC;
++    unsigned long flags = MS_NOATIME | MS_NODEV | MS_NOSUID;
++
++    // Only use MS_DIRSYNC if we're not mounting adopted storage
++    if (!trusted) {
++        flags |= MS_DIRSYNC;
++    }
+ 
+     int res = mount(c_source, c_target, "f2fs", flags, NULL);
+     if (res != 0) {
+diff --git a/fs/F2fs.h b/fs/F2fs.h
+index eb34afa..0950552 100644
+--- a/fs/F2fs.h
++++ b/fs/F2fs.h
+@@ -28,7 +28,8 @@ namespace f2fs {
+ bool IsSupported();
+ 
+ status_t Check(const std::string& source, bool trusted);
+-status_t Mount(const std::string& source, const std::string& target);
++status_t Mount(const std::string& source, const std::string& target,
++        bool trusted);
+ status_t Format(const std::string& source);
+ 
+ }  // namespace f2fs
+-- 
+2.8.2
+

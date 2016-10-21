@@ -1,0 +1,32 @@
+From 530dbb121b9399f8fae6d9e20312806c9f5a0013 Mon Sep 17 00:00:00 2001
+From: Rashed Abdel-Tawab <rashed@linux.com>
+Date: Thu, 25 Aug 2016 22:13:34 -0400
+Subject: [PATCH 18/18] vold: Correct base header paths
+
+These headers were moved to android-base
+
+Change-Id: I3eaa8316006b9017c5f5e31cd1e91efc2862106d
+---
+ DiskPartition.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/DiskPartition.cpp b/DiskPartition.cpp
+index 662118c..13b084b 100644
+--- a/DiskPartition.cpp
++++ b/DiskPartition.cpp
+@@ -22,9 +22,9 @@
+ #include "VolumeManager.h"
+ #include "ResponseCode.h"
+ 
+-#include <base/file.h>
+-#include <base/stringprintf.h>
+-#include <base/logging.h>
++#include <android-base/file.h>
++#include <android-base/stringprintf.h>
++#include <android-base/logging.h>
+ #include <diskconfig/diskconfig.h>
+ 
+ #include <vector>
+-- 
+2.8.2
+

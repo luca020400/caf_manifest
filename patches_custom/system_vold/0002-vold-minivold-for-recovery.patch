@@ -1,0 +1,706 @@
+From 81c333f8df4a53ecf516666f22ce249bfffc90b1 Mon Sep 17 00:00:00 2001
+From: Tom Marshall <tdm@cyngn.com>
+Date: Wed, 4 Nov 2015 15:35:09 -0800
+Subject: [PATCH 02/18] vold: minivold for recovery
+
+ * Build static linked minivold
+ * Adjust tool paths for recovery
+ * Skip ASEC and FUSE in recovery
+ * Default volume label to fstab label
+ * Add label "emulated" to emulated volume
+ * Always send VolumeFsLabelChanged on volume creation
+ * Add detach option to volume unmount
+
+Change-Id: I1a943dd3e606caa6bee6a0ec1df54fed365f769a
+---
+ Android.mk          | 59 +++++++++++++++++++++++++++++++++++++++++++++--------
+ CommandListener.cpp |  5 +++--
+ Disk.cpp            |  6 +++++-
+ EmulatedVolume.cpp  | 14 ++++++++++++-
+ EmulatedVolume.h    |  3 ++-
+ PrivateVolume.cpp   |  2 +-
+ PrivateVolume.h     |  2 +-
+ PublicVolume.cpp    | 29 +++++++++++++++++++++-----
+ PublicVolume.h      |  4 ++--
+ Utils.cpp           | 15 +++++++++++++-
+ Utils.h             |  2 +-
+ VolumeBase.cpp      |  6 +++---
+ VolumeBase.h        |  4 ++--
+ cryptfs.c           | 19 +++++++++++++++++
+ fs/Ext4.cpp         |  6 ++++++
+ main.cpp            |  2 +-
+ vdc.cpp             |  9 +++++++-
+ vold.c              | 21 +++++++++++++++++++
+ vold.h              | 30 +++++++++++++++++++++++++++
+ 19 files changed, 206 insertions(+), 32 deletions(-)
+ create mode 100644 vold.c
+ create mode 100644 vold.h
+
+diff --git a/Android.mk b/Android.mk
+index 42528db..6c75a90 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -31,6 +31,7 @@ common_src_files := \
+ 	KeyStorage.cpp \
+ 	ScryptParameters.cpp \
+ 	secontext.cpp \
++	main.cpp
+ 
+ common_c_includes := \
+ 	system/extras/ext4_utils \
+@@ -41,19 +42,22 @@ common_c_includes := \
+ 	hardware/libhardware/include/hardware \
+ 	system/security/softkeymaster/include/keymaster
+ 
+-common_shared_libraries := \
++common_libraries := \
+ 	libsysutils \
+ 	libbinder \
+ 	libcutils \
+ 	liblog \
+ 	libdiskconfig \
+-	libhardware_legacy \
+ 	liblogwrap \
+-	libext4_utils \
+ 	libf2fs_sparseblock \
+-	libcrypto \
+ 	libselinux \
+-	libutils \
++	libutils
++
++common_shared_libraries := \
++	$(common_libraries) \
++	libhardware_legacy \
++	libext4_utils \
++	libcrypto \
+ 	libhardware \
+ 	libsoftkeymaster \
+ 	libbase \
+@@ -65,12 +69,15 @@ common_static_libraries := \
+ 	libfs_mgr \
+ 	libfec \
+ 	libfec_rs \
++	libext4_utils_static \
++	libsparse_static \
+ 	libsquashfs_utils \
+ 	libscrypt_static \
+ 	libmincrypt \
+ 	libbatteryservice \
+ 	libext2_blkid \
+-	libext2_uuid_static
++	libext2_uuid_static \
++	libz
+ 
+ vold_conlyflags := -std=c11
+ vold_cflags := -Werror -Wall -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-parameter
+@@ -96,8 +103,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
+ LOCAL_MODULE := vold
+ LOCAL_CLANG := true
+ LOCAL_SRC_FILES := \
+-	main.cpp \
+-	$(common_src_files)
++	vold.c
+ 
+ LOCAL_INIT_RC := vold.rc
+ 
+@@ -113,7 +119,7 @@ LOCAL_CFLAGS += -DCONFIG_HW_DISK_ENCRYPTION
+ endif
+ 
+ LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
+-LOCAL_STATIC_LIBRARIES := $(common_static_libraries)
++LOCAL_STATIC_LIBRARIES := libvold $(common_static_libraries)
+ 
+ include $(BUILD_EXECUTABLE)
+ 
+@@ -141,3 +147,38 @@ LOCAL_CFLAGS := $(vold_cflags)
+ LOCAL_CONLYFLAGS := $(vold_conlyflags)
+ 
+ include $(BUILD_EXECUTABLE)
++
++include $(CLEAR_VARS)
++LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
++LOCAL_MODULE := libminivold
++LOCAL_CLANG := true
++LOCAL_SRC_FILES := $(common_src_files)
++LOCAL_C_INCLUDES := $(common_c_includes) system/core/fs_mgr/include system/core/logwrapper/include
++LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
++LOCAL_STATIC_LIBRARIES := $(common_static_libraries)
++LOCAL_MODULE_TAGS := eng tests
++LOCAL_CFLAGS := $(vold_cflags) -DMINIVOLD -DHELPER_PATH=\"/sbin/\"
++LOCAL_CONLYFLAGS := $(vold_conlyflags)
++include $(BUILD_STATIC_LIBRARY)
++
++include $(CLEAR_VARS)
++LOCAL_ADDITIONAL_DEPENDENCIES := $(LOCAL_PATH)/Android.mk
++LOCAL_MODULE := minivold
++LOCAL_CLANG := true
++LOCAL_SRC_FILES := vold.c
++LOCAL_C_INCLUDES := $(common_c_includes)
++LOCAL_CFLAGS := $(vold_cflags) -DMINIVOLD
++LOCAL_CONLYFLAGS := $(vold_conlyflags)
++LOCAL_STATIC_LIBRARIES := libminivold
++LOCAL_STATIC_LIBRARIES += libc libc++_static libm
++LOCAL_STATIC_LIBRARIES += libbase
++LOCAL_STATIC_LIBRARIES += $(common_static_libraries) $(common_libraries)
++LOCAL_STATIC_LIBRARIES += libcrypto_static libext2_uuid libvold
++LOCAL_STATIC_LIBRARIES += libnl
++LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
++LOCAL_FORCE_STATIC_EXECUTABLE := true
++LOCAL_PACK_MODULE_RELOCATIONS := false
++LOCAL_MODULE_CLASS := RECOVERY_EXECUTABLES
++LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
++LOCAL_MODULE_TAGS := optional
++include $(BUILD_EXECUTABLE)
+diff --git a/CommandListener.cpp b/CommandListener.cpp
+index 8780e98..12882a1 100644
+--- a/CommandListener.cpp
++++ b/CommandListener.cpp
+@@ -226,14 +226,15 @@ int CommandListener::VolumeCmd::runCommand(SocketClient *cli,
+         return sendGenericOkFail(cli, res);
+ 
+     } else if (cmd == "unmount" && argc > 2) {
+-        // unmount [volId]
++        // unmount [volId] [detach]
+         std::string id(argv[2]);
+         auto vol = vm->findVolume(id);
+         if (vol == nullptr) {
+             return cli->sendMsg(ResponseCode::CommandSyntaxError, "Unknown volume", false);
+         }
++        bool detach = (argc > 3 && !strcmp(argv[3], "detach"));
+ 
+-        return sendGenericOkFail(cli, vol->unmount());
++        return sendGenericOkFail(cli, vol->unmount(detach));
+ 
+     } else if (cmd == "format" && argc > 3) {
+         // format [volId] [fsType|auto]
+diff --git a/Disk.cpp b/Disk.cpp
+index 2c2a2da..0029e88 100644
+--- a/Disk.cpp
++++ b/Disk.cpp
+@@ -43,7 +43,11 @@ using android::base::StringPrintf;
+ namespace android {
+ namespace vold {
+ 
++#ifdef MINIVOLD
++static const char* kSgdiskPath = "/sbin/sgdisk";
++#else
+ static const char* kSgdiskPath = "/system/bin/sgdisk";
++#endif
+ static const char* kSgdiskToken = " \t\n";
+ 
+ static const char* kSysfsMmcMaxMinors = "/sys/module/mmcblk/parameters/perdev_minors";
+@@ -161,7 +165,7 @@ status_t Disk::destroy() {
+ }
+ 
+ void Disk::createPublicVolume(dev_t device) {
+-    auto vol = std::shared_ptr<VolumeBase>(new PublicVolume(device));
++    auto vol = std::shared_ptr<VolumeBase>(new PublicVolume(device, mNickname));
+     if (mJustPartitioned) {
+         LOG(DEBUG) << "Device just partitioned; silently formatting";
+         vol->setSilent(true);
+diff --git a/EmulatedVolume.cpp b/EmulatedVolume.cpp
+index 581c322..b60a86c 100644
+--- a/EmulatedVolume.cpp
++++ b/EmulatedVolume.cpp
+@@ -16,6 +16,7 @@
+ 
+ #include "EmulatedVolume.h"
+ #include "Utils.h"
++#include "ResponseCode.h"
+ 
+ #include <android-base/stringprintf.h>
+ #include <android-base/logging.h>
+@@ -34,7 +35,11 @@ using android::base::StringPrintf;
+ namespace android {
+ namespace vold {
+ 
++#ifdef MINIVOLD
++static const char* kFusePath = "/sbin/sdcard";
++#else
+ static const char* kFusePath = "/system/bin/sdcard";
++#endif
+ 
+ EmulatedVolume::EmulatedVolume(const std::string& rawPath) :
+         VolumeBase(Type::kEmulated), mFusePid(0) {
+@@ -53,6 +58,13 @@ EmulatedVolume::EmulatedVolume(const std::string& rawPath, dev_t device,
+ EmulatedVolume::~EmulatedVolume() {
+ }
+ 
++status_t EmulatedVolume::doCreate() {
++    if (mLabel.size() > 0) {
++        notifyEvent(ResponseCode::VolumeFsLabelChanged, mLabel);
++    }
++    return OK;
++}
++
+ status_t EmulatedVolume::doMount() {
+     // We could have migrated storage to an adopted private volume, so always
+     // call primary storage "emulated" to avoid media rescans.
+@@ -106,7 +118,7 @@ status_t EmulatedVolume::doMount() {
+     return OK;
+ }
+ 
+-status_t EmulatedVolume::doUnmount() {
++status_t EmulatedVolume::doUnmount(bool detach /* = false */) {
+     // Unmount the storage before we kill the FUSE process. If we kill
+     // the FUSE process first, most file system operations will return
+     // ENOTCONN until the unmount completes. This is an exotic and unusual
+diff --git a/EmulatedVolume.h b/EmulatedVolume.h
+index 09686c1..ea397fa 100644
+--- a/EmulatedVolume.h
++++ b/EmulatedVolume.h
+@@ -42,8 +42,9 @@ public:
+     virtual ~EmulatedVolume();
+ 
+ protected:
++    status_t doCreate() override;
+     status_t doMount() override;
+-    status_t doUnmount() override;
++    status_t doUnmount(bool detach = false) override;
+ 
+ private:
+     std::string mRawPath;
+diff --git a/PrivateVolume.cpp b/PrivateVolume.cpp
+index 21746b2..59e5627 100644
+--- a/PrivateVolume.cpp
++++ b/PrivateVolume.cpp
+@@ -178,7 +178,7 @@ status_t PrivateVolume::doMount() {
+     return OK;
+ }
+ 
+-status_t PrivateVolume::doUnmount() {
++status_t PrivateVolume::doUnmount(bool detach /* = false */) {
+     ForceUnmount(mPath);
+ 
+     if (TEMP_FAILURE_RETRY(rmdir(mPath.c_str()))) {
+diff --git a/PrivateVolume.h b/PrivateVolume.h
+index 95b718d..3a92aba 100644
+--- a/PrivateVolume.h
++++ b/PrivateVolume.h
+@@ -44,7 +44,7 @@ protected:
+     status_t doCreate() override;
+     status_t doDestroy() override;
+     status_t doMount() override;
+-    status_t doUnmount() override;
++    status_t doUnmount(bool detach = false) override;
+     status_t doFormat(const std::string& fsType) override;
+ 
+     status_t readMetadata();
+diff --git a/PublicVolume.cpp b/PublicVolume.cpp
+index 893f928..4916ca6 100644
+--- a/PublicVolume.cpp
++++ b/PublicVolume.cpp
+@@ -37,12 +37,16 @@ using android::base::StringPrintf;
+ namespace android {
+ namespace vold {
+ 
++#ifdef MINIVOLD
++static const char* kFusePath = "/sbin/sdcard";
++#else
+ static const char* kFusePath = "/system/bin/sdcard";
++#endif
+ 
+ static const char* kAsecPath = "/mnt/secure/asec";
+ 
+-PublicVolume::PublicVolume(dev_t device) :
+-        VolumeBase(Type::kPublic), mDevice(device), mFusePid(0) {
++PublicVolume::PublicVolume(dev_t device, const std::string& nickname) :
++        VolumeBase(Type::kPublic), mDevice(device), mFusePid(0), mFsLabel(nickname) {
+     setId(StringPrintf("public:%u,%u", major(device), minor(device)));
+     mDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
+ }
+@@ -83,6 +87,9 @@ status_t PublicVolume::initAsecStage() {
+ }
+ 
+ status_t PublicVolume::doCreate() {
++    if (mFsLabel.size() > 0) {
++        notifyEvent(ResponseCode::VolumeFsLabelChanged, mFsLabel);
++    }
+     return CreateDeviceNode(mDevPath, mDevice);
+ }
+ 
+@@ -110,11 +117,18 @@ status_t PublicVolume::doMount() {
+         stableName = mFsUuid;
+     }
+ 
++#ifdef MINIVOLD
++    // In recovery, directly mount to /storage/* since we have no fuse daemon
++    mRawPath = StringPrintf("/storage/%s", stableName.c_str());
++    mFuseDefault = StringPrintf("/storage/%s", stableName.c_str());
++    mFuseRead = StringPrintf("/storage/%s", stableName.c_str());
++    mFuseWrite = StringPrintf("/storage/%s", stableName.c_str());
++#else
+     mRawPath = StringPrintf("/mnt/media_rw/%s", stableName.c_str());
+-
+     mFuseDefault = StringPrintf("/mnt/runtime/default/%s", stableName.c_str());
+     mFuseRead = StringPrintf("/mnt/runtime/read/%s", stableName.c_str());
+     mFuseWrite = StringPrintf("/mnt/runtime/write/%s", stableName.c_str());
++#endif
+ 
+     setInternalPath(mRawPath);
+     if (getMountFlags() & MountFlags::kVisible) {
+@@ -134,6 +148,11 @@ status_t PublicVolume::doMount() {
+         return -EIO;
+     }
+ 
++#ifdef MINIVOLD
++    // In recovery, don't setup ASEC or FUSE
++    return OK;
++#endif
++
+     if (getMountFlags() & MountFlags::kPrimary) {
+         initAsecStage();
+     }
+@@ -193,7 +212,7 @@ status_t PublicVolume::doMount() {
+     return OK;
+ }
+ 
+-status_t PublicVolume::doUnmount() {
++status_t PublicVolume::doUnmount(bool detach /* = false */) {
+     // Unmount the storage before we kill the FUSE process. If we kill
+     // the FUSE process first, most file system operations will return
+     // ENOTCONN until the unmount completes. This is an exotic and unusual
+@@ -205,7 +224,7 @@ status_t PublicVolume::doUnmount() {
+     ForceUnmount(mFuseDefault);
+     ForceUnmount(mFuseRead);
+     ForceUnmount(mFuseWrite);
+-    ForceUnmount(mRawPath);
++    ForceUnmount(mRawPath, detach);
+ 
+     if (mFusePid > 0) {
+         kill(mFusePid, SIGTERM);
+diff --git a/PublicVolume.h b/PublicVolume.h
+index 3aa7a73..08da34e 100644
+--- a/PublicVolume.h
++++ b/PublicVolume.h
+@@ -39,14 +39,14 @@ namespace vold {
+  */
+ class PublicVolume : public VolumeBase {
+ public:
+-    explicit PublicVolume(dev_t device);
++    explicit PublicVolume(dev_t device, const std::string& nickname);
+     virtual ~PublicVolume();
+ 
+ protected:
+     status_t doCreate() override;
+     status_t doDestroy() override;
+     status_t doMount() override;
+-    status_t doUnmount() override;
++    status_t doUnmount(bool detach = false) override;
+     status_t doFormat(const std::string& fsType) override;
+ 
+     status_t readMetadata();
+diff --git a/Utils.cpp b/Utils.cpp
+index 7ae22c5..0b407ff 100644
+--- a/Utils.cpp
++++ b/Utils.cpp
+@@ -52,7 +52,11 @@ security_context_t sBlkidUntrustedContext = nullptr;
+ security_context_t sFsckContext = nullptr;
+ security_context_t sFsckUntrustedContext = nullptr;
+ 
++#ifdef MINIVOLD
++static const char* kBlkidPath = "/sbin/blkid";
++#else
+ static const char* kBlkidPath = "/system/bin/blkid";
++#endif
+ static const char* kKeyPath = "/data/misc/vold";
+ 
+ static const char* kProcFilesystems = "/proc/filesystems";
+@@ -118,8 +122,15 @@ status_t PrepareDir(const std::string& path, mode_t mode, uid_t uid, gid_t gid)
+     }
+ }
+ 
+-status_t ForceUnmount(const std::string& path) {
++status_t ForceUnmount(const std::string& path, bool detach /* = false */) {
+     const char* cpath = path.c_str();
++    if (detach) {
++        if (!umount2(path.c_str(), UMOUNT_NOFOLLOW | MNT_DETACH) || errno == EINVAL || errno == ENOENT) {
++            return OK;
++        }
++        PLOG(WARNING) << "Failed to unmount " << path;
++        return -errno;
++    }
+     if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
+         return OK;
+     }
+@@ -190,6 +201,7 @@ static status_t readMetadata(const std::string& path, std::string& fsType,
+ 
+     std::vector<std::string> cmd;
+     cmd.push_back(kBlkidPath);
++#ifndef MINIVOLD
+     cmd.push_back("-c");
+     cmd.push_back("/dev/null");
+     cmd.push_back("-s");
+@@ -198,6 +210,7 @@ static status_t readMetadata(const std::string& path, std::string& fsType,
+     cmd.push_back("UUID");
+     cmd.push_back("-s");
+     cmd.push_back("LABEL");
++#endif
+     cmd.push_back(path);
+ 
+     std::vector<std::string> output;
+diff --git a/Utils.h b/Utils.h
+index 9abd322..49a5bf4 100644
+--- a/Utils.h
++++ b/Utils.h
+@@ -50,7 +50,7 @@ status_t DestroyDeviceNode(const std::string& path);
+ status_t PrepareDir(const std::string& path, mode_t mode, uid_t uid, gid_t gid);
+ 
+ /* Really unmounts the path, killing active processes along the way */
+-status_t ForceUnmount(const std::string& path);
++status_t ForceUnmount(const std::string& path, bool detach = false);
+ 
+ /* Kills any processes using given path */
+ status_t KillProcessesUsingPath(const std::string& path);
+diff --git a/VolumeBase.cpp b/VolumeBase.cpp
+index ea4d372..71dfb1c 100644
+--- a/VolumeBase.cpp
++++ b/VolumeBase.cpp
+@@ -164,9 +164,9 @@ status_t VolumeBase::create() {
+     CHECK(!mCreated);
+ 
+     mCreated = true;
+-    status_t res = doCreate();
+     notifyEvent(ResponseCode::VolumeCreated,
+             StringPrintf("%d \"%s\" \"%s\"", mType, mDiskId.c_str(), mPartGuid.c_str()));
++    status_t res = doCreate();
+     setState(State::kUnmounted);
+     return res;
+ }
+@@ -212,7 +212,7 @@ status_t VolumeBase::mount() {
+     return res;
+ }
+ 
+-status_t VolumeBase::unmount() {
++status_t VolumeBase::unmount(bool detach /* = false */) {
+     if (mState != State::kMounted) {
+         LOG(WARNING) << getId() << " unmount requires state mounted";
+         return -EBUSY;
+@@ -227,7 +227,7 @@ status_t VolumeBase::unmount() {
+     }
+     mVolumes.clear();
+ 
+-    status_t res = doUnmount();
++    status_t res = doUnmount(detach);
+     setState(State::kUnmounted);
+     return res;
+ }
+diff --git a/VolumeBase.h b/VolumeBase.h
+index d417019..4f2c397 100644
+--- a/VolumeBase.h
++++ b/VolumeBase.h
+@@ -98,7 +98,7 @@ public:
+     status_t create();
+     status_t destroy();
+     status_t mount();
+-    status_t unmount();
++    status_t unmount(bool detach = false);
+     status_t format(const std::string& fsType);
+ 
+ protected:
+@@ -107,7 +107,7 @@ protected:
+     virtual status_t doCreate();
+     virtual status_t doDestroy();
+     virtual status_t doMount() = 0;
+-    virtual status_t doUnmount() = 0;
++    virtual status_t doUnmount(bool detach = false) = 0;
+     virtual status_t doFormat(const std::string& fsType);
+ 
+     status_t setId(const std::string& id);
+diff --git a/cryptfs.c b/cryptfs.c
+index 7d8724a..01b634f 100644
+--- a/cryptfs.c
++++ b/cryptfs.c
+@@ -249,6 +249,12 @@ out:
+ }
+ #endif
+ 
++#ifdef MINIVOLD
++inline int release_wake_lock(const char* id) { return 0; }
++inline int acquire_wake_lock(int lock, const char* id) { return 0; }
++#endif
++
++#ifndef MINIVOLD // no HALs in recovery...
+ static int keymaster_init(keymaster0_device_t **keymaster0_dev,
+                           keymaster1_device_t **keymaster1_dev)
+ {
+@@ -287,10 +293,14 @@ err:
+     *keymaster1_dev = NULL;
+     return rc;
+ }
++#endif
+ 
+ /* Should we use keymaster? */
+ static int keymaster_check_compatibility()
+ {
++#ifdef MINIVOLD
++    return -1;
++#else
+     keymaster0_device_t *keymaster0_dev = 0;
+     keymaster1_device_t *keymaster1_dev = 0;
+     int rc = 0;
+@@ -332,11 +342,15 @@ out:
+         keymaster0_close(keymaster0_dev);
+     }
+     return rc;
++#endif
+ }
+ 
+ /* Create a new keymaster key and store it in this footer */
+ static int keymaster_create_key(struct crypt_mnt_ftr *ftr)
+ {
++#ifdef MINIVOLD // no HALs in recovery...
++    return -1;
++#else
+     uint8_t* key = 0;
+     keymaster0_device_t *keymaster0_dev = 0;
+     keymaster1_device_t *keymaster1_dev = 0;
+@@ -424,6 +438,7 @@ out:
+         keymaster1_close(keymaster1_dev);
+     free(key);
+     return rc;
++#endif
+ }
+ 
+ /* This signs the given object using the keymaster key. */
+@@ -433,6 +448,9 @@ static int keymaster_sign_object(struct crypt_mnt_ftr *ftr,
+                                  unsigned char **signature,
+                                  size_t *signature_size)
+ {
++#ifdef MINIVOLD // no HALs in recovery...
++    return -1;
++#else
+     int rc = 0;
+     keymaster0_device_t *keymaster0_dev = 0;
+     keymaster1_device_t *keymaster1_dev = 0;
+@@ -558,6 +576,7 @@ static int keymaster_sign_object(struct crypt_mnt_ftr *ftr,
+             keymaster0_close(keymaster0_dev);
+ 
+         return rc;
++#endif
+ }
+ 
+ /* Store password when userdata is successfully decrypted and mounted.
+diff --git a/fs/Ext4.cpp b/fs/Ext4.cpp
+index 0bd5b0c..5c202f3 100644
+--- a/fs/Ext4.cpp
++++ b/fs/Ext4.cpp
+@@ -54,9 +54,15 @@ namespace android {
+ namespace vold {
+ namespace ext4 {
+ 
++#ifdef MINIVOLD
++static const char* kResizefsPath = "/sbin/resize2fs";
++static const char* kMkfsPath = "/sbin/mke2fs";
++static const char* kFsckPath = "/sbin/e2fsck";
++#else
+ static const char* kResizefsPath = "/system/bin/resize2fs";
+ static const char* kMkfsPath = "/system/bin/make_ext4fs";
+ static const char* kFsckPath = "/system/bin/e2fsck";
++#endif
+ 
+ bool IsSupported() {
+     return access(kMkfsPath, X_OK) == 0
+diff --git a/main.cpp b/main.cpp
+index 9cbcf88..86407ef 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -49,7 +49,7 @@ struct selabel_handle *sehandle;
+ 
+ using android::base::StringPrintf;
+ 
+-int main(int argc, char** argv) {
++extern "C" int vold_main(int argc, char** argv) {
+     setenv("ANDROID_LOG_TAGS", "*:v", 1);
+     android::base::InitLogging(argv, android::base::LogdLogger(android::base::SYSTEM));
+ 
+diff --git a/vdc.cpp b/vdc.cpp
+index 4eb26cd..658d554 100644
+--- a/vdc.cpp
++++ b/vdc.cpp
+@@ -41,7 +41,7 @@ static int do_cmd(int sock, int argc, char **argv);
+ 
+ static constexpr int kCommandTimeoutMs = 20 * 1000;
+ 
+-int main(int argc, char **argv) {
++int vdc_main(int argc, char **argv) {
+     int sock;
+     int wait_for_socket;
+     char *progname;
+@@ -172,3 +172,10 @@ static void usage(char *progname) {
+     fprintf(stderr,
+             "Usage: %s [--wait] <monitor>|<cmd> [arg1] [arg2...]\n", progname);
+ }
++
++#ifndef MINIVOLD
++int main(int argc, char **argv) {
++    return vdc_main(argc, argv);
++}
++#endif
++
+diff --git a/vold.c b/vold.c
+new file mode 100644
+index 0000000..9da3054
+--- /dev/null
++++ b/vold.c
+@@ -0,0 +1,21 @@
++/*
++ * Copyright (C) 2015 The CyanogenMod Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "vold.h"
++
++int main(int argc, char **argv) {
++    return vold_main();
++}
+diff --git a/vold.h b/vold.h
+new file mode 100644
+index 0000000..a873992
+--- /dev/null
++++ b/vold.h
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (C) 2015 The CyanogenMod Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef _VOLD_H
++#define _VOLD_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++int vold_main();
++
++#ifdef __cplusplus
++}
++#endif
++#endif
++
+-- 
+2.8.2
+

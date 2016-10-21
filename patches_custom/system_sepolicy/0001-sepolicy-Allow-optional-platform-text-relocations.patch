@@ -1,7 +1,7 @@
-From a7c14b51df577ed346c9ad2bab8b6e453e88858e Mon Sep 17 00:00:00 2001
+From a4a29f854d8b0d075b1ab296aaefd956f204e97e Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Sun, 18 Sep 2016 10:48:17 +0200
-Subject: [PATCH] sepolicy: Allow optional text relocations
+Subject: [PATCH 1/4] sepolicy: Allow optional platform text relocations
 
 Change-Id: Ibcf8a1014c8fcfdc33ea26e1e852bc5f58d20af6
 ---
@@ -10,14 +10,14 @@ Change-Id: Ibcf8a1014c8fcfdc33ea26e1e852bc5f58d20af6
  2 files changed, 23 insertions(+), 8 deletions(-)
 
 diff --git a/Android.mk b/Android.mk
-index 0bfa54d..5124330 100644
+index 0bfa54d..e4d3c66 100644
 --- a/Android.mk
 +++ b/Android.mk
 @@ -95,6 +95,7 @@ $(sepolicy_policy.conf): $(call build_policy, $(sepolicy_build_files))
  	$(hide) m4 $(PRIVATE_ADDITIONAL_M4DEFS) \
  		-D mls_num_sens=$(PRIVATE_MLS_SENS) -D mls_num_cats=$(PRIVATE_MLS_CATS) \
  		-D target_build_variant=$(TARGET_BUILD_VARIANT) \
-+		-D target_needs_text_relocations=$(TARGET_NEEDS_TEXT_RELOCATIONS) \
++		-D target_needs_platform_text_relocations=$(TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS) \
  		-s $^ > $@
  	$(hide) sed '/dontaudit/d' $@ > $@.dontaudit
  
@@ -25,12 +25,12 @@ index 0bfa54d..5124330 100644
  		-D mls_num_sens=$(PRIVATE_MLS_SENS) -D mls_num_cats=$(PRIVATE_MLS_CATS) \
  		-D target_build_variant=$(TARGET_BUILD_VARIANT) \
  		-D target_recovery=true \
-+		-D target_needs_text_relocations=$(TARGET_NEEDS_TEXT_RELOCATIONS) \
++		-D target_needs_platform_text_relocations=$(TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS) \
  		-s $^ > $@
  
  $(LOCAL_BUILT_MODULE): $(sepolicy_policy_recovery.conf) $(HOST_OUT_EXECUTABLES)/checkpolicy $(HOST_OUT_EXECUTABLES)/sepolicy-analyze
 diff --git a/domain.te b/domain.te
-index ac4ef70..9f9c56b 100644
+index 509b477..5c334b7 100644
 --- a/domain.te
 +++ b/domain.te
 @@ -426,13 +426,24 @@ neverallow { domain userdebug_or_eng(`-dumpstate -shell -su') } su_exec:file no_
@@ -44,7 +44,7 @@ index ac4ef70..9f9c56b 100644
 -  -app_data_file
 -  -asec_public_file
 -}:file execmod;
-+ifelse(target_needs_text_relocations, `true',
++ifelse(target_needs_platform_text_relocations, `true',
 +  `neverallow * {
 +    file_type
 +    -system_file
@@ -70,12 +70,12 @@ index ac4ef70..9f9c56b 100644
  # prohibit non-zygote spawned processes from using shared libraries
  # with text relocations. b/20013628 .
 -neverallow { domain -appdomain } file_type:file execmod;
-+ifelse(target_needs_text_relocations, `true', ,
++ifelse(target_needs_platform_text_relocations, `true', ,
 +  `neverallow { domain -appdomain } file_type:file execmod;'
 +)
  
  neverallow { domain -init } proc:{ file dir } mounton;
  
 -- 
-2.9.3
+2.8.2
 

@@ -1,0 +1,29 @@
+From a247f8e49e09284a4b0b9fa97b4317d549458527 Mon Sep 17 00:00:00 2001
+From: Sam Mortimer <sam@mortimer.me.uk>
+Date: Fri, 18 Dec 2015 05:17:13 -0800
+Subject: [PATCH 11/18] Also change emulated device id separator from comma to
+ underscore
+
+Needed to fix emulated primary storage on adopted storage.
+
+Change-Id: I22114698e480fc829090261b79824c8b65b009c3
+---
+ EmulatedVolume.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/EmulatedVolume.cpp b/EmulatedVolume.cpp
+index b60a86c..1d1c12e 100644
+--- a/EmulatedVolume.cpp
++++ b/EmulatedVolume.cpp
+@@ -50,7 +50,7 @@ EmulatedVolume::EmulatedVolume(const std::string& rawPath) :
+ 
+ EmulatedVolume::EmulatedVolume(const std::string& rawPath, dev_t device,
+         const std::string& fsUuid) : VolumeBase(Type::kEmulated), mFusePid(0) {
+-    setId(StringPrintf("emulated:%u,%u", major(device), minor(device)));
++    setId(StringPrintf("emulated:%u_%u", major(device), minor(device)));
+     mRawPath = rawPath;
+     mLabel = fsUuid;
+ }
+-- 
+2.8.2
+

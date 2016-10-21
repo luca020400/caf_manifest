@@ -1,0 +1,54 @@
+From f1e19660121de7b8d7c6d6ac11e2c04b8f40c31b Mon Sep 17 00:00:00 2001
+From: Tom Marshall <tdm@cyngn.com>
+Date: Fri, 12 Dec 2014 16:35:56 -0800
+Subject: [PATCH 2/4] sepolicy: New type sdcard_posix for labeled filesystems
+
+ * Need this because sdcard_external is an alias for vfat
+
+Change-Id: I804ebb0fcf643d603b1a02ee7a54e6d5b6b46294
+---
+ domain.te | 2 +-
+ file.te   | 1 +
+ vold.te   | 1 +
+ 3 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/domain.te b/domain.te
+index 5c334b7..266728b 100644
+--- a/domain.te
++++ b/domain.te
+@@ -325,7 +325,7 @@ neverallow * rootfs:file { create write setattr relabelto append unlink link ren
+ 
+ # Restrict context mounts to specific types marked with
+ # the contextmount_type attribute.
+-neverallow * {fs_type -contextmount_type}:filesystem relabelto;
++neverallow * {fs_type -contextmount_type -sdcard_posix}:filesystem relabelto;
+ 
+ # Ensure that context mount types are not writable, to ensure that
+ # the write to /system restriction above is not bypassed via context=
+diff --git a/file.te b/file.te
+index f0e984d..8006afd 100644
+--- a/file.te
++++ b/file.te
+@@ -48,6 +48,7 @@ type shm, fs_type;
+ type mqueue, fs_type;
+ type fuse, sdcard_type, fs_type, mlstrustedobject;
+ type sdcardfs, sdcard_type, fs_type, mlstrustedobject;
++type sdcard_posix, sdcard_type, fs_type, mlstrustedobject;
+ type vfat, sdcard_type, fs_type, mlstrustedobject;
+ type debugfs, fs_type;
+ type debugfs_trace_marker, fs_type, debugfs_type, mlstrustedobject;
+diff --git a/vold.te b/vold.te
+index 8cea0c3..abdfdff 100644
+--- a/vold.te
++++ b/vold.te
+@@ -41,6 +41,7 @@ allow vold devpts:chr_file rw_file_perms;
+ allow vold rootfs:dir mounton;
+ allow vold sdcard_type:dir mounton; # TODO: deprecated in M
+ allow vold sdcard_type:filesystem { mount remount unmount }; # TODO: deprecated in M
++allow vold sdcard_posix:filesystem { relabelto relabelfrom };
+ allow vold sdcard_type:dir create_dir_perms; # TODO: deprecated in M
+ allow vold sdcard_type:file create_file_perms; # TODO: deprecated in M
+ 
+-- 
+2.8.2
+

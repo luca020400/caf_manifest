@@ -1,0 +1,197 @@
+From c238ddb83a7271192218f64ec1da3631ee5c7fe3 Mon Sep 17 00:00:00 2001
+From: Jani Lusikka <jani.lusikka@gmail.com>
+Date: Fri, 15 Jan 2016 22:25:47 +0200
+Subject: [PATCH 15/18] vold: Mount ext4/f2fs portable storage with
+ sdcard_posix context
+
+This commit is a forward port of following commits:
+
+Author: Michael Stucki <mundaun@gmx.ch>
+Change-Id: Ia34ad91444951e62f6d17374f480dcbdfa34cca3
+
+Author: Tom Marshall <tdm@cyngn.com>
+Change-Id: I05d9b57cc28ffd1f8deb8148d81c7f6fad0aa8db
+
+Author: Pawit Pornkitprasan <p.pawit@gmail.com>
+Change-Id: I1364f37018b25d79b1826c85849def64e868d72f
+
+Author: Pawit Pornkitprasan <p.pawit@gmail.com>
+Change-Id: I873af4dc2309d3d0942ce466b8acf8158abb85ae
+
+Author: Jorge Ruesga <jorge@ruesga.com>
+Change-Id: Ic0bb314b30e42489c45caec29d35d6896c9849eb
+
+Signed-off-by: Michael Bestas <mikeioannina@cyanogenmod.org>
+Change-Id: I9699643987c53d8e2538720f33da28de35230dfe
+---
+ PublicVolume.cpp |  4 ++--
+ fs/Ext4.cpp      | 23 +++++++++++++++++++----
+ fs/Ext4.h        |  2 +-
+ fs/F2fs.cpp      | 26 ++++++++++++++++++++++----
+ fs/F2fs.h        |  3 ++-
+ 5 files changed, 46 insertions(+), 12 deletions(-)
+
+diff --git a/PublicVolume.cpp b/PublicVolume.cpp
+index 005b9e3..d56b7b5 100644
+--- a/PublicVolume.cpp
++++ b/PublicVolume.cpp
+@@ -168,9 +168,9 @@ status_t PublicVolume::doMount() {
+                 AID_MEDIA_RW, AID_MEDIA_RW, 0007);
+     } else if (mFsType == "ext4") {
+         ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts,
+-                false);
++                false, true);
+     } else if (mFsType == "f2fs") {
+-        ret = f2fs::Mount(mDevPath, mRawPath, mMntOpts, false);
++        ret = f2fs::Mount(mDevPath, mRawPath, mMntOpts, false, true);
+     } else if (mFsType == "ntfs") {
+         ret = ntfs::Mount(mDevPath, mRawPath, false, false, false,
+                 AID_MEDIA_RW, AID_MEDIA_RW, 0007, true);
+diff --git a/fs/Ext4.cpp b/fs/Ext4.cpp
+index 5f07d0c..3c01650 100644
+--- a/fs/Ext4.cpp
++++ b/fs/Ext4.cpp
+@@ -42,6 +42,7 @@
+ #include <cutils/log.h>
+ #include <cutils/properties.h>
+ #include <logwrap/logwrap.h>
++#include <private/android_filesystem_config.h>
+ #include <selinux/selinux.h>
+ 
+ #include "Ext4.h"
+@@ -133,13 +134,22 @@ status_t Check(const std::string& source, const std::string& target, bool truste
+ 
+ status_t Mount(const std::string& source, const std::string& target, bool ro,
+         bool remount, bool executable, const std::string& opts /* = "" */,
+-        bool trusted) {
++        bool trusted, bool portable) {
+     int rc;
+     unsigned long flags;
+ 
++    std::string data(opts);
++
++    if (portable) {
++        if (!data.empty()) {
++            data += ",";
++        }
++        data += "context=u:object_r:sdcard_posix:s0";
++    }
++
+     const char* c_source = source.c_str();
+     const char* c_target = target.c_str();
+-    const char* c_opts = opts.c_str();
++    const char* c_data = data.c_str();
+ 
+     flags = MS_NOATIME | MS_NODEV | MS_NOSUID;
+ 
+@@ -152,12 +162,17 @@ status_t Mount(const std::string& source, const std::string& target, bool ro,
+     flags |= (ro ? MS_RDONLY : 0);
+     flags |= (remount ? MS_REMOUNT : 0);
+ 
+-    rc = mount(c_source, c_target, "ext4", flags, c_opts);
++    rc = mount(c_source, c_target, "ext4", flags, c_data);
++
++    if (portable && rc == 0) {
++        chown(c_target, AID_MEDIA_RW, AID_MEDIA_RW);
++        chmod(c_target, 0755);
++    }
+ 
+     if (rc && errno == EROFS) {
+         SLOGE("%s appears to be a read only filesystem - retrying mount RO", c_source);
+         flags |= MS_RDONLY;
+-        rc = mount(c_source, c_target, "ext4", flags, NULL);
++        rc = mount(c_source, c_target, "ext4", flags, c_data);
+     }
+ 
+     return rc;
+diff --git a/fs/Ext4.h b/fs/Ext4.h
+index 49279ef..74218a0 100644
+--- a/fs/Ext4.h
++++ b/fs/Ext4.h
+@@ -31,7 +31,7 @@ status_t Check(const std::string& source, const std::string& target,
+         bool trusted);
+ status_t Mount(const std::string& source, const std::string& target, bool ro,
+         bool remount, bool executable, const std::string& opts = ""
+-        bool trusted = false);
++        bool trusted = false, bool portable = false);
+ status_t Format(const std::string& source, unsigned long numSectors,
+         const std::string& target);
+ status_t Resize(const std::string& source, unsigned long numSectors);
+diff --git a/fs/F2fs.cpp b/fs/F2fs.cpp
+index 8837807..26d41e9 100644
+--- a/fs/F2fs.cpp
++++ b/fs/F2fs.cpp
+@@ -19,11 +19,13 @@
+ 
+ #include <android-base/logging.h>
+ #include <android-base/stringprintf.h>
++#include <private/android_filesystem_config.h>
+ 
+ #include <vector>
+ #include <string>
+ 
+ #include <sys/mount.h>
++#include <sys/stat.h>
+ 
+ using android::base::StringPrintf;
+ 
+@@ -50,10 +52,20 @@ status_t Check(const std::string& source, bool trusted) {
+ }
+ 
+ status_t Mount(const std::string& source, const std::string& target,
+-        const std::string& opts /* = "" */, bool trusted) {
++        const std::string& opts /* = "" */, bool trusted, bool portable) {
++    std::string data(opts);
++
++    if (portable) {
++        if (!data.empty()) {
++            data += ",";
++        }
++        data += "context=u:object_r:sdcard_posix:s0";
++    }
++
+     const char* c_source = source.c_str();
+     const char* c_target = target.c_str();
+-    const char* c_opts = opts.c_str();
++    const char* c_data = data.c_str();
++
+     unsigned long flags = MS_NOATIME | MS_NODEV | MS_NOSUID;
+ 
+     // Only use MS_DIRSYNC if we're not mounting adopted storage
+@@ -61,11 +73,17 @@ status_t Mount(const std::string& source, const std::string& target,
+         flags |= MS_DIRSYNC;
+     }
+ 
+-    int res = mount(c_source, c_target, "f2fs", flags, c_opts);
++    int res = mount(c_source, c_target, "f2fs", flags, c_data);
++
++    if (portable && res == 0) {
++        chown(c_target, AID_MEDIA_RW, AID_MEDIA_RW);
++        chmod(c_target, 0755);
++    }
++
+     if (res != 0) {
+         PLOG(ERROR) << "Failed to mount " << source;
+         if (errno == EROFS) {
+-            res = mount(c_source, c_target, "f2fs", flags | MS_RDONLY, NULL);
++            res = mount(c_source, c_target, "f2fs", flags | MS_RDONLY, c_data);
+             if (res != 0) {
+                 PLOG(ERROR) << "Failed to mount read-only " << source;
+             }
+diff --git a/fs/F2fs.h b/fs/F2fs.h
+index e035a71..ecfc0c7 100644
+--- a/fs/F2fs.h
++++ b/fs/F2fs.h
+@@ -29,7 +29,8 @@ bool IsSupported();
+ 
+ status_t Check(const std::string& source, bool trusted);
+ status_t Mount(const std::string& source, const std::string& target,
+-        const std::string& opts = "", bool trusted = false);
++        const std::string& opts = "", bool trusted = false,
++        bool portable = false);
+ status_t Format(const std::string& source);
+ 
+ }  // namespace f2fs
+-- 
+2.8.2
+

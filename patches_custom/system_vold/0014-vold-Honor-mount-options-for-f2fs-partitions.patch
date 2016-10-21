@@ -1,0 +1,82 @@
+From bde19fd3e90c3c057ae99c3b4e95de290d02f984 Mon Sep 17 00:00:00 2001
+From: Michael Bestas <mikeioannina@cyanogenmod.org>
+Date: Wed, 20 Jan 2016 22:06:11 +0200
+Subject: [PATCH 14/18] vold: Honor mount options for f2fs partitions
+
+* Based on 1436fc7ea3b349283a021e75fdd4f3478a2ca2e8
+
+Change-Id: Id9491ada3bd34275a95ef9855167db6ae7a9b30f
+---
+ PrivateVolume.cpp | 2 +-
+ PublicVolume.cpp  | 2 +-
+ fs/F2fs.cpp       | 5 +++--
+ fs/F2fs.h         | 2 +-
+ 4 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/PrivateVolume.cpp b/PrivateVolume.cpp
+index 87658b9..12e448f 100644
+--- a/PrivateVolume.cpp
++++ b/PrivateVolume.cpp
+@@ -127,7 +127,7 @@ status_t PrivateVolume::doMount() {
+             return -EIO;
+         }
+ 
+-        if (f2fs::Mount(mDmDevPath, mPath, true)) {
++        if (f2fs::Mount(mDmDevPath, mPath, "", true)) {
+             PLOG(ERROR) << getId() << " failed to mount";
+             return -EIO;
+         }
+diff --git a/PublicVolume.cpp b/PublicVolume.cpp
+index 49c51e2..005b9e3 100644
+--- a/PublicVolume.cpp
++++ b/PublicVolume.cpp
+@@ -170,7 +170,7 @@ status_t PublicVolume::doMount() {
+         ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts,
+                 false);
+     } else if (mFsType == "f2fs") {
+-        ret = f2fs::Mount(mDevPath, mRawPath, false);
++        ret = f2fs::Mount(mDevPath, mRawPath, mMntOpts, false);
+     } else if (mFsType == "ntfs") {
+         ret = ntfs::Mount(mDevPath, mRawPath, false, false, false,
+                 AID_MEDIA_RW, AID_MEDIA_RW, 0007, true);
+diff --git a/fs/F2fs.cpp b/fs/F2fs.cpp
+index 5551753..8837807 100644
+--- a/fs/F2fs.cpp
++++ b/fs/F2fs.cpp
+@@ -50,9 +50,10 @@ status_t Check(const std::string& source, bool trusted) {
+ }
+ 
+ status_t Mount(const std::string& source, const std::string& target,
+-        bool trusted) {
++        const std::string& opts /* = "" */, bool trusted) {
+     const char* c_source = source.c_str();
+     const char* c_target = target.c_str();
++    const char* c_opts = opts.c_str();
+     unsigned long flags = MS_NOATIME | MS_NODEV | MS_NOSUID;
+ 
+     // Only use MS_DIRSYNC if we're not mounting adopted storage
+@@ -60,7 +61,7 @@ status_t Mount(const std::string& source, const std::string& target,
+         flags |= MS_DIRSYNC;
+     }
+ 
+-    int res = mount(c_source, c_target, "f2fs", flags, NULL);
++    int res = mount(c_source, c_target, "f2fs", flags, c_opts);
+     if (res != 0) {
+         PLOG(ERROR) << "Failed to mount " << source;
+         if (errno == EROFS) {
+diff --git a/fs/F2fs.h b/fs/F2fs.h
+index 0950552..e035a71 100644
+--- a/fs/F2fs.h
++++ b/fs/F2fs.h
+@@ -29,7 +29,7 @@ bool IsSupported();
+ 
+ status_t Check(const std::string& source, bool trusted);
+ status_t Mount(const std::string& source, const std::string& target,
+-        bool trusted);
++        const std::string& opts = "", bool trusted = false);
+ status_t Format(const std::string& source);
+ 
+ }  // namespace f2fs
+-- 
+2.8.2
+

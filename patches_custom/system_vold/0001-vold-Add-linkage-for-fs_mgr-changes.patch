@@ -1,0 +1,42 @@
+From acb5912233fc18704687f07eed88f988facab0da Mon Sep 17 00:00:00 2001
+From: Steve Kondik <steve@cyngn.com>
+Date: Fri, 16 Oct 2015 06:52:14 -0700
+Subject: [PATCH 01/18] vold: Add linkage for fs_mgr changes
+
+Change-Id: Id6623ee558a43600e474ef89f318574bdc6ba25f
+---
+ Android.mk | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Android.mk b/Android.mk
+index fb5e23e..42528db 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -58,6 +58,7 @@ common_shared_libraries := \
+ 	libsoftkeymaster \
+ 	libbase \
+ 	libkeymaster_messages \
++	libext2_blkid
+ 
+ common_static_libraries := \
+ 	libbootloader_message_writer \
+@@ -68,6 +69,8 @@ common_static_libraries := \
+ 	libscrypt_static \
+ 	libmincrypt \
+ 	libbatteryservice \
++	libext2_blkid \
++	libext2_uuid_static
+ 
+ vold_conlyflags := -std=c11
+ vold_cflags := -Werror -Wall -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-parameter
+@@ -103,6 +106,7 @@ LOCAL_CFLAGS := $(vold_cflags)
+ LOCAL_CONLYFLAGS := $(vold_conlyflags)
+ 
+ ifeq ($(TARGET_HW_DISK_ENCRYPTION),true)
++TARGET_CRYPTFS_HW_PATH ?= device/qcom/common/cryptfs_hw
+ LOCAL_C_INCLUDES += $(TARGET_CRYPTFS_HW_PATH)
+ common_shared_libraries += libcryptfs_hw
+ LOCAL_CFLAGS += -DCONFIG_HW_DISK_ENCRYPTION
+-- 
+2.8.2
+

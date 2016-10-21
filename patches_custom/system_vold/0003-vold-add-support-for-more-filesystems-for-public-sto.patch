@@ -1,7 +1,8 @@
-From ed4e212c03d054332e644b27004c3154db61a032 Mon Sep 17 00:00:00 2001
+From 62534f168fec3d353f680a1434266ed7df8d5627 Mon Sep 17 00:00:00 2001
 From: Dan Pasanen <dan.pasanen@gmail.com>
 Date: Tue, 27 Oct 2015 22:52:37 -0500
-Subject: [PATCH] vold: add support for more filesystems for public storage
+Subject: [PATCH 03/18] vold: add support for more filesystems for public
+ storage
 
 * Add exfat and ntfs support based off f2fs and ported to use
   fuse
@@ -27,7 +28,7 @@ Change-Id: I0a83761cefd97791e3ec84a18e199dfd27a5ed0b
  create mode 100644 fs/Ntfs.h
 
 diff --git a/Android.mk b/Android.mk
-index fb5e23e..084ac44 100644
+index 6c75a90..71e083a 100644
 --- a/Android.mk
 +++ b/Android.mk
 @@ -8,8 +8,10 @@ common_src_files := \
@@ -42,10 +43,10 @@ index fb5e23e..084ac44 100644
  	Loop.cpp \
  	Devmapper.cpp \
 diff --git a/Disk.cpp b/Disk.cpp
-index 2c2a2da..b9d0929 100644
+index 0029e88..aa8750f 100644
 --- a/Disk.cpp
 +++ b/Disk.cpp
-@@ -331,9 +331,11 @@ status_t Disk::readPartitions() {
+@@ -335,9 +335,11 @@ status_t Disk::readPartitions() {
  
                  switch (strtol(type, nullptr, 16)) {
                  case 0x06: // FAT16
@@ -58,7 +59,7 @@ index 2c2a2da..b9d0929 100644
                      break;
                  }
 diff --git a/PublicVolume.cpp b/PublicVolume.cpp
-index 893f928..92d7971 100644
+index 4916ca6..cb9e102 100644
 --- a/PublicVolume.cpp
 +++ b/PublicVolume.cpp
 @@ -14,6 +14,10 @@
@@ -72,7 +73,7 @@ index 893f928..92d7971 100644
  #include "fs/Vfat.h"
  #include "PublicVolume.h"
  #include "Utils.h"
-@@ -94,16 +98,11 @@ status_t PublicVolume::doMount() {
+@@ -101,16 +105,11 @@ status_t PublicVolume::doMount() {
      // TODO: expand to support mounting other filesystems
      readMetadata();
  
@@ -90,7 +91,7 @@ index 893f928..92d7971 100644
      // Use UUID as stable name, if available
      std::string stableName = getId();
      if (!mFsUuid.empty()) {
-@@ -128,8 +127,42 @@ status_t PublicVolume::doMount() {
+@@ -142,8 +141,42 @@ status_t PublicVolume::doMount() {
          return -errno;
      }
  
@@ -135,7 +136,7 @@ index 893f928..92d7971 100644
          PLOG(ERROR) << getId() << " failed to mount " << mDevPath;
          return -EIO;
      }
-@@ -227,19 +260,41 @@ status_t PublicVolume::doUnmount() {
+@@ -246,19 +279,41 @@ status_t PublicVolume::doUnmount(bool detach /* = false */) {
  }
  
  status_t PublicVolume::doFormat(const std::string& fsType) {
@@ -187,20 +188,20 @@ index 893f928..92d7971 100644
  }
  
 diff --git a/Utils.cpp b/Utils.cpp
-index 7ae22c5..8f218ef 100644
+index 0b407ff..d65ee55 100644
 --- a/Utils.cpp
 +++ b/Utils.cpp
-@@ -18,6 +18,9 @@
- #include "Utils.h"
- #include "Process.h"
- 
-+#include "fs/Exfat.h"
-+#include "fs/Ntfs.h"
-+
+@@ -21,6 +21,9 @@
  #include <android-base/file.h>
  #include <android-base/logging.h>
  #include <android-base/stringprintf.h>
-@@ -511,6 +514,11 @@ bool IsFilesystemSupported(const std::string& fsType) {
++#include "fs/Exfat.h"
++#include "fs/Ntfs.h"
++
+ #include <cutils/fs.h>
+ #include <cutils/properties.h>
+ #include <private/android_filesystem_config.h>
+@@ -524,6 +527,11 @@ bool IsFilesystemSupported(const std::string& fsType) {
          PLOG(ERROR) << "Failed to read supported filesystems";
          return false;
      }
@@ -214,7 +215,7 @@ index 7ae22c5..8f218ef 100644
  
 diff --git a/fs/Exfat.cpp b/fs/Exfat.cpp
 new file mode 100644
-index 0000000..ab0f106
+index 0000000..24a7831
 --- /dev/null
 +++ b/fs/Exfat.cpp
 @@ -0,0 +1,86 @@
@@ -237,8 +238,8 @@ index 0000000..ab0f106
 +#include "Exfat.h"
 +#include "Utils.h"
 +
-+#include <android-base/logging.h>
-+#include <android-base/stringprintf.h>
++#include <base/logging.h>
++#include <base/stringprintf.h>
 +
 +#include <vector>
 +#include <string>
@@ -351,7 +352,7 @@ index 0000000..cd4fb5d
 +#endif
 diff --git a/fs/Ntfs.cpp b/fs/Ntfs.cpp
 new file mode 100644
-index 0000000..9fc721e
+index 0000000..56070a3
 --- /dev/null
 +++ b/fs/Ntfs.cpp
 @@ -0,0 +1,96 @@
@@ -374,8 +375,8 @@ index 0000000..9fc721e
 +#include "Ntfs.h"
 +#include "Utils.h"
 +
-+#include <android-base/logging.h>
-+#include <android-base/stringprintf.h>
++#include <base/logging.h>
++#include <base/stringprintf.h>
 +
 +#include <vector>
 +#include <string>
@@ -498,10 +499,10 @@ index 0000000..805fb99
 +
 +#endif
 diff --git a/main.cpp b/main.cpp
-index 9cbcf88..fff1e29 100644
+index 86407ef..982903b 100644
 --- a/main.cpp
 +++ b/main.cpp
-@@ -56,8 +56,10 @@ int main(int argc, char** argv) {
+@@ -56,8 +56,10 @@ extern "C" int vold_main(int argc, char** argv) {
      LOG(INFO) << "Vold 3.0 (the awakening) firing up";
  
      LOG(VERBOSE) << "Detected support for:"
@@ -513,5 +514,5 @@ index 9cbcf88..fff1e29 100644
  
      VolumeManager *vm;
 -- 
-2.7.4
+2.8.2
 
