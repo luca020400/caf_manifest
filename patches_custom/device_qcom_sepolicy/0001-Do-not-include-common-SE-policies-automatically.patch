@@ -1,7 +1,7 @@
-From 05996ded45b0c269f2050cee9177dfd30d2a60e7 Mon Sep 17 00:00:00 2001
+From 6f41eaf40cd22e0b29c540ac1d90ab5e450eb548 Mon Sep 17 00:00:00 2001
 From: Ricardo Cerqueira <ricardo@cyngn.com>
 Date: Wed, 26 Nov 2014 03:14:15 +0000
-Subject: [PATCH] Do not include common SE policies automatically
+Subject: [PATCH 1/2] Do not include common SE policies automatically
 
 Automatic additions to BOARD_SEPOLICY_UNION from Android.mk do not
 guarantee order or precedence of rules. More often than not, these
@@ -61,5 +61,5 @@ index 0000000..6d2f31d
 +       device/qcom/sepolicy/test \
 +       device/qcom/sepolicy/$(TARGET_BOARD_PLATFORM)
 -- 
-2.9.3
+2.8.2
 
