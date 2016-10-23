@@ -16,7 +16,7 @@
   <project path="build" name="luca020400/android_build" groups="pdk" revision="cm-14.0-caf" remote="github">
     <copyfile src="core/root.mk" dest="Makefile" />
   </project>
-  <project path="build/kati" name="luca020400/android_build_kati" remote="github" revision="cm-14.0-caf" />
+  <project path="build/kati" name="luca020400/android_build_kati" remote="github" revision="caf-7.0" />
 
   <remove-project name="platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" />
   <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" name="platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" groups="pdk,linux,arm" revision="refs/tags/ndk-r13" clone-depth="1" />
