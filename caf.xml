@@ -2,7 +2,7 @@
 <manifest>
 
   <remote  name="github"
-           fetch="https://github.com" />
+           fetch="ssh://git@github.com" />
 
   <remove-project name="platform/build" />
   <remove-project name="platform/build/kati" />
