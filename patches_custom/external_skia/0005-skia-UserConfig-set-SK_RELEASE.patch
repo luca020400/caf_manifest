@@ -1,7 +1,7 @@
-From 68ac9f6727ee2604ce4fcdc8aec3ef4082eb7170 Mon Sep 17 00:00:00 2001
+From c354d8b1b774558baa4b0407b2e2c4d6ebcae21b Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 17:15:00 +0200
-Subject: [PATCH 4/7] skia: UserConfig: set SK_RELEASE
+Subject: [PATCH 5/9] skia: UserConfig: set SK_RELEASE
 
 * We always want to build Skia
   in Performance mode.
@@ -26,5 +26,5 @@ index 0cf628c..bbd33ab 100644
  /*  Skia has certain debug-only code that is extremely intensive even for debug
      builds.  This code is useful for diagnosing specific issues, but is not
 -- 
-2.10.0
+2.10.1
 

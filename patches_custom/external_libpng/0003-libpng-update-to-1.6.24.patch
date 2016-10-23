@@ -1,7 +1,7 @@
-From 084371dda6664fd1bc01301bd5f0d3ae9e37ca22 Mon Sep 17 00:00:00 2001
+From 097bdd83342810b2730d388484a8b83ac976477d Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Sat, 1 Oct 2016 12:24:00 +0200
-Subject: [PATCH 3/4] libpng: update to 1.6.24
+Subject: [PATCH 3/5] libpng: update to 1.6.24
 
 Change-Id: I48f6da38968babfc85501a8b8cfdf80e12a1799b
 Signed-off-by: Alex Naidis <alex.naidis@linux.com>
@@ -10161,5 +10161,5 @@ index 35fd39d..d3851f5 100644
  ; LIBPNG symbol list as a Win32 DEF file
  ; Contains all the symbols that can be exported from libpng
 -- 
-2.10.0
+2.10.1
 

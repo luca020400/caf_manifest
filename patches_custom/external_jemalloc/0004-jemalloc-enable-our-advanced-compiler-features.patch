@@ -1,0 +1,33 @@
+From 91936fe910290085bdf12f1c3b480a771ea83be3 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Fri, 7 Oct 2016 22:20:11 +0200
+Subject: [PATCH 4/4] jemalloc: enable our advanced compiler features
+
+* enables LTO together with QCLD
+* passes proper LDFLAGS for LTO
+* qualifies this for FDO
+
+Change-Id: I476131e7c14eb4b0cb87d4193444850254e60b5a
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ Android.mk | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Android.mk b/Android.mk
+index 52b9b89..ab206fb 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -16,6 +16,10 @@
+ 
+ LOCAL_PATH := $(call my-dir)
+ 
++LOCAL_SDCLANG_LTO := true
++LOCAL_SDCLANG_LTO_LDFLAGS := -O3 -funroll-loops
++LOCAL_FDO_SUPPORT := true
++
+ jemalloc_common_cflags := \
+ 	-O3 \
+ 	-funroll-loops \
+-- 
+2.10.1
+

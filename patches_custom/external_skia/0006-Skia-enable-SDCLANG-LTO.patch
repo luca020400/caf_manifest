@@ -1,7 +1,7 @@
-From 73a807ecd61118b40a874d30da4ae984a257b1ae Mon Sep 17 00:00:00 2001
+From aa3de6dd009d7826b635e276cb94f406c0a345f3 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Fri, 7 Oct 2016 22:16:11 +0200
-Subject: [PATCH 5/7] Skia: enable SDCLANG LTO
+Subject: [PATCH 6/9] Skia: enable SDCLANG LTO
 
 * together with QCLD
 
@@ -24,5 +24,5 @@ index c68475f..b073351 100644
  # This should be the last -Oxxx specified in LOCAL_CFLAGS
  LOCAL_CFLAGS += -O3
 -- 
-2.10.0
+2.10.1
 

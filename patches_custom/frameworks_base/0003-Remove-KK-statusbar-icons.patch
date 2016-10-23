@@ -1,7 +1,7 @@
-From da017d270b6fbbcb22864f34ac91a75bd9b8205f Mon Sep 17 00:00:00 2001
+From 0610c25451c76a27f3c50bf74691a30901569895 Mon Sep 17 00:00:00 2001
 From: LuK1337 <priv.luk@gmail.com>
 Date: Wed, 7 Sep 2016 18:38:32 +0200
-Subject: [PATCH 3/6] Remove KK statusbar icons
+Subject: [PATCH 03/10] Remove KK statusbar icons
 
 Change-Id: Ibc7a98f21ef4ca693b1afa430758d07cc47e5e68
 ---
@@ -314,5 +314,5 @@ z&PPEM4Y~O#nQ4`{HAEPCt_5n40of3opH@<ySd_}(n3A8As^FGclv<u&lwGXg9Bf*+
 S^|2XH9fPN<pUXO@geCy0$dOY3
 
 -- 
-2.10.0
+2.10.1
 

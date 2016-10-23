@@ -1,7 +1,7 @@
-From d43fee60ea47ab5beb56865a5ba29deb7ca10cb2 Mon Sep 17 00:00:00 2001
+From 6edca88e8188a3b77b3a142daa0e4ffb5414f6c0 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Fri, 19 Aug 2016 22:57:27 +0200
-Subject: [PATCH 2/3] jemalloc: apply recommended optimizations
+Subject: [PATCH 2/4] jemalloc: apply recommended optimizations
 
 The Jemalloc project suggests using -O3 and -funroll-loops for optimization.
 Let's enable these flags by default in order to improve the performance.
@@ -40,5 +40,5 @@ index b5815fc..52b9b89 100644
  	-D_REENTRANT \
  	-fvisibility=hidden \
 -- 
-2.10.0
+2.10.1
 

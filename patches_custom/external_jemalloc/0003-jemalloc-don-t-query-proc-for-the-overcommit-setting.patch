@@ -1,7 +1,7 @@
-From d563d17154b3bbff96d0e2cd39ba69dd6ef2822e Mon Sep 17 00:00:00 2001
+From b592fdb903843bcc13b365d23504519e001ce89a Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 14:08:33 +0200
-Subject: [PATCH 3/3] jemalloc: don't query /proc for the overcommit setting
+Subject: [PATCH 3/4] jemalloc: don't query /proc for the overcommit setting
 
 * @arter97 found the issue that
   querying /proc to get the OS's
@@ -55,5 +55,5 @@ index 51d55f5..f08827b 100644
 +#endif
  }
 -- 
-2.10.0
+2.10.1
 

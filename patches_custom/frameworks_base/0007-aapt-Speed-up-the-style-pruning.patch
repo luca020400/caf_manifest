@@ -1,0 +1,47 @@
+From 3f3d30ee0f44a57ba28bd045d850534c07406104 Mon Sep 17 00:00:00 2001
+From: "Christopher R. Palmer" <crpalmer@gmail.com>
+Date: Mon, 4 Jan 2016 05:18:31 -0500
+Subject: [PATCH 07/10] aapt: Speed up the style pruning
+
+Prior to this commit it removed each style one by one which
+causes the vector to repeatedly be shrunk and reallocated and
+copied (aka either quadratic or NlogN in the number of items
+removed).
+
+This commit simply makes it remove them all at once to make it
+linear instead.
+
+Change-Id: I541d151675ab19f37d9de1e7a323104d0d3b3c63
+---
+ tools/aapt/StringPool.cpp | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/tools/aapt/StringPool.cpp b/tools/aapt/StringPool.cpp
+index 9908c44..e449896 100644
+--- a/tools/aapt/StringPool.cpp
++++ b/tools/aapt/StringPool.cpp
+@@ -349,14 +349,18 @@ void StringPool::sortByConfig()
+ 
+     // Now trim any entries at the end of the new style array that are
+     // not needed.
+-    for (ssize_t i=newEntryStyleArray.size()-1; i>=0; i--) {
++    ssize_t i;
++    for (i=newEntryStyleArray.size()-1; i>=0; i--) {
+         const entry_style& style = newEntryStyleArray[i];
+         if (style.spans.size() > 0) {
+             // That's it.
+             break;
+         }
+-        // This one is not needed; remove.
+-        newEntryStyleArray.removeAt(i);
++    }
++
++    ssize_t nToRemove=newEntryStyleArray.size()-(i+1);
++    if (nToRemove) {
++        newEntryStyleArray.removeItemsAt(i+1, nToRemove);
+     }
+ 
+     // All done, install the new data structures and upate mValues with
+-- 
+2.10.1
+

@@ -1,7 +1,7 @@
-From 03632fc909b4bc73c7cb07ddee21e6fb0ea99acc Mon Sep 17 00:00:00 2001
+From 4deb387c148313be6de10b1d5c272087bddb3380 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Mon, 17 Oct 2016 22:08:29 +0200
-Subject: [PATCH 1/3] Squashed commit of the following:
+Subject: [PATCH 1/4] Squashed commit of the following:
 
 commit 00fa4482d89786a43fb6f76d6e86996e1587e16f
 Author: Josh Gao <jmgao@google.com>
@@ -20378,5 +20378,5 @@ index 93afc2b..30ebe37 100644
  
  TEST_BEGIN(test_zero_small)
 -- 
-2.10.0
+2.10.1
 

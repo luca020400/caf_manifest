@@ -1,0 +1,116 @@
+From 77d235e4a5c5a7838baf39026a38b5a30a92f19c Mon Sep 17 00:00:00 2001
+From: "Christopher R. Palmer" <crpalmer@gmail.com>
+Date: Mon, 4 Jan 2016 20:29:02 -0500
+Subject: [PATCH 08/10] aapt: Use a std::map instead of a SortedVector
+
+Android's SortedVectorImpl uses arrays that it must
+insert into the middle of.  Each insertion is O(N) time
+because it must move on average half the elements of
+the array to make room for the new element.  That is,
+O(N^2) time to build this sorted vector.
+
+std::map on the other hand normally uses red/black
+trees and has a cost of NlogN to add N elements to it.
+
+Change-Id: I5da0363ba806ab615b2aad0fb2a43ef9a9bec327
+---
+ tools/aapt/StringPool.cpp | 21 +++++++++++----------
+ tools/aapt/StringPool.h   |  3 ++-
+ 2 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/tools/aapt/StringPool.cpp b/tools/aapt/StringPool.cpp
+index e449896..0d59fae 100644
+--- a/tools/aapt/StringPool.cpp
++++ b/tools/aapt/StringPool.cpp
+@@ -127,7 +127,7 @@ int StringPool::entry::compare(const entry& o) const {
+ }
+ 
+ StringPool::StringPool(bool utf8) :
+-        mUTF8(utf8), mValues(-1)
++        mUTF8(utf8)
+ {
+ }
+ 
+@@ -144,8 +144,8 @@ ssize_t StringPool::add(const String16& value, const Vector<entry_style_span>& s
+ ssize_t StringPool::add(const String16& value,
+         bool mergeDuplicates, const String8* configTypeName, const ResTable_config* config)
+ {
+-    ssize_t vidx = mValues.indexOfKey(value);
+-    ssize_t pos = vidx >= 0 ? mValues.valueAt(vidx) : -1;
++    auto it = mValues.find(value);
++    ssize_t pos = it != mValues.end() ? it->second : -1;
+     ssize_t eidx = pos >= 0 ? mEntryArray.itemAt(pos) : -1;
+     if (eidx < 0) {
+         eidx = mEntries.add(entry(value));
+@@ -192,21 +192,21 @@ ssize_t StringPool::add(const String16& value,
+         }
+     }
+ 
+-    const bool first = vidx < 0;
++    const bool first = (it == mValues.end());
+     const bool styled = (pos >= 0 && (size_t)pos < mEntryStyleArray.size()) ?
+         mEntryStyleArray[pos].spans.size() : 0;
+     if (first || styled || !mergeDuplicates) {
+         pos = mEntryArray.add(eidx);
+         if (first) {
+-            vidx = mValues.add(value, pos);
++            mValues[value] = pos;
+         }
+         entry& ent = mEntries.editItemAt(eidx);
+         ent.indices.add(pos);
+     }
+ 
+     if (kIsDebug) {
+-        printf("Adding string %s to pool: pos=%zd eidx=%zd vidx=%zd\n",
+-                String8(value).string(), SSIZE(pos), SSIZE(eidx), SSIZE(vidx));
++        printf("Adding string %s to pool: pos=%zd eidx=%zd\n",
++                String8(value).string(), SSIZE(pos), SSIZE(eidx));
+     }
+ 
+     return pos;
+@@ -371,7 +371,7 @@ void StringPool::sortByConfig()
+     mValues.clear();
+     for (size_t i=0; i<mEntries.size(); i++) {
+         const entry& ent = mEntries[i];
+-        mValues.add(ent.value, ent.indices[0]);
++        mValues[ent.value] = ent.indices[0];
+     }
+ 
+ #if 0
+@@ -614,9 +614,10 @@ ssize_t StringPool::offsetForString(const String16& val) const
+ 
+ const Vector<size_t>* StringPool::offsetsForString(const String16& val) const
+ {
+-    ssize_t pos = mValues.valueFor(val);
+-    if (pos < 0) {
++    auto it = mValues.find(val);
++    if (it == mValues.end()) {
+         return NULL;
+     }
++    ssize_t pos = it->second;
+     return &mEntries[mEntryArray[pos]].indices;
+ }
+diff --git a/tools/aapt/StringPool.h b/tools/aapt/StringPool.h
+index 4b0d920..c789392 100644
+--- a/tools/aapt/StringPool.h
++++ b/tools/aapt/StringPool.h
+@@ -19,6 +19,7 @@
+ #include <fcntl.h>
+ #include <ctype.h>
+ #include <errno.h>
++#include <map>
+ 
+ using namespace android;
+ 
+@@ -173,7 +174,7 @@ private:
+ 
+     // Unique set of all the strings added to the pool, mapped to
+     // the first index of mEntryArray where the value was added.
+-    DefaultKeyedVector<String16, ssize_t>   mValues;
++    std::map<String16, ssize_t>             mValues;
+     // This array maps from the original position a string was placed at
+     // in mEntryArray to its new position after being sorted with sortByConfig().
+     Vector<size_t>                          mOriginalPosToNewPos;
+-- 
+2.10.1
+

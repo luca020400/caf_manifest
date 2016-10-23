@@ -1,7 +1,7 @@
-From 8199a9471e548e0b280b9b31d80e4700f3c3846c Mon Sep 17 00:00:00 2001
+From 706b6e452e0ac371b94d39c78fa984e57d0bfbb2 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Thu, 8 Sep 2016 18:39:04 +0200
-Subject: [PATCH 4/6] Revert "Emergency call button on Swipe lock Screen."
+Subject: [PATCH 04/10] Revert "Emergency call button on Swipe lock Screen."
 
 This reverts commit e7b6415c010c269e34cce09277148f7b2f91bcf5.
 ---
@@ -146,5 +146,5 @@ index 161ceb6..772c766 100644
 -    }
  }
 -- 
-2.10.0
+2.10.1
 

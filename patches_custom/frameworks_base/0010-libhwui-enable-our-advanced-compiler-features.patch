@@ -1,0 +1,37 @@
+From 9ee7c3dd1a1d3de138e486586b5f9a092cea7038 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Fri, 7 Oct 2016 22:18:27 +0200
+Subject: [PATCH 10/10] libhwui: enable our advanced compiler features
+
+* enables LTO together with QCLD
+* LTO relies on the flags from the platform
+
+Change-Id: I948182080e98e1706b731681ea82a51e63d5d706
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ libs/hwui/Android.mk | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libs/hwui/Android.mk b/libs/hwui/Android.mk
+index c9d4af6..276b436 100644
+--- a/libs/hwui/Android.mk
++++ b/libs/hwui/Android.mk
+@@ -174,6 +174,7 @@ endif
+ 
+ include $(CLEAR_VARS)
+ 
++LOCAL_SDCLANG_LTO := true
+ LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+ LOCAL_MODULE := libhwui_static
+ LOCAL_CFLAGS := $(hwui_cflags)
+@@ -217,6 +218,7 @@ include $(BUILD_STATIC_LIBRARY)
+ 
+ include $(CLEAR_VARS)
+ 
++LOCAL_SDCLANG_LTO := true
+ LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+ LOCAL_MODULE := libhwui
+ LOCAL_WHOLE_STATIC_LIBRARIES := libhwui_static
+-- 
+2.10.1
+

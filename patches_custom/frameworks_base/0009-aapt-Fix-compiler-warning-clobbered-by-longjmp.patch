@@ -1,0 +1,30 @@
+From 9d2958ce12fea9f735f66842e20f34631b329c0b Mon Sep 17 00:00:00 2001
+From: "Christopher R. Palmer" <crpalmer@gmail.com>
+Date: Thu, 29 Oct 2015 06:04:21 -0400
+Subject: [PATCH 09/10] aapt: Fix compiler warning (clobbered by longjmp)
+
+The error handling can clobber the fp variable when the code is
+being optimized and therefore fp must be marked as volatile to
+stop it from doing unsafe optimizations.
+
+Change-Id: Ib133587687c7fc0e788c4b9673669ef9b5bbe91a
+---
+ tools/aapt/Images.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/aapt/Images.cpp b/tools/aapt/Images.cpp
+index 9939c18..9bf64c8 100644
+--- a/tools/aapt/Images.cpp
++++ b/tools/aapt/Images.cpp
+@@ -1459,7 +1459,7 @@ status_t preProcessImageToCache(const Bundle* bundle, const String8& source, con
+     png_structp read_ptr = NULL;
+     png_infop read_info = NULL;
+ 
+-    FILE* fp;
++    FILE*volatile fp;
+ 
+     image_info imageInfo;
+ 
+-- 
+2.10.1
+

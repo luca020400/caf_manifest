@@ -1,7 +1,7 @@
-From a3b8e7ea4362fb5e86064a873d02a70bcb32dcce Mon Sep 17 00:00:00 2001
+From a4b3191efa919ac6602f2b99fa235aec93b25410 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Wed, 5 Oct 2016 10:22:43 +0200
-Subject: [PATCH 7/7] skia: update libpng to 1.6.25
+Subject: [PATCH 8/9] skia: update libpng to 1.6.25
 
 * also match Android config
 
@@ -36,5 +36,5 @@ index 7204c6d..741608d 100644
  #define PNG_WRITE_ANCILLARY_CHUNKS_SUPPORTED
  #define PNG_WRITE_BGR_SUPPORTED
 -- 
-2.10.0
+2.10.1
 

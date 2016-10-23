@@ -1,7 +1,7 @@
-From fdca3b9bbcac7bfa03c9392bde216a7da5b567e2 Mon Sep 17 00:00:00 2001
+From 151595819d1c87d1bd0f7a74ec5d9a94e00711d9 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 17:13:15 +0200
-Subject: [PATCH 3/7] skia: correct call for SK_RELEASE
+Subject: [PATCH 4/9] skia: correct call for SK_RELEASE
 
 In Skia "NDEBUG" shouldn't be directly
 used as conditional. Instead a logic is
@@ -31,5 +31,5 @@ index 0c259d6..742f86d 100644
          for (int i = 1; i < fNextRun; ++i) {
              SkASSERT(fBufferedRuns[i].fY == fBufferedRuns[i-1].fY + 1);
 -- 
-2.10.0
+2.10.1
 
