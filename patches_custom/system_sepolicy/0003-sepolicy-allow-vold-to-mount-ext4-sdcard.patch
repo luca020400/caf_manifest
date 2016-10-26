@@ -1,7 +1,7 @@
-From 8d6f9d8d730deb9e0e58541d2a7f2f6998ffa43e Mon Sep 17 00:00:00 2001
+From 99ed35da5978f61495afefbc6c8c3369ab9b7b8b Mon Sep 17 00:00:00 2001
 From: Michael Bestas <mikeioannina@gmail.com>
 Date: Sat, 13 Dec 2014 20:51:20 +0200
-Subject: [PATCH 3/4] sepolicy: allow vold to mount ext4 sdcard
+Subject: [PATCH 3/5] sepolicy: allow vold to mount ext4 sdcard
 
 * Originally in 9a19f575a4c991bf2d7bc2f8f980909910ee4cce vendor/cm
 

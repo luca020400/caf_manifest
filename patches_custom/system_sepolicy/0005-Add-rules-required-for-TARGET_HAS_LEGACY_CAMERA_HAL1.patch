@@ -1,0 +1,42 @@
+From c7e13baad980b296b3d4a29b960f4ea1ca67b5cf Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Tue, 25 Oct 2016 23:26:12 +0200
+Subject: [PATCH 5/5] Add rules required for TARGET_HAS_LEGACY_CAMERA_HAL1
+
+Change-Id: Ica4926fa3acf88b95c687f25eec4dbc68ea41fbb
+---
+ Android.mk     | 1 +
+ mediaserver.te | 5 +++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/Android.mk b/Android.mk
+index e4d3c66..32b59a0 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -95,6 +95,7 @@ $(sepolicy_policy.conf): $(call build_policy, $(sepolicy_build_files))
+ 	$(hide) m4 $(PRIVATE_ADDITIONAL_M4DEFS) \
+ 		-D mls_num_sens=$(PRIVATE_MLS_SENS) -D mls_num_cats=$(PRIVATE_MLS_CATS) \
+ 		-D target_build_variant=$(TARGET_BUILD_VARIANT) \
++		-D target_has_legacy_camera_hal1=$(TARGET_HAS_LEGACY_CAMERA_HAL1) \
+ 		-D target_needs_platform_text_relocations=$(TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS) \
+ 		-s $^ > $@
+ 	$(hide) sed '/dontaudit/d' $@ > $@.dontaudit
+diff --git a/mediaserver.te b/mediaserver.te
+index 5fbaa30..150b4b6 100644
+--- a/mediaserver.te
++++ b/mediaserver.te
+@@ -94,6 +94,11 @@ allow mediaserver processinfo_service:service_manager find;
+ allow mediaserver scheduling_policy_service:service_manager find;
+ allow mediaserver surfaceflinger_service:service_manager find;
+ 
++ifelse(target_has_legacy_camera_hal1, `true',
++  allow mediaserver cameraproxy_service:service_manager find;
++  allow mediaserver cameraserver_service:service_manager add;
++,)
++
+ # /oem access
+ allow mediaserver oemfs:dir search;
+ allow mediaserver oemfs:file r_file_perms;
+-- 
+2.8.2
+

@@ -1,7 +1,7 @@
-From f1e19660121de7b8d7c6d6ac11e2c04b8f40c31b Mon Sep 17 00:00:00 2001
+From 9f5ddd0f4969270351207a3b25b9d88dfe25abd8 Mon Sep 17 00:00:00 2001
 From: Tom Marshall <tdm@cyngn.com>
 Date: Fri, 12 Dec 2014 16:35:56 -0800
-Subject: [PATCH 2/4] sepolicy: New type sdcard_posix for labeled filesystems
+Subject: [PATCH 2/5] sepolicy: New type sdcard_posix for labeled filesystems
 
  * Need this because sdcard_external is an alias for vfat
 
