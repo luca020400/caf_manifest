@@ -1,4 +1,4 @@
-From bcf9f83c419a7cdb7d082858e799216c1e1c68fa Mon Sep 17 00:00:00 2001
+From 1674a6c7cf737658a91687d1a2b332a44a24a4a2 Mon Sep 17 00:00:00 2001
 From: Sanket Padawe <sanketpadawe@google.com>
 Date: Fri, 9 Sep 2016 10:28:57 -0700
 Subject: [PATCH] Remove flag from intent sent from Catservice to StkApp.
@@ -26,5 +26,5 @@ index fe74104..2c2a697 100644
          intent.putExtra("SLOT_ID", mSlotId);
          CatLog.d(this, "Sending CmdMsg: " + cmdMsg+ " on slotid:" + mSlotId);
 -- 
-2.10.0
+2.10.1
 

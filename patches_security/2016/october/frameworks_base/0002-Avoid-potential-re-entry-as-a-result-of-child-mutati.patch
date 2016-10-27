@@ -1,7 +1,7 @@
-From 4f2c5602b21d3b5cbd40ddc0e32082ffc5ff33a5 Mon Sep 17 00:00:00 2001
+From 789128f816872e03f9621f62574acf5457e6f17e Mon Sep 17 00:00:00 2001
 From: Alan Viverette <alanv@google.com>
 Date: Wed, 27 Jul 2016 10:23:35 -0400
-Subject: [PATCH 02/28] Avoid potential re-entry as a result of child mutation
+Subject: [PATCH 02/22] Avoid potential re-entry as a result of child mutation
 
 Don't set the callback until we're all done making changes.
 
@@ -28,5 +28,5 @@ index d5143da..cc7f5c7 100644
          }
  
 -- 
-2.10.0
+2.10.1
 

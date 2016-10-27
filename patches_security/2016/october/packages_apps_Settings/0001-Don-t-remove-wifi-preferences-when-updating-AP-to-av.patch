@@ -1,4 +1,4 @@
-From 15e2ced48203eecc6a80aac340335830fd1e215d Mon Sep 17 00:00:00 2001
+From 26e06a4f97771d848cfef576ac5634c3cfa73d99 Mon Sep 17 00:00:00 2001
 From: Fan Zhang <zhfan@google.com>
 Date: Wed, 24 Aug 2016 14:52:49 -0700
 Subject: [PATCH 1/4] Don't remove wifi preferences when updating AP to avoid
@@ -54,5 +54,5 @@ index 40e3673..d0f803c 100755
                          LongPressAccessPointPreference pref = (LongPressAccessPointPreference)
                                  getCachedPreference(key);
 -- 
-2.10.0
+2.10.1
 

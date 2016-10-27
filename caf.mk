@@ -70,7 +70,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dataroaming=false
 
-CAF_RELEASE = LA.BR.1.2.9-01010-8x16.0
+CAF_RELEASE = LA.BR.1.2.9-01310-8x16.0
 CAF_VERSION = $(TARGET_DEVICE)-$(CAF_RELEASE)-$(shell date -u +%Y%m%d)
 
 # Overlay

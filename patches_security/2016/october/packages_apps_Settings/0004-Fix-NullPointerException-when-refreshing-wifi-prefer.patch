@@ -1,4 +1,4 @@
-From 742fdfc613dce9295e4718a0dcb850d7ce8d6eb0 Mon Sep 17 00:00:00 2001
+From 6e9adcf37890d87ebbc47919b9a1f3cd0b319f29 Mon Sep 17 00:00:00 2001
 From: Doris Ling <dling@google.com>
 Date: Wed, 31 Aug 2016 14:27:19 -0700
 Subject: [PATCH 4/4] Fix NullPointerException when refreshing wifi
@@ -48,5 +48,5 @@ index b5404c9..55a083f 100755
  
      @Override
 -- 
-2.10.0
+2.10.1
 

@@ -1,4 +1,4 @@
-From 2c198a0f8f5361706dc88083f4dd0e95690efd40 Mon Sep 17 00:00:00 2001
+From 10a308cac7520b0af48e52b1a386e88be25b59c3 Mon Sep 17 00:00:00 2001
 From: Andy Hung <hunga@google.com>
 Date: Thu, 28 Jul 2016 10:45:54 -0700
 Subject: [PATCH 2/2] audio_a2dp_hw: Always update frame counter in out_write
@@ -10,11 +10,113 @@ Change-Id: I7db51321672c128039545cc0fb604c615f169bc3
 (cherry picked from commit f4a37b255d1d6fa4cf7cefe2aeb1c3f4fdf33f3c)
 (cherry picked from commit 5274ab7a31055865be100753f26de56119886d3f)
 ---
- audio_a2dp_hw/audio_a2dp_hw.c | 29 +++++++++++++----------------
- 1 file changed, 13 insertions(+), 16 deletions(-)
+ ...hw-Always-update-frame-counter-in-out_wri.patch | 94 ++++++++++++++++++++++
+ audio_a2dp_hw/audio_a2dp_hw.c                      | 25 +++---
+ 2 files changed, 105 insertions(+), 14 deletions(-)
+ create mode 100644 0001-audio_a2dp_hw-Always-update-frame-counter-in-out_wri.patch
 
+diff --git a/0001-audio_a2dp_hw-Always-update-frame-counter-in-out_wri.patch b/0001-audio_a2dp_hw-Always-update-frame-counter-in-out_wri.patch
+new file mode 100644
+index 0000000..deead32
+--- /dev/null
++++ b/0001-audio_a2dp_hw-Always-update-frame-counter-in-out_wri.patch
+@@ -0,0 +1,94 @@
++From 820042fc0064ebc88641f321609edda6618962a9 Mon Sep 17 00:00:00 2001
++From: Andy Hung <hunga@google.com>
++Date: Thu, 28 Jul 2016 10:45:54 -0700
++Subject: [PATCH] audio_a2dp_hw: Always update frame counter in out_write
++
++Required now that we always return success.
++
++Bug: 30025777
++Change-Id: I7db51321672c128039545cc0fb604c615f169bc3
++(cherry picked from commit f4a37b255d1d6fa4cf7cefe2aeb1c3f4fdf33f3c)
++(cherry picked from commit 5274ab7a31055865be100753f26de56119886d3f)
++---
++ audio_a2dp_hw/audio_a2dp_hw.c | 29 +++++++++++++----------------
++ 1 file changed, 13 insertions(+), 16 deletions(-)
++
++diff --git a/audio_a2dp_hw/audio_a2dp_hw.c b/audio_a2dp_hw/audio_a2dp_hw.c
++index 4de0b0b..2c677c9 100644
++--- a/audio_a2dp_hw/audio_a2dp_hw.c
+++++ b/audio_a2dp_hw/audio_a2dp_hw.c
++@@ -672,8 +672,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
++                          size_t bytes)
++ {
++     struct a2dp_stream_out *out = (struct a2dp_stream_out *)stream;
++-    int sent;
++-    int us_delay;
+++    int sent = -1;
++     #ifdef BT_AUDIO_SYSTRACE_LOG
++     char trace_buf[512];
++     #endif
++@@ -683,8 +682,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
++     pthread_mutex_lock(&out->common.lock);
++     if (out->common.state == AUDIO_A2DP_STATE_SUSPENDED ||
++             out->common.state == AUDIO_A2DP_STATE_STOPPING) {
++-        INFO("stream suspended or closing");
++-        goto error;
+++        DEBUG("stream suspended or closing");
+++        goto finish;
++     }
++ 
++     /* only allow autostarting if we are in stopped or standby */
++@@ -697,13 +696,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
++         if (start_audio_datapath(&out->common) < 0)
++ #endif
++         {
++-            goto error;
+++            goto finish;
++         }
++     }
++     else if (out->common.state != AUDIO_A2DP_STATE_STARTED)
++     {
++         ERROR("stream not in stopped or standby");
++-        goto error;
+++        goto finish;
++     }
++     #ifdef BT_AUDIO_SAMPLE_LOG
++     if (outputpcmsamplefile)
++@@ -752,26 +751,24 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
++         } else {
++             ERROR("write failed : stream suspended, avoid resetting state");
++         }
++-        goto error;
+++        goto finish;
++     }
++ 
+++finish: ;
++     const size_t frames = bytes / audio_stream_out_frame_size(stream);
++     out->frames_rendered += frames;
++     out->frames_presented += frames;
++     pthread_mutex_unlock(&out->common.lock);
++-    return bytes;
++ 
++-error:
++-    pthread_mutex_unlock(&out->common.lock);
++-    us_delay = calc_audiotime(out->common.cfg, bytes);
++-
++-    DEBUG("emulate a2dp write delay (%d us)", us_delay);
++-
++-    usleep(us_delay);
+++    // If send didn't work out, sleep to emulate write delay.
+++    if (sent == -1) {
+++        const int us_delay = calc_audiotime(out->common.cfg, bytes);
+++        DEBUG("emulate a2dp write delay (%d us)", us_delay);
+++        usleep(us_delay);
+++    }
++     return bytes;
++ }
++ 
++-
++ static uint32_t out_get_sample_rate(const struct audio_stream *stream)
++ {
++     struct a2dp_stream_out *out = (struct a2dp_stream_out *)stream;
++-- 
++2.10.1
++
 diff --git a/audio_a2dp_hw/audio_a2dp_hw.c b/audio_a2dp_hw/audio_a2dp_hw.c
-index 4de0b0b..2c677c9 100644
+index 4de0b0b..3c7b319 100644
 --- a/audio_a2dp_hw/audio_a2dp_hw.c
 +++ b/audio_a2dp_hw/audio_a2dp_hw.c
 @@ -672,8 +672,7 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
@@ -27,17 +129,6 @@ index 4de0b0b..2c677c9 100644
      #ifdef BT_AUDIO_SYSTRACE_LOG
      char trace_buf[512];
      #endif
-@@ -683,8 +682,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
-     pthread_mutex_lock(&out->common.lock);
-     if (out->common.state == AUDIO_A2DP_STATE_SUSPENDED ||
-             out->common.state == AUDIO_A2DP_STATE_STOPPING) {
--        INFO("stream suspended or closing");
--        goto error;
-+        DEBUG("stream suspended or closing");
-+        goto finish;
-     }
- 
-     /* only allow autostarting if we are in stopped or standby */
 @@ -697,13 +696,13 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
          if (start_audio_datapath(&out->common) < 0)
  #endif
@@ -68,13 +159,13 @@ index 4de0b0b..2c677c9 100644
      out->frames_presented += frames;
      pthread_mutex_unlock(&out->common.lock);
 -    return bytes;
- 
+-
 -error:
 -    pthread_mutex_unlock(&out->common.lock);
 -    us_delay = calc_audiotime(out->common.cfg, bytes);
 -
 -    DEBUG("emulate a2dp write delay (%d us)", us_delay);
--
+ 
 -    usleep(us_delay);
 +    // If send didn't work out, sleep to emulate write delay.
 +    if (sent == -1) {
@@ -90,5 +181,5 @@ index 4de0b0b..2c677c9 100644
  {
      struct a2dp_stream_out *out = (struct a2dp_stream_out *)stream;
 -- 
-2.10.0
+2.10.1
 

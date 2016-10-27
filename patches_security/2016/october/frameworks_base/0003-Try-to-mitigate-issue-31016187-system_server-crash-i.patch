@@ -1,7 +1,7 @@
-From 183ce96c1b297aa13be321f229cbb5c2743eb0c5 Mon Sep 17 00:00:00 2001
+From 22d37bf3c61d4bde6675670037847034601ecd6e Mon Sep 17 00:00:00 2001
 From: Dianne Hackborn <hackbod@google.com>
 Date: Wed, 24 Aug 2016 14:54:20 -0700
-Subject: [PATCH 03/28] Try to mitigate issue #31016187: system_server crash in
+Subject: [PATCH 03/22] Try to mitigate issue #31016187: system_server crash in
  ArraySet.
 
 Instead of crashing, log a wtf and recover.  This is not a problem
@@ -84,5 +84,5 @@ index 1e765b6..a02c070 100644
              }
          }
 -- 
-2.10.0
+2.10.1
 

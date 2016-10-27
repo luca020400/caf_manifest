@@ -1,4 +1,4 @@
-From 59d4fd4de9b5cdf92f54f2509482c6fe2c0babab Mon Sep 17 00:00:00 2001
+From 504f6ce9e56e2310a716666e7e5088d8bf463f62 Mon Sep 17 00:00:00 2001
 From: Jason Monk <jmonk@google.com>
 Date: Mon, 25 Jul 2016 10:37:39 -0400
 Subject: [PATCH 2/4] Fix multiple bluetooth devices bug
@@ -36,5 +36,5 @@ index 0a8221b..5a4bf7d 100644
                  // Paired devices category
                  addDeviceCategory(mPairedDevicesCategory,
 -- 
-2.10.0
+2.10.1
 

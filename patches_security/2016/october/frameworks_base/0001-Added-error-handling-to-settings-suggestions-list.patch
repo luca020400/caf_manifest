@@ -1,7 +1,7 @@
-From 53e025ed5d22eab4841d773699af76ab02c1d58c Mon Sep 17 00:00:00 2001
+From 2b0bfb0284cac9d7e6e2f3eb6a4d95faa6811aa0 Mon Sep 17 00:00:00 2001
 From: Salvador Martinez <dehboxturtle@google.com>
 Date: Thu, 4 Aug 2016 13:37:52 -0700
-Subject: [PATCH 01/28] Added error handling to settings suggestions list
+Subject: [PATCH 01/22] Added error handling to settings suggestions list
 
 The suggestions list in the summary page of the
 settings app could sometimes cause a crash due to
@@ -37,5 +37,5 @@ index 741b0ea..21786c9 100644
      }
  
 -- 
-2.10.0
+2.10.1
 

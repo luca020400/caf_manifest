@@ -1,4 +1,4 @@
-From cce6acf83facfa9682473d1a4a928f2af3d23375 Mon Sep 17 00:00:00 2001
+From 8a7375454605c8b13e40ab9d1878fab4ff8ef016 Mon Sep 17 00:00:00 2001
 From: Andre Eisenbach <eisenbach@google.com>
 Date: Thu, 7 Jul 2016 09:58:59 -0700
 Subject: [PATCH 1/2] Disable auto-pairing for hands-free devices
@@ -24,5 +24,5 @@ index 5879011..fd21d6a 100644
              check_cod(&bd_addr, COD_AV_PORTABLE_AUDIO) ||
              check_cod(&bd_addr, COD_AV_HIFI_AUDIO) ||
 -- 
-2.10.0
+2.10.1
 
