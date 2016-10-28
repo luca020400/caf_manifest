@@ -37,7 +37,18 @@
   <project name="TheMuppets/proprietary_vendor_asus" path="vendor/asus" remote="github" revision="cm-14.0" />
   <!-- END ASUS -->
 
-  <!-- BEGIN SDCLANG -->
+  <!-- BEGIN AOSPA -->
   <project path="vendor/qcom/sdclang-3.8/linux-x86" name="ThankYouMario/proprietary_vendor_qcom_sdclang-3.8_linux-x86" remote="github" revision="nougat-caf" />
+
+  <remove-project name="platform/external/libjpeg-turbo" />
+  <project path="external/libjpeg-turbo" name="AOSPA/android_external_libjpeg-turbo" remote="github" revision="nougat-caf" />
+  <remove-project name="platform/external/libpng" />
+  <project path="external/libpng" name="AOSPA/android_external_libpng" remote="github" revision="nougat-caf" />
+  <remove-project name="platform/external/skia" />
+  <project path="external/skia" name="AOSPA/android_external_skia" remote="github" revision="nougat-caf" />
+  <remove-project name="platform/external/jemalloc" />
+  <project path="external/jemalloc" name="AOSPA/android_external_jemalloc" remote="github" revision="nougat-caf" />
+  <remove-project name="platform/external/sqlite" />
+  <project path="external/sqlite" name="AOSPA/android_external_sqlite" remote="github" revision="nougat-caf" />
   <!-- END SDCLANG -->
 </manifest>

@@ -1,7 +1,7 @@
-From 68cfee20254a088d6416023b5e13b80c6658aae7 Mon Sep 17 00:00:00 2001
+From f32c266dc4d66d6a0f2c6be8898f94bbe3ff3b23 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Mon, 29 Aug 2016 11:41:07 +0200
-Subject: [PATCH 01/11] skia: Kill libqc-skia
+Subject: [PATCH] skia: Kill libqc-skia
 
 Change-Id: I7810fd86abe8a7e5b09e436f940550dd94dda655
 ---
@@ -9,18 +9,18 @@ Change-Id: I7810fd86abe8a7e5b09e436f940550dd94dda655
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/Android.mk b/Android.mk
-index 429407d..7808375 100644
+index 2d13bfd..9dcfb75 100644
 --- a/Android.mk
 +++ b/Android.mk
-@@ -830,9 +830,9 @@ LOCAL_WHOLE_STATIC_LIBRARIES := libskia_static
- LOCAL_SHARED_LIBRARIES := \
-         libcutils
+@@ -841,9 +841,9 @@ LOCAL_SDCLANG_LTO := true
+ LOCAL_FDO_SUPPORT := true
+ 
  
 -ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
 -        LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
 -endif
 +#ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
-+#LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
++#        LOCAL_WHOLE_STATIC_LIBRARIES += libqc-skia
 +#endif
  
  LOCAL_EXPORT_C_INCLUDE_DIRS := \
