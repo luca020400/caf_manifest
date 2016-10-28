@@ -1,4 +1,4 @@
-From bb7e21ccf9e53d6462528d6e752f988c95f7ea75 Mon Sep 17 00:00:00 2001
+From c9fd3c0d63d805e111829c22beb3e8a434ea7c68 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:35:31 +0200
 Subject: [PATCH 06/33] OMS-N: integrate OverlayManagerService into framework
@@ -2315,5 +2315,5 @@ index 8425cc6..241646f 100644
          AttributeCache.init(mSystemContext);
  
 -- 
-2.10.0
+2.10.1
 

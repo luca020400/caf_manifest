@@ -1,4 +1,4 @@
-From 3f3d30ee0f44a57ba28bd045d850534c07406104 Mon Sep 17 00:00:00 2001
+From ce01faaea0fc9c171f055d8c133b6bb73c59e116 Mon Sep 17 00:00:00 2001
 From: "Christopher R. Palmer" <crpalmer@gmail.com>
 Date: Mon, 4 Jan 2016 05:18:31 -0500
 Subject: [PATCH 07/10] aapt: Speed up the style pruning

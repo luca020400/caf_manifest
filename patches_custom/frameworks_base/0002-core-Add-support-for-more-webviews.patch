@@ -1,4 +1,4 @@
-From 04f44bc483e1bec65eba70669670b64210287c65 Mon Sep 17 00:00:00 2001
+From f8b157ecb9899773605782978b1f897fb696f53b Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Wed, 7 Sep 2016 07:17:56 -0700
 Subject: [PATCH 02/10] core: Add support for more webviews

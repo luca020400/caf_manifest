@@ -1,4 +1,4 @@
-From 05e8b2e9cf25d312eea07aa4b47620c4fef54f1a Mon Sep 17 00:00:00 2001
+From bd7a959558796878bc584693ebf52a8692f5ed36 Mon Sep 17 00:00:00 2001
 From: Dave Kover <dkover@cyngn.com>
 Date: Wed, 18 Feb 2015 16:11:14 -0800
 Subject: [PATCH 23/33] Themes: Expose resolver hardcoded colors
@@ -106,5 +106,5 @@ index 0000000..c77eb01
 +    <color name="resolver_list_bg">@color/white</color>
 +</resources>
 -- 
-2.10.0
+2.10.1
 

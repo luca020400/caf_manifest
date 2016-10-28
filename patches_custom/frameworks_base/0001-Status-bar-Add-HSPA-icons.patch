@@ -1,4 +1,4 @@
-From 8e89e8ce1c3f818f3e5d75c1037c8298f374d125 Mon Sep 17 00:00:00 2001
+From 3eb38e5158ffbf554880e28aafb32b39c4c49c88 Mon Sep 17 00:00:00 2001
 From: Rashed Abdel-Tawab <rashed@linux.com>
 Date: Sun, 30 Nov 2014 00:17:03 -0500
 Subject: [PATCH 01/10] Status bar: Add HSPA+ icons

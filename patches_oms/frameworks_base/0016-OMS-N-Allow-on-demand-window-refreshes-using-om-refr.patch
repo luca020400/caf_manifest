@@ -1,4 +1,4 @@
-From d14a916bbafd1655392829f65860a05474bac799 Mon Sep 17 00:00:00 2001
+From 72cab1d3534a2085decb4c4e13c6e6663b314cc7 Mon Sep 17 00:00:00 2001
 From: Jacob McSwain <jacob.a.mcswain@gmail.com>
 Date: Wed, 31 Aug 2016 05:11:27 +0000
 Subject: [PATCH 16/33] OMS-N: Allow on-demand window refreshes using "om
@@ -80,5 +80,5 @@ index 2cfc9a5..7cdc7d0 100644
          System.err.println("         PACKAGE to be just higher than the priority of PACKAGE_PARENT");
          System.err.println("         If PARENT is the special keyword 'lowest', change priority of");
 -- 
-2.10.0
+2.10.1
 

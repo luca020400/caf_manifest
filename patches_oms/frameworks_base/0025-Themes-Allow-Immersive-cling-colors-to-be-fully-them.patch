@@ -1,4 +1,4 @@
-From 21757c17f2f48711115e4001b77527a5dd11b21a Mon Sep 17 00:00:00 2001
+From f47e7d9bf4f9fe615c6308da85dadf26951ffd04 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Tue, 17 Nov 2015 18:57:11 -0500
 Subject: [PATCH 25/33] Themes: Allow Immersive cling colors to be fully themed
@@ -76,5 +76,5 @@ index c77eb01..dfc6c8b 100644
 +    <color name="immersive_cling_button_text_color">@android:color/white</color>
  </resources>
 -- 
-2.10.0
+2.10.1
 

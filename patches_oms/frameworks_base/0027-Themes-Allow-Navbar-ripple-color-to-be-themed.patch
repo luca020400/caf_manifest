@@ -1,4 +1,4 @@
-From 5f3b2ff9de4e3c5e62822b9c9fc3189248a79688 Mon Sep 17 00:00:00 2001
+From 44ed0e4ec63088779cd9dffecb6bcdb31a1647a2 Mon Sep 17 00:00:00 2001
 From: Dave Kover <dkover@cyngn.com>
 Date: Thu, 14 Apr 2016 10:19:13 +0700
 Subject: [PATCH 27/33] Themes: Allow Navbar ripple color to be themed
@@ -71,5 +71,5 @@ index 57e092a..2579579 100644
          return mRipplePaint;
      }
 -- 
-2.10.0
+2.10.1
 

@@ -1,4 +1,4 @@
-From e07ffe7c509831346c511fb7b794ece4175771e0 Mon Sep 17 00:00:00 2001
+From 4c91746ec7955419c9686c4846362735a56ae961 Mon Sep 17 00:00:00 2001
 From: Nicholas Chum <nicholaschum@gmail.com>
 Date: Sun, 8 Nov 2015 05:27:28 -0500
 Subject: [PATCH 29/33] Themes: Allow Resolver List BG to be fully themed
@@ -54,5 +54,5 @@ index d12c8ba..d947094 100644
                android:padding="32dp"
                android:gravity="center"
 -- 
-2.10.0
+2.10.1
 

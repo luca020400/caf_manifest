@@ -1,4 +1,4 @@
-From 9d2958ce12fea9f735f66842e20f34631b329c0b Mon Sep 17 00:00:00 2001
+From 871b76887fdb44b7b215455ba657ef69e02a6378 Mon Sep 17 00:00:00 2001
 From: "Christopher R. Palmer" <crpalmer@gmail.com>
 Date: Thu, 29 Oct 2015 06:04:21 -0400
 Subject: [PATCH 09/10] aapt: Fix compiler warning (clobbered by longjmp)

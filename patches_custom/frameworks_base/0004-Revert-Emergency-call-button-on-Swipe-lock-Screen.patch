@@ -1,4 +1,4 @@
-From 706b6e452e0ac371b94d39c78fa984e57d0bfbb2 Mon Sep 17 00:00:00 2001
+From 04ff515fb05fca4278b34da913581cb8a91c82ea Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Thu, 8 Sep 2016 18:39:04 +0200
 Subject: [PATCH 04/10] Revert "Emergency call button on Swipe lock Screen."
@@ -25,10 +25,10 @@ index 917825a..44336d3 100644
 -    <bool name="config_showEmergencyButton">true</bool>
  </resources>
 diff --git a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-index 491c31e..a5269e5 100644
+index 418cd58..4f9183c 100755
 --- a/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
 +++ b/packages/Keyguard/src/com/android/keyguard/EmergencyButton.java
-@@ -151,7 +151,7 @@ public class EmergencyButton extends Button {
+@@ -157,7 +157,7 @@ public class EmergencyButton extends Button {
          }
      }
  
@@ -37,7 +37,7 @@ index 491c31e..a5269e5 100644
          boolean visible = false;
          if (mIsVoiceCapable) {
              // Emergency calling requires voice capability.
-@@ -165,8 +165,7 @@ public class EmergencyButton extends Button {
+@@ -171,8 +171,7 @@ public class EmergencyButton extends Button {
                      visible = mEnableEmergencyCallWhileSimLocked;
                  } else {
                      // Only show if there is a secure screen (pin/pattern/SIM pin/SIM puk);
@@ -45,8 +45,8 @@ index 491c31e..a5269e5 100644
 -                              mContext.getResources().getBoolean(R.bool.config_showEmergencyButton);
 +                    visible = mLockPatternUtils.isSecure(KeyguardUpdateMonitor.getCurrentUser());
                  }
-             }
-         }
+ 
+                 if (mContext.getResources().getBoolean(R.bool.kg_hide_emgcy_btn_when_oos)) {
 diff --git a/packages/SystemUI/res/layout/keyguard_bottom_area.xml b/packages/SystemUI/res/layout/keyguard_bottom_area.xml
 index de73538..444f0f0 100644
 --- a/packages/SystemUI/res/layout/keyguard_bottom_area.xml

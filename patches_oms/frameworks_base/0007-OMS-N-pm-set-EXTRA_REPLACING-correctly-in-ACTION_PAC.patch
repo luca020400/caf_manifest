@@ -1,4 +1,4 @@
-From 380ee6a0e9afaad74c653af8f11eecae4f539101 Mon Sep 17 00:00:00 2001
+From 4965797b48fb34c483fad3d6209085d151b6da0c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Mon, 25 Apr 2016 16:29:22 +0200
 Subject: [PATCH 07/33] OMS-N: pm: set EXTRA_REPLACING correctly in
@@ -51,5 +51,5 @@ index a6f3cd5..0c686c7 100755
                  }
                  sendPackageBroadcast(Intent.ACTION_PACKAGE_ADDED, packageName,
 -- 
-2.10.0
+2.10.1
 

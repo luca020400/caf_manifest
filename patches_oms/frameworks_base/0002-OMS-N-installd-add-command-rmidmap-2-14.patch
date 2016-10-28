@@ -1,4 +1,4 @@
-From ac529423a3ab760b8f30327c53ae2c3dc39e28ee Mon Sep 17 00:00:00 2001
+From 8630f66498b65843a2c44dbfb75093a8b0e36399 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:35:09 +0200
 Subject: [PATCH 02/33] OMS-N: installd: add command 'rmidmap' [2/14]
@@ -37,5 +37,5 @@ index 9cea3b2..5198a2a 100644
          assertValidInstructionSet(instructionSet);
          mInstaller.execute("rmdex", codePath, instructionSet);
 -- 
-2.10.0
+2.10.1
 

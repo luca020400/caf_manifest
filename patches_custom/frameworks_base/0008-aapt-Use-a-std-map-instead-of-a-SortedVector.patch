@@ -1,4 +1,4 @@
-From 77d235e4a5c5a7838baf39026a38b5a30a92f19c Mon Sep 17 00:00:00 2001
+From f567eb466d755557a72fdc2e7d1e4ceda3ca2907 Mon Sep 17 00:00:00 2001
 From: "Christopher R. Palmer" <crpalmer@gmail.com>
 Date: Mon, 4 Jan 2016 20:29:02 -0500
 Subject: [PATCH 08/10] aapt: Use a std::map instead of a SortedVector

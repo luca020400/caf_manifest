@@ -1,4 +1,4 @@
-From 435553116e2955842bd49c6529daf9420092318f Mon Sep 17 00:00:00 2001
+From 43d733093c3e38afb295679ca548d5b743943ac9 Mon Sep 17 00:00:00 2001
 From: Ivan Iskandar <iiiiskandar14@gmail.com>
 Date: Sun, 18 Sep 2016 21:33:18 +0700
 Subject: [PATCH 31/33] SystemUI: Expose QS edit item decoration background
@@ -49,5 +49,5 @@ index 8e4ed91..fbd566f 100644
                  mDrawable.setBounds(0, top, width, bottom);
                  mDrawable.draw(c);
 -- 
-2.10.0
+2.10.1
 

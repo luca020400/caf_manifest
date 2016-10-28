@@ -1,4 +1,4 @@
-From 69aff48d366a162c84e1b250028593c316e406bb Mon Sep 17 00:00:00 2001
+From 9a6888cab6bf0b4b952c4d5a611dfb245f39a81f Mon Sep 17 00:00:00 2001
 From: 0xD34D <clark@scheffsblend.com>
 Date: Sun, 5 Jun 2016 04:25:44 +0300
 Subject: [PATCH 20/33] OMS-N: Themes should be dynamically theming the power
@@ -223,5 +223,5 @@ index 3aab504..d8b1764 100644
 +    }
  }
 -- 
-2.10.0
+2.10.1
 

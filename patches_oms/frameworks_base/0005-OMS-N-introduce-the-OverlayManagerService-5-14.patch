@@ -1,4 +1,4 @@
-From 58befdd921465d43ec245aca5ed2c1a949fd53a3 Mon Sep 17 00:00:00 2001
+From 5ddaabaf3010080a15ff3b94cf001b0e991121c7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 15 Dec 2015 16:40:23 +0100
 Subject: [PATCH 05/33] OMS-N: introduce the OverlayManagerService [5/14]
@@ -637,7 +637,7 @@ index 14f7727..c643efd 100644
 +    public abstract List<PackageInfo> getOverlayPackages(int userId);
  }
 diff --git a/core/res/AndroidManifest.xml b/core/res/AndroidManifest.xml
-index 310e46a..bfc12fa 100644
+index 7947154..84189d7 100644
 --- a/core/res/AndroidManifest.xml
 +++ b/core/res/AndroidManifest.xml
 @@ -81,6 +81,10 @@
@@ -649,8 +649,8 @@ index 310e46a..bfc12fa 100644
 +    <protected-broadcast android:name="android.intent.action.OVERLAY_REMOVED" />
 +    <protected-broadcast android:name="android.intent.action.OVERLAY_PRIORITY_CHANGED" />
  
+     <protected-broadcast android:name="Auth_password_wrong" />
      <protected-broadcast android:name="android.os.action.POWER_SAVE_MODE_CHANGED" />
-     <protected-broadcast android:name="android.os.action.POWER_SAVE_MODE_CHANGING" />
 diff --git a/services/core/java/com/android/server/om/IdmapManager.java b/services/core/java/com/android/server/om/IdmapManager.java
 new file mode 100644
 index 0000000..936e047
@@ -2788,5 +2788,5 @@ index 6811428..64857c7 100755
  
      @Override
 -- 
-2.10.0
+2.10.1
 

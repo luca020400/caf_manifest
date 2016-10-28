@@ -1,4 +1,4 @@
-From 5ab5a9246f66a3c2abffbde24cfebdb31292d079 Mon Sep 17 00:00:00 2001
+From befe0285c1a8b2b84518e2f3870bf3ab96dcf3c9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 23 Feb 2016 14:26:51 +0100
 Subject: [PATCH 12/33] OMS-N: Ensure unique type IDs when parsing overlays
@@ -95,5 +95,5 @@ index 75a760d..246c899 100644
          return NO_MEMORY;
      }
 -- 
-2.10.0
+2.10.1
 

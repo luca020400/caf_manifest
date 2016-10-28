@@ -1,4 +1,4 @@
-From b0d1b46dd45e71b2409daa309771259b9cccbbdd Mon Sep 17 00:00:00 2001
+From 02e11a3fee442f9e5e9b1025fa442dcad893ac62 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Thu, 2 Jun 2016 09:34:36 +0200
 Subject: [PATCH 10/33] OMS-N: Fix memory leak during idmap creation [10/14]
@@ -34,5 +34,5 @@ index 4097089..9b559d1 100644
          ret = tables[0].createIdmap(tables[1], targetCrc, overlayCrc,
                  targetApkPath, overlayApkPath, (void**)outData, outSize) == NO_ERROR;
 -- 
-2.10.0
+2.10.1
 

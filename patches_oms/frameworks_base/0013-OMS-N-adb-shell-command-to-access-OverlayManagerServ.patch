@@ -1,4 +1,4 @@
-From 361564c8b7a9fc5a25b788bb9e160836daa1724e Mon Sep 17 00:00:00 2001
+From 9de2c874e80a4a2e276058e4cbfa5564ee5f6f08 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?M=C3=A5rten=20Kongstad?= <marten.kongstad@sonymobile.com>
 Date: Tue, 30 Aug 2016 01:19:19 -0400
 Subject: [PATCH 13/33] OMS-N: adb shell command to access
@@ -400,5 +400,5 @@ index 0000000..a1104ee
 +}
 \ No newline at end of file
 -- 
-2.10.0
+2.10.1
 

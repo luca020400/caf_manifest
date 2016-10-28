@@ -1,4 +1,4 @@
-From 9ee7c3dd1a1d3de138e486586b5f9a092cea7038 Mon Sep 17 00:00:00 2001
+From fef2040ea7f2bd15febe0ae8f656f2ad452c9a12 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Fri, 7 Oct 2016 22:18:27 +0200
 Subject: [PATCH 10/10] libhwui: enable our advanced compiler features
