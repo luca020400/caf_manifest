@@ -1,7 +1,7 @@
-From c354d8b1b774558baa4b0407b2e2c4d6ebcae21b Mon Sep 17 00:00:00 2001
+From f9f61d3d1b95857563cc5d51c02d9419c49708f5 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 17:15:00 +0200
-Subject: [PATCH 5/9] skia: UserConfig: set SK_RELEASE
+Subject: [PATCH 05/11] skia: UserConfig: set SK_RELEASE
 
 * We always want to build Skia
   in Performance mode.

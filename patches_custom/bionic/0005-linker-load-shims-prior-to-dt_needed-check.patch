@@ -1,7 +1,7 @@
-From fabeeb33781b1adb92bd909c85397e19818e1928 Mon Sep 17 00:00:00 2001
+From 71027c77d7f8ddfdbd231b562711c6a4016ae593 Mon Sep 17 00:00:00 2001
 From: jrior001 <jriordan001@gmail.com>
 Date: Fri, 7 Oct 2016 19:36:51 -0400
-Subject: [PATCH 05/19] linker: load shims prior to dt_needed check
+Subject: [PATCH 05/20] linker: load shims prior to dt_needed check
 
 This allows shims to override existing symbols, not just
 inject new symbols.
@@ -41,5 +41,5 @@ index 41304a6..c32ce04 100644
  
  static bool load_library(android_namespace_t* ns,
 -- 
-2.10.0
+2.10.1
 

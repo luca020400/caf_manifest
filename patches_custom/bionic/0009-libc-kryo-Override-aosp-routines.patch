@@ -1,7 +1,7 @@
-From c28ef01dd501a150306f024be656ad6ca6e61f5d Mon Sep 17 00:00:00 2001
+From 347f4c7603543548dca20615f4099a8ac996abf1 Mon Sep 17 00:00:00 2001
 From: Luca Stefani <luca.stefani.ge1@gmail.com>
 Date: Sun, 4 Sep 2016 12:23:07 +0200
-Subject: [PATCH 09/19] libc: kryo: Override aosp routines
+Subject: [PATCH 09/20] libc: kryo: Override aosp routines
 
 Change-Id: Ic7551bf1261a6bcfaf4e78bc88c13d86ee5d529c
 ---
@@ -54,5 +54,5 @@ index b5b714e..7f3fe8c 100644
 +libc_bionic_src_files_exclude_arm64 += \
 +    arch-arm64/generic/bionic/memcpy.S \
 -- 
-2.10.0
+2.10.1
 

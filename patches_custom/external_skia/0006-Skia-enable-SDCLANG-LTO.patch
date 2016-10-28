@@ -1,7 +1,7 @@
-From aa3de6dd009d7826b635e276cb94f406c0a345f3 Mon Sep 17 00:00:00 2001
+From 6e126180f983b46ced60e16bce00c5c79dd0a8a6 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Fri, 7 Oct 2016 22:16:11 +0200
-Subject: [PATCH 6/9] Skia: enable SDCLANG LTO
+Subject: [PATCH 06/11] Skia: enable SDCLANG LTO
 
 * together with QCLD
 

@@ -1,7 +1,7 @@
-From a4b3191efa919ac6602f2b99fa235aec93b25410 Mon Sep 17 00:00:00 2001
+From 845c0a7245529b4eb90153a41b7072ae6449befb Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Wed, 5 Oct 2016 10:22:43 +0200
-Subject: [PATCH 8/9] skia: update libpng to 1.6.25
+Subject: [PATCH 08/11] skia: update libpng to 1.6.25
 
 * also match Android config
 

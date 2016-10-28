@@ -1,7 +1,7 @@
-From bbd9f1dc5f85aa6d904d08f6f0e578df5b81639d Mon Sep 17 00:00:00 2001
+From cc448ffdc66e6c92be8d08d08d3c82e4df9bf3ef Mon Sep 17 00:00:00 2001
 From: Tom Marshall <tdm@cyngn.com>
 Date: Fri, 1 Apr 2016 14:57:21 -0700
-Subject: [PATCH 07/19] bionic: Teach fnmatch(3) to handle UTF-8 characters in
+Subject: [PATCH 07/20] bionic: Teach fnmatch(3) to handle UTF-8 characters in
  patterns
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -214,5 +214,5 @@ index 0d0f18f..ac6280e 100644
  }
  
 -- 
-2.10.0
+2.10.1
 

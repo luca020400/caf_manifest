@@ -1,7 +1,7 @@
-From bad59837244febd7374ec739ff838451cbc7ba92 Mon Sep 17 00:00:00 2001
+From 4bbaed79f7311d57793417fb8918cd14549ec783 Mon Sep 17 00:00:00 2001
 From: Wilco Dijkstra <wdijkstr@arm.com>
 Date: Mon, 13 Jul 2015 13:09:00 +0100
-Subject: [PATCH 11/19] libc: ARM64: Optimize memcpy.
+Subject: [PATCH 11/20] libc: ARM64: Optimize memcpy.
 
  This is an optimized memcpy for AArch64.  Copies are split into 3 main
  cases: small copies of up to 16 bytes, medium copies of 17..96 bytes
@@ -347,5 +347,5 @@ index c5d42ce..82431a3 100644
 +	stp	C_l, C_h, [dstend, -16]
  	ret
 -- 
-2.10.0
+2.10.1
 

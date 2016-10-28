@@ -1,7 +1,7 @@
-From 33e5fc886107cee1ca0decea0f478deeb8711006 Mon Sep 17 00:00:00 2001
+From c7354f74f43c38fb867c86392924dbbc83845f99 Mon Sep 17 00:00:00 2001
 From: Erik Kline <ek@google.com>
 Date: Fri, 4 Mar 2016 17:16:55 +0900
-Subject: [PATCH 06/19] Don't leak sockets if setsockopt() or fchown() fail.
+Subject: [PATCH 06/20] Don't leak sockets if setsockopt() or fchown() fail.
 
 Change-Id: Idcf8c08ff50d21c3a04b7ef80c4044f3f9762f2b
 ---
@@ -30,5 +30,5 @@ index 829b679..cc8b8b4 100644
  		ret = __connect(sock, addr, len);
  	} while (ret == -1 && errno == EINTR);
 -- 
-2.10.0
+2.10.1
 

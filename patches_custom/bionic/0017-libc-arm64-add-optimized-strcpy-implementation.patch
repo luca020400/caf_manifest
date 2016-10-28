@@ -1,7 +1,7 @@
-From e339305e85ed0898de520a4d79c694bcf3993dbd Mon Sep 17 00:00:00 2001
+From 457a2d71b63e813c3e010b3c2f1fb76336639dcb Mon Sep 17 00:00:00 2001
 From: Yingshiuan Pan <yingshiuan.pan@linaro.org>
 Date: Fri, 6 Mar 2015 15:24:22 +0000
-Subject: [PATCH 17/19] libc: arm64: add optimized strcpy implementation
+Subject: [PATCH 17/20] libc: arm64: add optimized strcpy implementation
 
 This optimization is extracted from cortex-strings and bionic-ized.
 stringbench result:
@@ -539,5 +539,5 @@ index 2bf969d..2691ca5 100644
  END(stpcpy)
  #elif defined(STRCPY)
 -- 
-2.10.0
+2.10.1
 

@@ -1,7 +1,7 @@
-From 151595819d1c87d1bd0f7a74ec5d9a94e00711d9 Mon Sep 17 00:00:00 2001
+From 5b646aa96c867ccdf5dc2d00460961e5622a1348 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 17:13:15 +0200
-Subject: [PATCH 4/9] skia: correct call for SK_RELEASE
+Subject: [PATCH 04/11] skia: correct call for SK_RELEASE
 
 In Skia "NDEBUG" shouldn't be directly
 used as conditional. Instead a logic is

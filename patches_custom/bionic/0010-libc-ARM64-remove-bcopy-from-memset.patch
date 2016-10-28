@@ -1,7 +1,7 @@
-From f215677994890f5376d00cce1bca42e5683b7a6a Mon Sep 17 00:00:00 2001
+From fd85ecfd57670e78c003affc06af96872651b48a Mon Sep 17 00:00:00 2001
 From: Jake Weinstein <xboxlover360@gmail.com>
 Date: Fri, 18 Sep 2015 15:02:39 +0000
-Subject: [PATCH 10/19] libc: ARM64: remove bcopy from memset
+Subject: [PATCH 10/20] libc: ARM64: remove bcopy from memset
 
 * Deprecated by ce9ce28e5d760e32ab6c894dfaf7b8dad6de7ff6
 
@@ -58,5 +58,5 @@ index 7c204b4..b9c0d50 100644
  #ifdef MAYBE_VIRT
  	.bss
 -- 
-2.10.0
+2.10.1
 

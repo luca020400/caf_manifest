@@ -1,7 +1,7 @@
-From 196ef7fcaee92d1334d8abd54871947290f2ece9 Mon Sep 17 00:00:00 2001
+From 66d14829c1ba140e86f2d58e6ea1ffd6b471f147 Mon Sep 17 00:00:00 2001
 From: Richard Earnshaw <rearnsha@arm.com>
 Date: Mon, 8 Dec 2014 15:21:00 +0000
-Subject: [PATCH 14/19] libc: ARM64: add assembly strrchr
+Subject: [PATCH 14/20] libc: ARM64: add assembly strrchr
 
 Change-Id: I59a0aa618bf8139dc0368af9ddf881eba5d3eadf
 ---
@@ -215,5 +215,5 @@ index 0000000..46b5031
 +
 +END(strrchr)
 -- 
-2.10.0
+2.10.1
 

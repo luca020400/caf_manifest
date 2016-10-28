@@ -1,7 +1,7 @@
-From 06389d751ef0f3473596abecf70a1715333804f0 Mon Sep 17 00:00:00 2001
+From 94207c58469dbfaa1ad7d93e02304ec332ac4f78 Mon Sep 17 00:00:00 2001
 From: Tom Marshall <tdm@cyngn.com>
 Date: Fri, 17 Jun 2016 16:38:12 -0700
-Subject: [PATCH 08/19] bionic: Sort and cache hosts file data for fast lookup
+Subject: [PATCH 08/20] bionic: Sort and cache hosts file data for fast lookup
 
 The hosts file is normally searched linearly.  This is very slow when
 the file is large.  To mitigate this, read the hosts file and sort the
@@ -639,5 +639,5 @@ index 916421e..be29621 100644
  	{
  		res_state res = __res_get_state();
 -- 
-2.10.0
+2.10.1
 

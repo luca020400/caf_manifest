@@ -1,7 +1,7 @@
-From e8d13ac521d5345c78e50ba3407ecbcd4daadaa9 Mon Sep 17 00:00:00 2001
+From 4c61afecf345d395257350e9297b797c8ea6f9a6 Mon Sep 17 00:00:00 2001
 From: Wilco Dijkstra <wdijkstr@arm.com>
 Date: Thu, 30 Jul 2015 12:51:00 +0100
-Subject: [PATCH 12/19] libc: ARM64: optimize memset.
+Subject: [PATCH 12/20] libc: ARM64: optimize memset.
 
  This is an optimized memset for AArch64.  Memset is split into 4 main
  cases: small sets of up to 16 bytes, medium of 16..96 bytes which are
@@ -425,5 +425,5 @@ index b9c0d50..4b3b17b 100644
 +
 +END(memset)
 -- 
-2.10.0
+2.10.1
 

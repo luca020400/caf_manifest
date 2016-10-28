@@ -1,7 +1,7 @@
-From b9e9f9607d7a6559c92925f3e676d3697025b5d2 Mon Sep 17 00:00:00 2001
+From 907075e4451e68c68713d99b8723605a0cc34e05 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Tue, 4 Oct 2016 16:37:30 +0200
-Subject: [PATCH 2/9] skia: use O3, regardless of FDO
+Subject: [PATCH 02/11] skia: use O3, regardless of FDO
 
 Change-Id: I8bd6149ac76e02d83656f2f04258d0bf6d55226c
 Signed-off-by: Alex Naidis <alex.naidis@linux.com>

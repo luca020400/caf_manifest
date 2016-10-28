@@ -1,7 +1,7 @@
-From 7b99d4c754a5ec0f181ad74cd52b489820555771 Mon Sep 17 00:00:00 2001
+From 0b963dce95dbb05c1baa359448ad12ef95de9ff6 Mon Sep 17 00:00:00 2001
 From: Jake Weinstein <xboxlover360@gmail.com>
 Date: Tue, 15 Mar 2016 00:22:54 -0400
-Subject: [PATCH 18/19] libm: add more aarch64 hardware instructions
+Subject: [PATCH 18/20] libm: add more aarch64 hardware instructions
 
 * Taken from ARM code contributed to newlib
 
@@ -302,5 +302,5 @@ index 063f8d7..760abd1 100644
 +#endif
  DECL(long double, nearbyintl, rintl)
 -- 
-2.10.0
+2.10.1
 

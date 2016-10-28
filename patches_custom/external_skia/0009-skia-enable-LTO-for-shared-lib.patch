@@ -1,7 +1,7 @@
-From 8bd9cb64b7179bf4bd4fbf4878a3a64efac45734 Mon Sep 17 00:00:00 2001
+From 7d6c74ca8fa97c26a5e4f22b54fab2067a21714f Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Sun, 16 Oct 2016 22:01:10 +0200
-Subject: [PATCH 9/9] skia: enable LTO for shared lib
+Subject: [PATCH 09/11] skia: enable LTO for shared lib
 
 Change-Id: Ibaee70b0153b793fa9e71b760bda603ae5cf5d20
 Signed-off-by: Alex Naidis <alex.naidis@linux.com>

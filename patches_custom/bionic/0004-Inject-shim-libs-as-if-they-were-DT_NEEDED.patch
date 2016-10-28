@@ -1,7 +1,7 @@
-From 66bd429c1114a4b42a0708d25cfd7ec32bb68b79 Mon Sep 17 00:00:00 2001
+From e982bb2ac8d881a01f4ae6c28ab46a8417fa0426 Mon Sep 17 00:00:00 2001
 From: Danny Baumann <dannybaumann@web.de>
 Date: Wed, 7 Sep 2016 16:54:06 +0200
-Subject: [PATCH 04/19] Inject shim libs as if they were DT_NEEDED.
+Subject: [PATCH 04/20] Inject shim libs as if they were DT_NEEDED.
 
 The previous separate approach had one flaw: If the shim lib requires
 another lib that's already loaded, find_library_internal() would return
@@ -157,5 +157,5 @@ index bfe9f33..41304a6 100644
      local_group.push_back(si);
      return true;
 -- 
-2.10.0
+2.10.1
 

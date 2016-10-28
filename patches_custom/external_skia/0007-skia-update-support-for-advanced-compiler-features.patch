@@ -1,7 +1,7 @@
-From e7d50d564ec297597bc100cda41e89f241600d0a Mon Sep 17 00:00:00 2001
+From b2a17bfddcce5163fc7dd3a3c3dbe4de7e1b9983 Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Thu, 13 Oct 2016 19:25:52 +0200
-Subject: [PATCH 7/9] skia: update support for advanced compiler features
+Subject: [PATCH 07/11] skia: update support for advanced compiler features
 
 * set flags to be passed to linker
 * add FDO support to the skia static lib

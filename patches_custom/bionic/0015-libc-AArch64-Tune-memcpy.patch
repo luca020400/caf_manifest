@@ -1,7 +1,7 @@
-From a1dc9dccf60f6c6dd0cffb824b5d26b903b7cb90 Mon Sep 17 00:00:00 2001
+From 4dd5b73267ce4dbef841502b4f50dbcc42c6819f Mon Sep 17 00:00:00 2001
 From: Wilco Dijkstra <Wilco.Dijkstra@arm.com>
 Date: Fri, 6 Nov 2015 14:09:00 +0000
-Subject: [PATCH 15/19] libc: AArch64: Tune memcpy
+Subject: [PATCH 15/20] libc: AArch64: Tune memcpy
 
 * Further tuning for performance.
 
@@ -111,5 +111,5 @@ index 82431a3..f850624 100644
  	   32 bytes from the end.  */
  L(copy96):
 -- 
-2.10.0
+2.10.1
 

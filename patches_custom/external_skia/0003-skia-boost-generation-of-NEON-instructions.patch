@@ -1,7 +1,7 @@
-From ebd5e15e5b1d0ebdc919c6e2cd982eaaed89d0f8 Mon Sep 17 00:00:00 2001
+From 8e57e464285d0965164feb39277c88578d5f412c Mon Sep 17 00:00:00 2001
 From: Alex Naidis <alex.naidis@linux.com>
 Date: Sat, 20 Aug 2016 01:31:28 +0200
-Subject: [PATCH 3/9] skia: boost generation of NEON instructions
+Subject: [PATCH 03/11] skia: boost generation of NEON instructions
 
 * adding the unsafe-math flag increases the code generation ratio for (faster) NEON instructions greatly.
 * however this results in a slight loss of precision, which is not critical to SKIA.

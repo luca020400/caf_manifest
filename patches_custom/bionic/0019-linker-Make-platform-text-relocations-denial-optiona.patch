@@ -1,7 +1,7 @@
-From 74750df9208a09719a7815fb6dd21b28432ee71a Mon Sep 17 00:00:00 2001
+From 38beb0e7f90c977a6a1d76daf6f02e34d2cdb2aa Mon Sep 17 00:00:00 2001
 From: Adrian DC <radian.dc@gmail.com>
 Date: Sat, 27 Aug 2016 15:09:36 +0200
-Subject: [PATCH 19/19] linker: Make platform text relocations denial optional
+Subject: [PATCH 19/20] linker: Make platform text relocations denial optional
 
  * Use the TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS := true
     configuration to allow a device to use legacy proprietary
@@ -53,5 +53,5 @@ index c32ce04..d17c1bb 100644
        DL_ERR("%s: has text relocations", get_realpath());
        return false;
 -- 
-2.10.0
+2.10.1
 

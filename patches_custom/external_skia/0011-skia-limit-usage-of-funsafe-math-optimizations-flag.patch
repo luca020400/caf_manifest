@@ -1,0 +1,46 @@
+From 978ad90793760367d7b1bf2fdb5972956513e584 Mon Sep 17 00:00:00 2001
+From: Alex Naidis <alex.naidis@linux.com>
+Date: Wed, 26 Oct 2016 18:16:05 +0200
+Subject: [PATCH 11/11] skia: limit usage of funsafe-math-optimizations flag
+
+Setting the flag to generate the maximum amount
+of NEON instruction is only needed on ARM targets
+with NEON support. On ARM64 (armv8+) NEON support
+is fully IEEE 754 compilant anyways and we don't
+need to set the flag.
+
+Change-Id: Ie692207e5a4d28c5ddad1923b9da1c6229fb4150
+Signed-off-by: Alex Naidis <alex.naidis@linux.com>
+---
+ Android.mk | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/Android.mk b/Android.mk
+index 096fdc9..7891101 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -55,7 +55,6 @@ LOCAL_ARM_MODE := thumb
+ 
+ LOCAL_CFLAGS += \
+ 	-fPIC \
+-	-funsafe-math-optimizations \
+ 	-Wno-unused-parameter \
+ 	-U_FORTIFY_SOURCE \
+ 	-D_FORTIFY_SOURCE=1 \
+@@ -63,6 +62,13 @@ LOCAL_CFLAGS += \
+ 	-Wno-clobbered -Wno-error \
+ 	-fexceptions
+ 
++ifeq ($(strip $(TARGET_ARCH)),arm)
++  ifeq ($(ARCH_ARM_HAVE_NEON),true)
++    LOCAL_CFLAGS += -funsafe-math-optimizations
++  endif
++endif
++
++
+ LOCAL_CPPFLAGS := \
+ 	-std=c++11 \
+ 	-fno-threadsafe-statics
+-- 
+2.10.1
+

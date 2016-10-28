@@ -1,7 +1,7 @@
-From 327963a579be5ed13caab7eac8e7f32b93576e50 Mon Sep 17 00:00:00 2001
+From 0c348bf1380eb42648606b63f1c178f22fdcec9d Mon Sep 17 00:00:00 2001
 From: Steve Kondik <steve@cyngn.com>
 Date: Thu, 29 Sep 2016 13:49:21 -0700
-Subject: [PATCH 16/19] bionic: Use a more simple strrchr for arm64
+Subject: [PATCH 16/20] bionic: Use a more simple strrchr for arm64
 
  * Current version seems like overkill, and it doesn't compile with
    Clang. Use a simplified version from ARM.
@@ -185,5 +185,5 @@ index 46b5031..409bc71 100644
 -
  END(strrchr)
 -- 
-2.10.0
+2.10.1
 

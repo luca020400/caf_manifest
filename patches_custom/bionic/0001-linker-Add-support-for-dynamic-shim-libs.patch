@@ -1,7 +1,7 @@
-From 03508387a89b44c2281591902c2c701afd088f28 Mon Sep 17 00:00:00 2001
+From 8e3e6789cb8f1fe952cb7c2c69a871ca272ef09f Mon Sep 17 00:00:00 2001
 From: "Christopher R. Palmer" <crpalmer@gmail.com>
 Date: Tue, 3 Nov 2015 16:44:44 -0500
-Subject: [PATCH 01/19] linker: Add support for dynamic "shim" libs
+Subject: [PATCH 01/20] linker: Add support for dynamic "shim" libs
 
 Add a new environment variable
 
@@ -249,5 +249,5 @@ index 39aa2ca..2c2f174 100644
    somain = si;
  
 -- 
-2.10.0
+2.10.1
 

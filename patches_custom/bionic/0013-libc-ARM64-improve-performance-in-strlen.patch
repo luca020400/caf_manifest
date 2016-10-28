@@ -1,7 +1,7 @@
-From 24026cfe456e9122736ad9bc801e88b529755b8f Mon Sep 17 00:00:00 2001
+From af9518cee00024f88a56cb2814448c1e6e40f34b Mon Sep 17 00:00:00 2001
 From: Wilco Dijkstra <wdijkstr@arm.com>
 Date: Tue, 20 Jan 2015 10:11:00 +0000
-Subject: [PATCH 13/19] libc: ARM64: improve performance in strlen
+Subject: [PATCH 13/20] libc: ARM64: improve performance in strlen
 
 Change-Id: Ic20f93a0052a49bd76cd6795f51e8606ccfbf11c
 ---
@@ -307,5 +307,5 @@ index 3bd9809..6e540fc 100644
  
  END(strlen)
 -- 
-2.10.0
+2.10.1
 
