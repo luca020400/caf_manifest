@@ -1,7 +1,7 @@
-From bd657c9931c9dedf92d438d67174a7ad49270dd3 Mon Sep 17 00:00:00 2001
+From bed48687d44bb52f872cc43125efad1a3d494371 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Mon, 9 May 2016 08:52:42 -0700
-Subject: [PATCH 08/12] SubscriptionController: load all subs before setting
+Subject: [PATCH 06/10] SubscriptionController: load all subs before setting
  defaults
 
 Switch the whole class to use the new inserted SIM logic added in
@@ -105,7 +105,7 @@ index 8c9c189..89dceb0 100644
              Binder.restoreCallingIdentity(identity);
          }
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index 7ca8359..f1d95e3 100644
+index 0f4a22a..302ca23 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -74,6 +74,9 @@ public class SubscriptionInfoUpdater extends Handler {
@@ -172,7 +172,7 @@ index 7ca8359..f1d95e3 100644
          int subId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
          int[] subIds = SubscriptionController.getInstance().getSubId(slotId);
          if (subIds != null) {   // Why an array?
-@@ -466,7 +472,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -458,7 +464,7 @@ public class SubscriptionInfoUpdater extends Handler {
                      PreferenceManager.getDefaultSharedPreferences(mContext);
              int storedSubId = sp.getInt(CURR_SUBID + slotId, -1);
  
@@ -181,7 +181,7 @@ index 7ca8359..f1d95e3 100644
                  int networkType = RILConstants.PREFERRED_NETWORK_MODE;
  
                  // when known SIM inserted in another slot for which subId already
-@@ -529,9 +535,6 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -521,9 +527,6 @@ public class SubscriptionInfoUpdater extends Handler {
              logd("SIM" + (slotId + 1) + " hot plug out or error");
          }
          mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
@@ -191,7 +191,7 @@ index 7ca8359..f1d95e3 100644
          updateCarrierServices(slotId, simState);
      }
  
-@@ -556,6 +559,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -548,6 +551,7 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
          logd("insertedSimCount = " + insertedSimCount);
@@ -199,7 +199,7 @@ index 7ca8359..f1d95e3 100644
  
          int index = 0;
          for (int i = 0; i < PROJECT_SIM_NUM; i++) {
-@@ -673,15 +677,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -665,15 +669,7 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  
@@ -216,7 +216,7 @@ index 7ca8359..f1d95e3 100644
              // Ensure the modems are mapped correctly
              mSubscriptionManager.setDefaultDataSubId(
                      mSubscriptionManager.getDefaultDataSubscriptionId());
-@@ -692,6 +688,9 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -684,6 +680,9 @@ public class SubscriptionInfoUpdater extends Handler {
      }
  
      protected int getInsertedSimCount() {

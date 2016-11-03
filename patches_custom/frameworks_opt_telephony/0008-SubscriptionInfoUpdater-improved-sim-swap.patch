@@ -1,7 +1,7 @@
-From b7a0d1235337ceda76d51da489259efe85248e9c Mon Sep 17 00:00:00 2001
+From 9058dcd1dcad14bfc184460b8e62789061018f97 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Tue, 17 May 2016 17:14:44 -0700
-Subject: [PATCH 10/12] SubscriptionInfoUpdater: improved sim swap
+Subject: [PATCH 08/10] SubscriptionInfoUpdater: improved sim swap
 
 We now keep track of the last number of inserted SIMs updated for. So
 when the number of SIMs has changed we do the following:
@@ -100,7 +100,7 @@ index c7c3f80..dc66485 100644
                  mDefaultFallbackSubId = subId;
                  // Update MCC MNC device configuration information
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index ff7975b..8ee2353 100644
+index e120425..6d3afdf 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -52,6 +52,7 @@ import com.android.internal.telephony.uicc.IccUtils;
@@ -153,7 +153,7 @@ index ff7975b..8ee2353 100644
                  if (isAllIccIdQueryDone() && !hasMessages(EVENT_UPDATE_INSERTED_SIM_COUNT)) {
                      updateSubscriptionInfoByIccId();
                      logd("update inserted sim count, current sim count: " + mCurrentSimCount);
-@@ -478,7 +493,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -470,7 +485,7 @@ public class SubscriptionInfoUpdater extends Handler {
                      PreferenceManager.getDefaultSharedPreferences(mContext);
              int storedSubId = sp.getInt(CURR_SUBID + slotId, -1);
  
@@ -162,7 +162,7 @@ index ff7975b..8ee2353 100644
                  int networkType = RILConstants.PREFERRED_NETWORK_MODE;
  
                  // when known SIM inserted in another slot for which subId already
-@@ -688,18 +703,57 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -680,18 +695,57 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  
@@ -224,8 +224,8 @@ index ff7975b..8ee2353 100644
 +    }
 +
      protected int getInsertedSimCount() {
-         if (!isAllIccIdQueryDone()) {
-             return 0;
+         return mCurrentSimCount;
+     }
 diff --git a/src/java/com/android/internal/telephony/UiccSmsController.java b/src/java/com/android/internal/telephony/UiccSmsController.java
 index 08ff4b3..caca2f2 100755
 --- a/src/java/com/android/internal/telephony/UiccSmsController.java

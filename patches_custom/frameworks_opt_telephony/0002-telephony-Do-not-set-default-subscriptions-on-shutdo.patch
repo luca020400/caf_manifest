@@ -1,7 +1,7 @@
-From ab6cf4ac69444dfbf60804013245747228240085 Mon Sep 17 00:00:00 2001
+From 68b878583190b47395f647ec04d299893f4d404d Mon Sep 17 00:00:00 2001
 From: Christian Morlok <ChristianMorlok@gmail.com>
 Date: Wed, 20 Jan 2016 08:31:10 +0100
-Subject: [PATCH 02/12] telephony: Do not set default subscriptions on shutdown
+Subject: [PATCH 02/10] telephony: Do not set default subscriptions on shutdown
 
 On some devices the SIM slots are not deactivated at the same time
 when the phone is shut down or rebooted. This means that at some point
@@ -14,7 +14,7 @@ Change-Id: Ief36004619b75530a21b23efc767e1beb1fb0750
  1 file changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index bcaff1d..80fda48 100644
+index 9d8728f..e43ab5f 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -114,6 +114,7 @@ public class SubscriptionInfoUpdater extends Handler {
@@ -50,7 +50,7 @@ index bcaff1d..80fda48 100644
              if (!action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED) &&
                      !action.equals(IccCardProxy.ACTION_INTERNAL_SIM_STATE_CHANGED)) {
                  return;
-@@ -664,7 +672,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -656,7 +664,7 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  

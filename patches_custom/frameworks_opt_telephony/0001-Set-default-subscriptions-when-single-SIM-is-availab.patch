@@ -1,7 +1,7 @@
-From 3f1194628516df0fd720edaeae71f0de7094be99 Mon Sep 17 00:00:00 2001
+From 7b8d88a78503ec68b7ae34ac14efbe646a3d5138 Mon Sep 17 00:00:00 2001
 From: Ethan Chen <intervigil@gmail.com>
 Date: Mon, 23 Nov 2015 17:12:47 -0800
-Subject: [PATCH 01/12] Set default subscriptions when single SIM is available
+Subject: [PATCH 01/10] Set default subscriptions when single SIM is available
 
 * Subscriptions are not updated when SIM cards are swapped. If there is
   ever a SIM count of 1, direct all defaults to point at that
@@ -13,10 +13,10 @@ Change-Id: Idb84140b65f3355e29cbdebcaff804318d826fe7
  1 file changed, 11 insertions(+), 3 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index a89f19c..bcaff1d 100644
+index 412b01c..9d8728f 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-@@ -664,9 +664,17 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -656,9 +656,17 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  

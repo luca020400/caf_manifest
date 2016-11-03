@@ -1,7 +1,7 @@
-From 42ac7cba35bac7278349d274388fc030ddd0e301 Mon Sep 17 00:00:00 2001
+From 0ac15092cc6664af316b814d0cb2ab58fbae749a Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Wed, 22 Jun 2016 15:12:01 -0700
-Subject: [PATCH 12/12] Subscription updater: don't turn data off if we've
+Subject: [PATCH 10/10] Subscription updater: don't turn data off if we've
  never set a deafult
 
 In the case of an MSIM device that has only had 1 SIM and then you swap
@@ -15,10 +15,10 @@ Signed-off-by: Roman Birg <roman@cyngn.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index 8ee2353..aadb579 100644
+index 6d3afdf..235d3cb 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-@@ -720,7 +720,11 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -712,7 +712,11 @@ public class SubscriptionInfoUpdater extends Handler {
                              Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION,
                              SubscriptionManager.INVALID_SUBSCRIPTION_ID);
  

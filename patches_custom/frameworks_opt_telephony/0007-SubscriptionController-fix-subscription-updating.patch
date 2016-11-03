@@ -1,7 +1,7 @@
-From 736df5202014393e58b1776e42b1458c921c8d4c Mon Sep 17 00:00:00 2001
+From e380a528e699ae9531c2fa41706dab2222fbd420 Mon Sep 17 00:00:00 2001
 From: Roman Birg <roman@cyngn.com>
 Date: Mon, 16 May 2016 11:15:26 -0700
-Subject: [PATCH 09/12] SubscriptionController: fix subscription updating
+Subject: [PATCH 07/10] SubscriptionController: fix subscription updating
 
 We need to only repost messages on events we have handled, not
 prematurely posting them for every single eveng incoming.
@@ -16,9 +16,9 @@ Ticket: CYNGNOS-2185, CYNGNOS-2570
 Change-Id: I5b829662b466f609cd22adfa7d3b754757258463
 Signed-off-by: Roman Birg <roman@cyngn.com>
 ---
- .../internal/telephony/SubscriptionController.java | 18 ++++++-------
- .../telephony/SubscriptionInfoUpdater.java         | 31 +++++++++++++++-------
- 2 files changed, 30 insertions(+), 19 deletions(-)
+ .../internal/telephony/SubscriptionController.java | 18 +++++-------
+ .../telephony/SubscriptionInfoUpdater.java         | 34 ++++++++++++++--------
+ 2 files changed, 30 insertions(+), 22 deletions(-)
 
 diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
 index 89dceb0..c7c3f80 100644
@@ -79,7 +79,7 @@ index 89dceb0..c7c3f80 100644
                                  if (DBG) {
                                      logdl("[addSubInfoRecord] one sim set defaults to subId=" + subId);
 diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
-index f1d95e3..ff7975b 100644
+index 302ca23..e120425 100644
 --- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 +++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
 @@ -226,9 +226,6 @@ public class SubscriptionInfoUpdater extends Handler {
@@ -131,7 +131,7 @@ index f1d95e3..ff7975b 100644
  
          int subId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID;
          int[] subIds = SubscriptionController.getInstance().getSubId(slotId);
-@@ -535,6 +541,7 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -527,6 +533,7 @@ public class SubscriptionInfoUpdater extends Handler {
              logd("SIM" + (slotId + 1) + " hot plug out or error");
          }
          mIccId[slotId] = ICCID_STRING_FOR_NO_SIM;
@@ -139,7 +139,7 @@ index f1d95e3..ff7975b 100644
          updateCarrierServices(slotId, simState);
      }
  
-@@ -545,7 +552,11 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -537,7 +544,11 @@ public class SubscriptionInfoUpdater extends Handler {
      synchronized protected void updateSubscriptionInfoByIccId() {
          logd("updateSubscriptionInfoByIccId:+ Start");
  
@@ -152,7 +152,7 @@ index f1d95e3..ff7975b 100644
  
          for (int i = 0; i < PROJECT_SIM_NUM; i++) {
              mInsertSimState[i] = SIM_NOT_CHANGE;
-@@ -620,13 +631,13 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -612,13 +623,13 @@ public class SubscriptionInfoUpdater extends Handler {
              if (mInsertSimState[i] == SIM_NOT_INSERT) {
                  logd("updateSubscriptionInfoByIccId: No SIM inserted in slot " + i + " this time");
              } else {
@@ -168,7 +168,7 @@ index f1d95e3..ff7975b 100644
                      mSubscriptionManager.addSubscriptionInfoRecord(mIccId[i], i);
                  }
                  if (isNewSim(mIccId[i], oldIccId)) {
-@@ -677,13 +688,15 @@ public class SubscriptionInfoUpdater extends Handler {
+@@ -669,20 +680,19 @@ public class SubscriptionInfoUpdater extends Handler {
              }
          }
  
@@ -184,6 +184,13 @@ index f1d95e3..ff7975b 100644
 +            SubscriptionController.getInstance().notifySubscriptionInfoChanged();
 +        }
          logd("updateSubscriptionInfoByIccId:- SsubscriptionInfo update complete");
+     }
+ 
+     protected int getInsertedSimCount() {
+-        if (!isAllIccIdQueryDone()) {
+-            return 0;
+-        }
+         return mCurrentSimCount;
      }
  
 -- 
